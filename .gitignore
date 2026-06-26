@@ -1,0 +1,68 @@
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Composer / PHP dependencies
+/vendor/
+
+# Node dependencies
+/node_modules/
+
+# Laravel generated files
+/public/hot
+/public/storage
+/storage/*.key
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*
+/bootstrap/cache/*.php
+
+# SQLite / local databases
+/database/database.sqlite
+/database/*.sqlite
+/database/*.sqlite-*
+/database/*.db
+/database/SAFE_DB_BACKUP_*/
+/database/database_malformed_*.sqlite
+/database/database_corrupted_*.sqlite
+/database/database_recovered.sqlite
+
+# Build output
+/public/build/
+/public/build/assets/
+
+# Test/cache files
+.phpunit.cache
+/.phpunit.cache/
+coverage/
+
+# Logs
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+/.idea/
+/.vscode/
+
+# PHPUnit result cache
+.phpunit.result.cache
+
+# Local documents/spec PDFs
+*.pdf
+
+# Uploaded storage files
+/storage/app/public/*
+!/storage/app/public/.gitignore
+/storage/app/private/*
+
+# Local backup files
+*.backup-*
+*.bak
+*.old
