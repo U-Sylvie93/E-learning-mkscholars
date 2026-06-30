@@ -1,5 +1,5 @@
 @php
-    $image = $course['image'] ?? 'https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=1200&q=85';
+    $image = $course['image'] ?? null;
     $lessonsCount = $course['lessons_count'] ?? collect($course['modules'] ?? [])->sum(fn ($module) => count($module['lessons'] ?? []));
     $skills = array_slice($course['outcomes'] ?? ['Focused study habits', 'Portfolio-ready practice', 'Confident communication'], 0, 4);
     $ctaState = $course['cta_state'] ?? 'guest';
@@ -51,8 +51,17 @@
             </div>
 
             <div>
-                <div class="overflow-hidden rounded-lg border border-slate-200 bg-slate-100 shadow-soft">
-                    <img class="h-80 w-full object-cover sm:h-[440px]" src="{{ $image }}" alt="{{ $course['title'] }}">
+                <div class="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-mk-navy shadow-soft">
+                    @if ($image)
+                        <img class="h-80 w-full object-cover sm:h-[440px]" src="{{ $image }}" alt="{{ $course['title'] }}">
+                        <div class="absolute inset-0 bg-gradient-to-t from-mk-navy/70 via-transparent to-transparent"></div>
+                    @else
+                        <div class="flex h-80 w-full items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(255,196,12,0.30),transparent_34%),linear-gradient(135deg,#073653_0%,#0e4a72_56%,#102a3a_100%)] sm:h-[440px]">
+                            <span class="flex h-24 w-24 items-center justify-center rounded-[1.75rem] border border-mk-gold/40 bg-white/10 text-mk-gold shadow-soft backdrop-blur">
+                                <x-academy-icon :name="$academyIcon" class="h-12 w-12" />
+                            </span>
+                        </div>
+                    @endif
                 </div>
                 <x-card class="-mt-8 ml-4 mr-4 relative">
                     <dl class="grid gap-4 sm:grid-cols-2">
@@ -76,8 +85,14 @@
             <div class="space-y-6">
                 <x-section-header eyebrow="Overview" title="Course overview" description="A guided course experience with clear lessons, practice checkpoints, and outcomes students can explain." />
                 <x-card>
-                    <div class="overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
-                        <img class="h-52 w-full object-cover" src="{{ $image }}" alt="{{ $course['title'] }} course overview image">
+                    <div class="relative overflow-hidden rounded-lg border border-slate-200 bg-mk-navy">
+                        @if ($image)
+                            <img class="h-52 w-full object-cover" src="{{ $image }}" alt="{{ $course['title'] }} course overview image">
+                        @else
+                            <div class="flex h-52 w-full items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(255,196,12,0.30),transparent_34%),linear-gradient(135deg,#073653_0%,#0e4a72_56%,#102a3a_100%)]">
+                                <x-academy-icon :name="$academyIcon" class="h-10 w-10 text-mk-gold" />
+                            </div>
+                        @endif
                     </div>
                     <dl class="mt-5 grid gap-4 text-sm">
                         <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
@@ -197,8 +212,8 @@
     <section class="py-16">
         <div class="mk-container grid gap-8 lg:grid-cols-2">
             <x-card>
-                <x-section-header eyebrow="Support" title="Instructor and mentor support" />
-                <p class="mt-6 text-sm leading-7 text-slate-600">Students can learn through lessons, submit work, attend live sessions, and receive mentor guidance as the course experience expands.</p>
+                <x-section-header eyebrow="Support" title="Instructor and student support" />
+                <p class="mt-6 text-sm leading-7 text-slate-600">Students can learn through lessons, submit work, attend live sessions, and receive learning guidance as the course experience expands.</p>
             </x-card>
             <x-card>
                 <x-section-header eyebrow="FAQ" title="Before you enroll" />
@@ -210,18 +225,6 @@
         </div>
     </section>
 
-    @if (($relatedOpportunities ?? collect())->isNotEmpty())
-        <section class="bg-white py-16">
-            <div class="mk-container">
-                <x-section-header eyebrow="Opportunities" title="Related opportunities to explore" />
-                <div class="mt-8 grid gap-5 md:grid-cols-3">
-                    @foreach ($relatedOpportunities as $opportunity)
-                        <x-opportunity-card :opportunity="$opportunity->toPublicCard()" />
-                    @endforeach
-                </div>
-            </div>
-        </section>
-    @endif
 
     <section class="bg-white py-16">
         <div class="mk-container">
@@ -314,4 +317,7 @@
         </div>
     </section>
 </x-layouts.app>
+
+
+
 

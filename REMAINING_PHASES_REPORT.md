@@ -19,7 +19,6 @@ The platform currently includes:
 - Live classes and attendance
 - Mentorship and weekly check-ins
 - Certificates and public verification
-- Opportunities and student application tracker
 - Student document center
 - Manual course payments
 - Course completion rules and certificate eligibility

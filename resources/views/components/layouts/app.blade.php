@@ -1,6 +1,6 @@
 @props([
     'title' => null,
-    'description' => 'MK Scholars is a premium e-learning platform for academies, courses, mentorship, and student opportunities.',
+    'description' => 'MK Scholars is a premium e-learning platform for academies, courses, student support, and progress tracking.',
 ])
 
 <!DOCTYPE html>
@@ -36,3 +36,5 @@
         @livewireScripts
     </body>
 </html>
+
+

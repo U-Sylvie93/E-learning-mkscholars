@@ -1,6 +1,6 @@
 # MK Scholars E-learning Platform
 
-MK Scholars is a Laravel-based e-learning platform for student courses, mentorship, live classes, assignments, quizzes, manual payments, certificates, opportunities, notifications, and admin reporting.
+MK Scholars is a Laravel-based e-learning platform for student courses, mentorship, live classes, assignments, quizzes, manual payments, certificates, notifications, and admin reporting.
 
 The project uses Blade and Livewire for the application UI, Tailwind CSS for the MK Scholars navy/gold/white design system, Filament for admin operations, and migrations that are ready for SQLite local testing and MySQL production deployment.
 
@@ -63,7 +63,6 @@ The demo seeder creates:
 - 1 quiz with questions and options
 - 1 assignment
 - 1 scheduled live class
-- 1 published opportunity with requirements
 - 1 active manual payment method
 - 1 active demo subscription plan with included paid courses
 - Admin, student, instructor, and mentor demo users

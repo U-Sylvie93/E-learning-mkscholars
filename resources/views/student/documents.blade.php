@@ -4,9 +4,8 @@
             <x-section-header
                 eyebrow="Documents"
                 title="Reusable application files"
-                description="Keep core application documents ready for scholarships, internships, competitions, and study abroad opportunities."
+                description="Keep reusable study documents ready for your courses, profile, and MK Scholars support."
             />
-            <x-button :href="route('student.applications')" variant="secondary">My Applications</x-button>
         </div>
     </section>
 

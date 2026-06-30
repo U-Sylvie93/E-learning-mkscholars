@@ -28,7 +28,7 @@ class AssignmentGradedEmail extends Notification
             ->greeting('Hello '.$this->studentName.',')
             ->line('Your submission for '.$this->assignmentTitle.' has been graded.')
             ->line('Open the assignment page to review your score and feedback.')
-            ->line('MK Scholars - Learn skills. Get coached. Earn certificates. Apply for opportunities.');
+            ->line('MK Scholars - Learn skills. Get coached. Earn certificates. Track your progress.');
 
         return $this->actionUrl
             ? $message->action('View assignment', $this->actionUrl)

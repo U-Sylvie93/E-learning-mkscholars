@@ -23,12 +23,10 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Academies page shows published academies and course counts.
 - Courses page shows published courses with images/fallback images, price labels, and CTAs.
 - Course details page shows hero, syllabus, outcomes, lessons, pricing, and correct CTA state.
-- Opportunities page shows published opportunities with deadline badges.
-- Opportunity details page shows requirements, benefits, and Apply/Login CTA.
 - Pricing, About, and Contact pages load with MK Scholars styling.
 - Certificate verification route shows valid and invalid certificate states.
 - Public homepage no longer shows opportunity cards, opportunity section, or Find Scholarships CTA.
-- Public opportunities page and opportunity details page still load through their normal routes.
+- Old public opportunity URLs return 404.
 - Public footer appears on home, academies, courses, course details, pricing, about, contact, login, and register pages.
 - Public footer uses MK Scholars navy branding with readable white/light text and gold accents.
 - Footer stacks cleanly on phone-width screens without horizontal overflow.
@@ -38,7 +36,7 @@ Use this checklist after running migrations, seeding demo data, building assets,
 
 - Admin can log in and access `/admin`.
 - Non-admin users cannot access `/admin`.
-- Filament resources load for academies, courses, modules, lessons, activities, quizzes, assignments, payments, certificates, opportunities, notifications, and reports.
+- Filament resources load for academies, courses, modules, lessons, activities, quizzes, assignments, payments, certificates, notifications, and reports.
 - Admin can review manual payments and approve/reject with notes.
 - Admin reports are read-only and load without changing data.
 - Admin Reports Overview shows CSV export buttons.
@@ -57,13 +55,13 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Admin can search users and filter by role or approval status.
 - Admin can approve a pending instructor account.
 - Admin can reject a pending instructor account.
-- Admin can approve a pending mentor account.
-- Pending instructor or mentor accounts cannot access their dashboards.
-- Rejected or suspended instructor or mentor accounts cannot access protected dashboards.
+- Mentor approvals are temporarily paused while mentorship is disabled.
+- Pending instructor accounts cannot access their dashboard; mentor workspaces return 404 while mentorship is disabled.
+- Rejected or suspended instructor accounts cannot access protected dashboards; mentor workspaces remain disabled.
 - Student registration still creates an approved student account and reaches the student dashboard.
 - Admin login still works and admin accounts stay protected from self-suspension.
 - Admin Reports Overview uses a compact professional header and does not show an oversized logo.
-- Student, Course, Payment, Learning, Live Class, Mentorship, Certificate, and Opportunity report pages load with the shared polished layout.
+- Student, Course, Payment, Learning, Live Class, and Certificate report pages load with the shared polished layout; Mentorship Report is hidden while disabled.
 - Report filters are grouped in a readable card with labels, Apply Filters, and Reset actions.
 - KPI cards show labels, values, helper text, and readable navy/gold contrast.
 - Report tables show clear headers, row counts, empty states, and horizontal scrolling on narrow screens.
@@ -73,7 +71,7 @@ Use this checklist after running migrations, seeding demo data, building assets,
 ## Student Tests
 
 - Student can log in and reaches `/student/dashboard`.
-- Student dashboard shows reminders, notifications, payments, mentorship, certificates, and opportunities summaries.
+- Student dashboard shows reminders, notifications, payments, and certificates summaries.
 - Student dashboard shows a small feedback prompt for enrolled courses not yet reviewed.
 - Free course enrollment creates active access.
 - Paid course enrollment creates a pending payment and blocks learning access until approval.
@@ -86,7 +84,7 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Quiz page submits answers and shows score/pass/fail result.
 - Assignment page accepts valid text/file/link submissions and blocks duplicate active submissions.
 - Student live classes page shows enrolled course sessions and join action.
-- Student mentorship page shows assigned mentor/check-ins or a clean empty state.
+- `/student/mentorship` returns 404 while mentorship is disabled.
 - Student certificates page shows issued certificates and print/verification link.
 - Student documents page uploads, downloads, and deletes allowed files.
 - Student notifications page marks one/all notifications as read.
@@ -113,11 +111,11 @@ Use this checklist after running migrations, seeding demo data, building assets,
 
 ## Mentor Tests
 
-- Mentor can log in and reaches `/mentor/dashboard`.
-- Mentor cannot access student, instructor, or admin protected pages.
-- Mentor students page only shows assigned students.
-- Mentor check-ins page allows completing assigned check-ins with feedback.
-- Mentor notifications page loads and supports mark read/all read.
+- Approved mentor users are preserved, but `/mentor/dashboard` returns 404 while mentorship is disabled.
+- Mentor users cannot access student, instructor, or admin protected pages.
+- `/mentor/students` returns 404 while mentorship is disabled.
+- `/mentor/check-ins` returns 404 while mentorship is disabled.
+- `/mentor/notifications` returns 404 while mentorship is disabled.
 
 ## Payment Tests
 
@@ -201,16 +199,6 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Browser print button works for certificate detail.
 - Printable HTML fallback works if DomPDF is not installed.
 - Public certificate verification stays accessible without login.
-
-## Opportunity/Application Tests
-
-- Student can browse opportunities and filter by type/country/deadline.
-- Guest Apply redirects to login.
-- Student Apply creates or opens one application per opportunity.
-- Application tracker groups applications by status.
-- Application detail shows requirements, missing documents, uploaded documents, admin feedback, and status timeline.
-- Application documents accept only allowed file types.
-- Submitting application records submitted state and status history.
 
 ## Notification Tests
 
@@ -503,7 +491,7 @@ Use this checklist after running migrations, seeding demo data, building assets,
 
 - Student can open `/student/settings` from desktop and mobile dashboard navigation.
 - Approved instructor can open `/instructor/settings` from desktop and mobile dashboard navigation.
-- Approved mentor can open `/mentor/settings` from desktop and mobile dashboard navigation.
+- `/mentor/settings` returns 404 while mentorship is disabled and is not shown in dashboard navigation.
 - Dashboard sidebar shows a real Settings link and no longer shows the disabled Settings soon placeholder.
 - Profile form updates only the authenticated user's own name.
 - Email is visible but not editable on settings pages.
@@ -546,10 +534,10 @@ Use this checklist after running migrations, seeding demo data, building assets,
 
 - Student login redirects to `/student/dashboard`.
 - Approved instructor login redirects to `/instructor/dashboard`.
-- Approved mentor login redirects to `/mentor/dashboard`.
+- Approved mentor login may redirect to `/mentor/dashboard`, which returns 404 while mentorship is disabled.
 - Admin login through the public login form redirects to `/admin`.
 - Pending, rejected, and suspended instructor or mentor accounts are blocked with a clear approval message.
-- Student, instructor, and mentor dashboards show the shared sidebar and topbar shell.
+- Student and instructor dashboards show the shared sidebar and topbar shell; mentor dashboard is disabled.
 - Sidebar links open pages that remain inside the dashboard shell, without the public navbar or footer.
 - Student dashboard cards wrap into a responsive grid on mobile, tablet, and desktop.
 - Student dashboard quick action buttons do not overflow on phone-width screens.
@@ -561,9 +549,9 @@ Use this checklist after running migrations, seeding demo data, building assets,
 
 ## Phase 36B Dashboard Shell QA and Notification Badge Polish
 
-- Student dashboard, my courses, learning page, assignments, quizzes, certificates, documents, applications, payments, subscriptions, mentorship, live classes, notifications, and settings all render inside the dashboard shell.
+- Student dashboard, my courses, learning page, assignments, quizzes, certificates, documents, applications, payments, subscriptions, live classes, notifications, and settings all render inside the dashboard shell.
 - Instructor dashboard, courses, course detail, students, submissions, quiz attempts, live classes, notifications, and settings all render inside the dashboard shell.
-- Mentor dashboard, assigned students, check-ins, notifications, and settings all render inside the dashboard shell.
+- Mentor dashboard, assigned students, check-ins, notifications, and settings return 404 while mentorship is disabled.
 - Dashboard sidebar active states highlight the current section on desktop and mobile menu links.
 - Topbar notification link points to the correct role notification route.
 - Notification badge is hidden when unread count is zero.
@@ -582,7 +570,7 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Admin report filters, KPI cards, tables, and export cards have readable spacing, contrast, and mobile stacking.
 - Student workspace pages render inside the dashboard shell with no public navbar/footer and no duplicated public container margins.
 - Instructor workspace pages render inside the dashboard shell with readable cards/tables and no mobile horizontal page overflow.
-- Mentor workspace pages render inside the dashboard shell with readable cards/tables and no mobile horizontal page overflow.
+- Mentor workspace pages are disabled and should return 404 while mentorship is disabled.
 - Notification badge remains hidden at zero unread notifications, visible for unread notifications, and capped at `99+`.
 - Dashboard tables scroll inside their card region on phone-width screens instead of forcing the whole page wider.
 - Old public-page wrappers such as `mk-container` and `py-16` do not create oversized spacing inside dashboard pages.
@@ -620,3 +608,203 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Notification badge remains in the dashboard topbar and role navigation still works.
 - Enrolled students can access the page; unenrolled or unpaid students remain blocked by existing access rules.
 - Mobile layout stacks cleanly with no horizontal page overflow.
+
+## Phase 37C Opportunities Removal QA
+
+- Public navbar and footer do not show Opportunities.
+- Home, courses, academies, pricing, about, and contact pages load without opportunity cards or links.
+- `/opportunities` and old opportunity detail URLs return 404.
+- Student dashboard/sidebar do not show Opportunities or Applications.
+- `/student/opportunities` and `/student/applications` return 404 for authenticated students.
+- Filament admin navigation does not show Opportunities, Opportunity Requirements, Student Applications, or Application Documents.
+- Admin reports overview does not show Opportunity Report or opportunity application exports.
+- `/admin/reports/opportunities` returns 404.
+- Courses, lessons, quizzes, assignments, payments, subscriptions, certificates, mentorship, live classes, and reports still load normally.
+## Phase 37D Public Website UI Polish QA
+
+- Public navbar order is Home, About, Academies, Courses, Contact.
+- Pricing is not visible in the navbar.
+- Opportunities is not visible in the navbar or public pages.
+- Premium learning support button/pill is removed from public header/footer surfaces.
+- Home page shows the polished statistics belt under the hero.
+- Home page About MK Scholars preview replaces the old Course progress/Application ready cards.
+- Pathways cards look polished, consistent, and stack cleanly on mobile.
+- Courses page has a professional navy/gold hero treatment.
+- Courses benefit cards appear below the hero, not inside the hero.
+- Contact page shows phone, email, and location cards with working tel/mailto links.
+- Footer shows visual subscribe area and social links for YouTube, WhatsApp, Facebook, X, and Instagram.
+- Public pages remain mobile responsive with no obvious horizontal overflow.
+- Home, About, Academies, Courses, Contact, Login, and Register still load normally.
+## Phase 37E Premium Public Website Visual Upgrade QA
+
+- [ ] Image asset audit completed: only the MK Scholars logo is a stable public asset; course/academy uploads remain model-driven; public storytelling uses CSS visual panels when no safe image exists.
+- [ ] Homepage hero feels premium, student-focused, and does not use remote image URLs.
+- [ ] Homepage picture-style premium cards are readable on desktop and mobile.
+- [ ] Homepage stats belt appears with `data-testid="home-stats-belt"`.
+- [ ] Animated counters appear with `data-testid="animated-counter"` and still show final values if JavaScript is disabled.
+- [ ] Animated counters respect reduced-motion settings.
+- [ ] About page includes Who we are, What MK Scholars does, How students learn, Academy-based learning, Courses and practical skills, Student learning support, Certificates and progress, and Our learning promise.
+- [ ] Pathways section feels like a professional learning journey, not plain small cards.
+- [ ] Courses page has a premium header and benefit cards below the header.
+- [ ] Course cards and course details show uploaded images when available and polished CSS fallbacks when missing.
+- [ ] Contact page has phone, email, and location cards with correct links and trustworthy support copy.
+- [ ] Footer newsletter/social area remains readable, navy branded, and mobile responsive.
+- [ ] Social links open in a new tab with `rel="noopener noreferrer"` and aria labels.
+- [ ] Public pages have no broken images and no horizontal overflow on mobile.
+- [ ] Public regression tests pass with `php artisan test --filter=PublicPagesTest`.
+
+## Phase 37F Real Image-Based Public UI QA
+
+- [ ] Real image audit completed for `public/images`, `public`, `storage/app/public`, `storage/app/public/academies`, and `storage/app/public/courses`.
+- [ ] Selected marketing images copied to `public/images/marketing/` with clear names.
+- [ ] Homepage fake dashboard/mockup card removed.
+- [ ] Homepage hero uses a real local education image and no repeated logo tile inside the hero visual.
+- [ ] Premium image card section uses real local images and remains readable on mobile.
+- [ ] Stats belt remains visible with `data-testid="home-stats-belt"` and animated counter markers.
+- [ ] Counter animation respects reduced-motion and final numbers are present without JavaScript.
+- [ ] About page uses real image storytelling and truthful platform content.
+- [ ] Courses page header uses a real image panel and keeps course listing logic unchanged.
+- [ ] Contact page uses a real support/trust image and contact cards with correct phone, email, and location.
+- [ ] Navbar order remains Home, About, Academies, Courses, Contact.
+- [ ] Navbar does not show Pricing, Opportunities, or Premium learning support.
+- [ ] Logo appears only where useful, such as navbar and footer.
+- [ ] No external placeholder image URLs appear in public pages.
+- [ ] No broken images or horizontal overflow on mobile.
+- [ ] Public regression tests pass with `php artisan test --filter=PublicPagesTest`.
+
+## Phase 37G Licensed Education Image Replacement QA
+
+- [ ] Licensed/free education image sources searched on Pexels using education, laptop, classroom, mentorship, and e-learning search terms.
+- [ ] Downloaded images are stored locally under `public/images/marketing/` and are not hotlinked.
+- [ ] `public/images/marketing/IMAGE_SOURCES.md` records source pages, license notes, and usage locations.
+- [ ] Wrong restaurant/food image removed from the Contact page and marketing assets.
+- [ ] Homepage hero uses `hero-learning.webp` and looks like a real education brand.
+- [ ] Homepage premium picture cards use `academy-learning.webp`, `practical-courses.webp`, and `student-support.webp`.
+- [ ] About page story section uses `about-learning.webp` and remains truthful to implemented platform features.
+- [ ] Courses page hero uses `courses-hero.webp` and keeps benefits below the header.
+- [ ] Contact page support image uses `contact-support.webp` and contact cards remain correct.
+- [ ] No public Blade page references external Unsplash/Pexels/Pixabay image URLs.
+- [ ] No watermarks, unrelated logos, restaurant, food, bakery, or unrelated business visuals appear.
+- [ ] Image cropping looks good on desktop, laptop, and mobile.
+- [ ] Stats counters still animate and final values are visible without JavaScript.
+- [ ] Public regression tests pass with `php artisan test --filter=PublicPagesTest`.
+
+## Focused Footer Redesign Polish QA
+
+- [ ] Footer height feels noticeably reduced and compact on desktop and mobile.
+- [ ] Support highlight cards show Verified certificates, Weekly check-ins, Live class schedule, and Progress tracker.
+- [ ] Support cards have polished icons, compact spacing, and readable navy/gold/white contrast.
+- [ ] Newsletter signup is compact with a slimmer input and Subscribe button.
+- [ ] Social icon buttons are present for Instagram, WhatsApp, YouTube, Facebook, and X.
+- [ ] Footer columns are aligned cleanly with brand summary, quick links, learning links, contact details, and social links.
+- [ ] Mobile footer stacks cleanly with no horizontal overflow.
+- [ ] Footer links and social icons have visible hover/focus states and readable labels.
+
+## Phase 37I Professional Public Icon System QA
+
+- [ ] Homepage statistics belt shows visible icons beside the animated counters.
+- [ ] Homepage premium image cards show icon badges that match MK Scholars navy/gold branding.
+- [ ] Pathway cards show clear icons for tech skills, exam preparation, next steps, and career confidence.
+- [ ] About page feature cards and story cards include consistent icon containers.
+- [ ] Courses page hero actions and benefit cards include professional icons.
+- [ ] Contact cards show phone, email, and location icons with correct tel/mailto links.
+- [ ] Footer support cards, contact links, newsletter field, and social buttons show visible icons.
+- [ ] Social icon links use aria labels, open in a new tab, and include `rel="noopener noreferrer"`.
+- [ ] Icons are inline/local SVGs with no emoji icons and no broken external icon URLs.
+- [ ] Icons remain readable and do not cause horizontal overflow on mobile.
+
+## Phase 37J Academies/Courses Listing Page QA
+
+- [ ] Academies hero uses a premium navy/gold image-led layout, not a plain white section.
+- [ ] Old placeholder academy icon grid is removed from the hero.
+- [ ] Academies page includes a polished visual panel using local education imagery.
+- [ ] Academies trust/stat strip appears with academy, focus, support, and progress cues.
+- [ ] Academy cards have improved image treatment, metadata, clear CTA, and no broken images.
+- [ ] Courses hero uses a premium navy/gold image-led layout with a polished visual panel.
+- [ ] Courses trust/stat strip appears with courses, proof, live support, and practice cues.
+- [ ] Course cards have improved image treatment, badges, metadata, clear CTA, and no broken images.
+- [ ] Listing empty states are polished and helpful when no academies/courses exist.
+- [ ] No external image URLs or unrelated restaurant/game/business visuals appear.
+- [ ] Academies and courses pages remain responsive with no horizontal overflow.
+- [ ] Public regression tests pass with `php artisan test --filter=PublicPagesTest`.
+
+## Phase 37K Public Section Separation and Blue Alignment QA
+
+- [ ] Last sections before the footer no longer use the same deep navy as the footer.
+- [ ] Footer feels compact and clearly separate from page content.
+- [ ] MK Innovations-style blue direction is visible through refined tech blue, deep ink, cream, and soft blue-gray surfaces.
+- [ ] Homepage statistics cards include visible icons and light cards on a tech-blue panel.
+- [ ] Homepage support section uses soft-blue background with white/cream cards before the footer.
+- [ ] About page final CTA uses cream/white styling and does not merge with the footer.
+- [ ] Footer support cards use compact cream cards with gold icon badges.
+- [ ] Public page color rhythm checked across Home, About, Academies, Courses, and Contact.
+- [ ] Icons remain visible and do not overlap text on mobile.
+- [ ] Color contrast and focus states remain readable.
+- [ ] Mobile layout has no horizontal overflow.
+- [ ] Public regression tests pass with `php artisan test --filter=PublicPagesTest`.
+
+## Phase 38A - Instructor Ownership and Builder QA
+
+- Confirm admin can assign an instructor owner to a course in Filament CourseResource.
+- Confirm an instructor sees owned courses even without a linked live class.
+- Confirm an instructor still sees courses assigned through live classes.
+- Confirm an instructor can create a course draft from `/instructor/courses/create`.
+- Confirm an instructor can edit only courses where `courses.instructor_id` matches their user id.
+- Confirm instructors cannot edit or add content to another instructor's course.
+- Confirm students and mentors cannot access instructor course builder routes.
+- Confirm instructor builder can add modules, lessons, YouTube lesson URLs, quizzes, quiz options, assignments, and assignment questions.
+- Confirm invalid YouTube URLs are rejected in instructor lesson creation.
+- Confirm existing student course learning, quiz, assignment, payment, subscription, and certificate flows still work after ownership changes.
+- Confirm instructor dashboard and courses page remain mobile-friendly and show Builder actions only for owned courses.
+
+## Phase 38B - Authentication Page UI QA
+
+- Confirm `/login` uses the premium split auth layout with navy/gold branding and no large empty white areas.
+- Confirm `/register` uses the matching premium auth layout and keeps role selection visible.
+- Confirm `/setup-admin` looks secure and explains first-admin setup clearly.
+- Confirm auth form validation errors remain visible and readable.
+- Confirm login still works and redirects each role to the correct dashboard.
+- Confirm registration works for student and instructor roles; Mentor is not shown in the role selector while disabled.
+- Confirm setup-admin still blocks access after an admin exists.
+- Confirm mobile auth pages stack cleanly with full-width inputs and no horizontal overflow.
+- Confirm no hardcoded email or password credentials appear in auth Blade templates.
+- Confirm navbar still excludes Pricing and Opportunities on public/auth pages.
+
+## Phase 38C - Demo Pitch Content and Notification Icon QA
+
+- Confirm `php artisan db:seed --class=DemoPitchSeeder` creates demo users with local-only credentials and does not run automatically in production.
+- Confirm running `DemoPitchSeeder` twice does not duplicate demo users, academies, courses, quizzes, assignments, enrollments, or notifications.
+- Confirm demo image assets exist under `public/images/demo/` and are copied to `storage/app/public/demo/` for seeded records.
+- Confirm `public/images/marketing/IMAGE_SOURCES.md` documents demo image sources and local usage.
+- Confirm demo academies show realistic names, summaries, icons, and images.
+- Confirm demo courses show realistic titles, descriptions, images, levels, durations, and payment/access states.
+- Confirm demo courses are owned by `instructor@mkscholars.demo` when `courses.instructor_id` exists.
+- Confirm demo modules, lessons, YouTube video lessons, quizzes, quiz options, assignments, and assignment questions exist.
+- Confirm `student@mkscholars.demo` has enrolled courses, lesson progress, one quiz attempt, and one assignment submission.
+- Confirm mentor demo assignment/check-in data remains stored but mentor UI is hidden while disabled.
+- Confirm student, instructor, mentor, and admin demo notifications are seeded without duplicates.
+- Confirm dashboard notification bell icon appears for student and instructor workspaces; mentor workspace is disabled.
+- Confirm unread badge is hidden at zero, shows unread counts, and caps through the existing dashboard display logic.
+- Confirm notification dropdown shows the latest notifications and a View all notifications link.
+- Confirm `/notifications` redirects authenticated users to the correct role notification page.
+- Confirm admin can access notification records through `/admin/app-notifications`.
+- Confirm public pages and dashboards still render after demo seeding.
+- Confirm mobile dashboard topbar notification dropdown has no horizontal overflow.
+
+## Phase 38E - Mentorship Disable and Dashboard Sidebar QA
+
+- [ ] Student dashboard sidebar shows Dashboard, My Courses, Assignments, Certificates, Payments, Documents, Live Classes, Notifications, and Settings only.
+- [ ] Student dashboard sidebar does not show Mentorship, Opportunities, or Subscriptions.
+- [ ] Student dashboard no longer shows mentorship summary cards or mentor check-in reminders.
+- [ ] `/student/mentorship` returns 404 while `MK_MENTORSHIP_ENABLED` is false.
+- [ ] `/mentor/dashboard`, `/mentor/students`, `/mentor/check-ins`, `/mentor/notifications`, and `/mentor/settings` return 404 for approved mentor users while mentorship is disabled.
+- [ ] Register form role selector shows Student and Instructor only; Mentor is not available for new signups.
+- [ ] Existing mentor users are not deleted and can be restored by enabling the feature flag later.
+- [ ] Filament navigation does not show Mentor Assignments, Mentor Check-ins, or Mentorship Report while mentorship is disabled.
+- [ ] Admin reports overview does not link to `/admin/reports/mentorship`.
+- [ ] Public pages use student support / learning support wording and do not promote mentorship.
+- [ ] Desktop dashboard sidebar can collapse and expand with `data-testid="dashboard-sidebar-toggle"`.
+- [ ] Collapsed desktop sidebar shows icons with `data-testid="dashboard-sidebar-collapsed-icon"` and active state remains visible.
+- [ ] Mobile dashboard drawer opens cleanly, stacks navigation links, and has no horizontal overflow.
+- [ ] Notification dropdown and unread badge still work after the sidebar polish.
+

@@ -49,6 +49,13 @@ class CourseResource extends Resource
                     ->searchable()
                     ->preload()
                     ->required(),
+                Select::make('instructor_id')
+                    ->label('Instructor owner')
+                    ->relationship('instructor', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->nullable()
+                    ->helperText('Optional owner for instructor course builder access.'),
                 TextInput::make('title')
                     ->required()
                     ->maxLength(255)
@@ -132,12 +139,17 @@ class CourseResource extends Resource
                     ->label('Cover')
                     ->disk('public')
                     ->square()
-                    ->defaultImageUrl(fn (Course $record): string => $record->coverImageUrl()),
+                    ->defaultImageUrl(fn (Course $record): string => $record->coverImageUrl() ?? asset('images/mk-scholars-logo.webp')),
                 TextColumn::make('title')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('academy.name')
                     ->label('Academy')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('instructor.name')
+                    ->label('Instructor')
+                    ->placeholder('Unassigned')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('level')
@@ -170,6 +182,10 @@ class CourseResource extends Resource
             ->filters([
                 SelectFilter::make('academy')
                     ->relationship('academy', 'name')
+                    ->searchable()
+                    ->preload(),
+                SelectFilter::make('instructor')
+                    ->relationship('instructor', 'name')
                     ->searchable()
                     ->preload(),
                 SelectFilter::make('status')
@@ -205,3 +221,6 @@ class CourseResource extends Resource
         ];
     }
 }
+
+
+

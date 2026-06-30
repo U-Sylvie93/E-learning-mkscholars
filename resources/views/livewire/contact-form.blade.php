@@ -24,8 +24,7 @@
                 <option value="">Select an option</option>
                 <option value="Academies">Academies</option>
                 <option value="Courses">Courses</option>
-                <option value="Opportunities">Opportunities</option>
-                <option value="Pricing">Pricing</option>
+                <option value='Learning support'>Learning support</option>
             </select>
             @error('interest') <p class="mt-2 text-sm text-red-600">{{ $message }}</p> @enderror
         </div>
@@ -42,3 +41,4 @@
         </x-button>
     </form>
 </x-card>
+

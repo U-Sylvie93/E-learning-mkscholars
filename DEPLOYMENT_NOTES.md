@@ -114,7 +114,6 @@ php artisan migrate:status
 - Quiz attempt flow works.
 - Assignment upload/submission flow works.
 - Certificate verification route works publicly.
-- Opportunity application tracker works for students.
 - In-app notifications load for each role.
 - If `MK_EMAIL_NOTIFICATIONS_ENABLED=true`, test payment, assignment, certificate, and application emails with a safe mail driver before using real SMTP.
 - Storage upload and file download/open links work after `php artisan storage:link`.

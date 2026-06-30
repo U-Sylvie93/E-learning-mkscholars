@@ -4,10 +4,14 @@
             <x-section-header
                 eyebrow="Instructor"
                 title="My Courses"
-                description="Read-only previews for courses connected to your scheduled live classes."
+                description="Create your own course drafts and preview courses connected to your live teaching schedule."
             />
 
             @include('instructor.partials.nav')
+
+            <div class="mt-6 flex justify-end">
+                <x-button :href="route('instructor.courses.create')">Create Course</x-button>
+            </div>
 
             <div class="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                 @forelse ($courses as $course)
@@ -32,16 +36,22 @@
                                 <p class="text-xs font-semibold text-slate-500">Live</p>
                             </div>
                         </div>
-                        <x-button :href="route('instructor.courses.show', $course)" class="mt-6 w-full" variant="secondary">Open Preview</x-button>
+                        <div class="mt-6 grid gap-3 sm:grid-cols-2">
+                            <x-button :href="route('instructor.courses.show', $course)" class="w-full" variant="secondary">Open Preview</x-button>
+                            @if ((int) $course->instructor_id === (int) auth()->id())
+                                <x-button :href="route('instructor.courses.edit', $course)" class="w-full">Builder</x-button>
+                            @endif
+                        </div>
                     </x-card>
                 @empty
                     <x-card class="md:col-span-2 xl:col-span-3">
                         <h2 class="text-xl font-bold text-mk-navy">No assigned courses</h2>
-                        <p class="mt-3 text-sm leading-6 text-slate-600">Courses appear here after an admin schedules you for a live class linked to a course, module, or lesson.</p>
+                        <p class="mt-3 text-sm leading-6 text-slate-600">Courses appear here when you create them or when an admin schedules you for a live class linked to a course, module, or lesson.</p>
                     </x-card>
                 @endforelse
             </div>
         </div>
     </section>
 </x-dashboard-layout>
+
 

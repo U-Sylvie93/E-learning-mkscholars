@@ -1,10 +1,10 @@
-<x-dashboard-layout role="mentor" title="Assigned Students" description="MK Scholars mentor students.">
+<x-dashboard-layout role="support" title="Assigned Students" description="MK Scholars support students.">
     <section class="bg-white py-16">
         <div class="mk-container flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <x-section-header
-                eyebrow="Mentor"
+                eyebrow="Support"
                 title="Assigned Students"
-                description="Students currently connected to your mentorship support."
+                description="Students currently connected to your learning support support."
             />
             <x-badge tone="gray">{{ $assignments->count() }} assignments</x-badge>
         </div>
@@ -29,8 +29,8 @@
                             </div>
                             <h2 class="mt-5 text-xl font-bold text-mk-navy">{{ $assignment->student?->name ?? 'Student' }}</h2>
                             <p class="mt-2 text-sm text-slate-600">{{ $assignment->student?->email }}</p>
-                            <p class="mt-4 text-sm leading-6 text-slate-600">{{ $assignment->notes ?? 'No mentor notes yet.' }}</p>
-                            <x-button :href="route('mentor.check-ins')" size="sm" class="mt-5">View Check-ins</x-button>
+                            <p class="mt-4 text-sm leading-6 text-slate-600">{{ $assignment->notes ?? 'No support notes yet.' }}</p>
+                            <x-button :href="route('support.check-ins')" size="sm" class="mt-5">View Check-ins</x-button>
                         </x-card>
                     @endforeach
                 </div>
@@ -38,4 +38,5 @@
         </div>
     </section>
 </x-dashboard-layout>
+
 

@@ -28,7 +28,7 @@ class PaymentApprovedEmail extends Notification
             ->greeting('Hello '.$this->studentName.',')
             ->line('Your payment for '.$this->paymentFor.' has been approved.')
             ->line('Your access has been updated in the MK Scholars platform.')
-            ->line('MK Scholars - Learn skills. Get coached. Earn certificates. Apply for opportunities.');
+            ->line('MK Scholars - Learn skills. Get coached. Earn certificates. Track your progress.');
 
         return $this->actionUrl
             ? $message->action('View payment', $this->actionUrl)

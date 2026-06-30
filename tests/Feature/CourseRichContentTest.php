@@ -124,6 +124,8 @@ MARKDOWN,
         $this->get(route('courses.show', $course->slug))
             ->assertOk()
             ->assertSee('A fallback summary for the public page.')
-            ->assertSee('images.unsplash.com', false);
+            ->assertSee('Course overview')
+            ->assertDontSee('images.unsplash.com', false)
+            ->assertDontSee('src=\'\'', false);
     }
 }

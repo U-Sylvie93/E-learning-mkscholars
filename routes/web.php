@@ -6,6 +6,7 @@ use App\Models\AppNotification;
 use App\Models\Assignment;
 use App\Models\AssignmentQuestionAnswer;
 use App\Models\AssignmentSubmission;
+use App\Models\AssignmentQuestion;
 use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\CourseReview;
@@ -16,15 +17,14 @@ use App\Models\LiveClass;
 use App\Models\LiveClassAttendance;
 use App\Models\MentorAssignment;
 use App\Models\MentorCheckIn;
-use App\Models\ApplicationDocument;
-use App\Models\Opportunity;
+use App\Models\Module;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\Quiz;
 use App\Models\QuizAnswer;
 use App\Models\QuizAttempt;
 use App\Models\QuizQuestion;
-use App\Models\StudentApplication;
+use App\Models\QuizOption;
 use App\Models\StudentDocument;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
@@ -34,6 +34,7 @@ use App\Services\AdminCsvExportService;
 use App\Services\CertificatePdfService;
 use App\Services\Payments\PaymentProviderManager;
 use App\Support\CourseContentRenderer;
+use App\Rules\YouTubeUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -41,6 +42,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -93,30 +95,6 @@ $publicCourses = function (?string $academySlug = null): array {
     return config('mkscholars.courses');
 };
 
-$publicOpportunities = function (?string $type = null, ?string $country = null): array {
-    try {
-        if (! Schema::hasTable('opportunities')) {
-            return config('mkscholars.opportunities');
-        }
-
-        $opportunities = Opportunity::query()
-            ->where('status', Opportunity::STATUS_PUBLISHED)
-            ->when($type, fn ($query) => $query->where('type', $type))
-            ->when($country, fn ($query) => $query->where('country', $country))
-            ->orderByDesc('is_featured')
-            ->orderBy('deadline')
-            ->latest()
-            ->get();
-
-        if ($opportunities->isNotEmpty()) {
-            return $opportunities->map->toPublicCard()->all();
-        }
-    } catch (Throwable) {
-        return config('mkscholars.opportunities');
-    }
-
-    return config('mkscholars.opportunities');
-};
 
 $publishedLessonsForCourse = function (Course $course) {
     return Lesson::query()
@@ -183,11 +161,23 @@ $hasCourseAccess = function (User $user, Course $course) use ($activeSubscriptio
     return ($hasActiveEnrollment && $hasApprovedPayment) || (bool) $activeSubscriptionForCourse($user, $course);
 };
 
-Route::get('/', fn () => view('pages.home', [
-    'academies' => $publicAcademies(),
-    'courses' => $publicCourses(),
-    'opportunities' => $publicOpportunities(),
-]))->name('home');
+Route::get('/', function () use ($publicAcademies, $publicCourses) {
+    $studentCount = 0;
+
+    try {
+        $studentCount = Schema::hasTable('users')
+            ? User::query()->where('role', User::ROLE_STUDENT)->count()
+            : 0;
+    } catch (Throwable) {
+        $studentCount = 0;
+    }
+
+    return view('pages.home', [
+        'academies' => $publicAcademies(),
+        'courses' => $publicCourses(),
+        'studentCount' => $studentCount,
+    ]);
+})->name('home');
 
 Route::get('/academies', fn () => view('pages.academies', [
     'academies' => $publicAcademies(),
@@ -305,14 +295,6 @@ Route::get('/courses/{slug}', function (string $slug) use ($activeSubscriptionFo
                     ->get()
                     ->map->toPublicCard()
                     ->all(),
-                'relatedOpportunities' => Schema::hasTable('opportunities')
-                    ? Opportunity::query()
-                        ->where('status', Opportunity::STATUS_PUBLISHED)
-                        ->orderByDesc('is_featured')
-                        ->orderBy('deadline')
-                        ->take(3)
-                        ->get()
-                    : collect(),
             ]);
         }
     } catch (Throwable) {
@@ -332,45 +314,10 @@ Route::get('/courses/{slug}', function (string $slug) use ($activeSubscriptionFo
             ->reject(fn (array $item): bool => $item['slug'] === $slug)
             ->take(2)
             ->all(),
-            'relatedOpportunities' => collect(),
             'reviews' => [],
         ]);
 })->name('courses.show');
 
-Route::get('/opportunities', fn (Request $request) => view('pages.opportunities', [
-    'opportunities' => $publicOpportunities($request->query('type'), $request->query('country')),
-]))->name('opportunities');
-
-Route::get('/opportunities/{slug}', function (string $slug) {
-    if (! Schema::hasTable('opportunities')) {
-        abort(404);
-    }
-
-    $opportunity = Opportunity::query()
-        ->with(['requirements' => fn ($query) => $query->orderBy('sort_order')])
-        ->where('status', Opportunity::STATUS_PUBLISHED)
-        ->where('slug', $slug)
-        ->firstOrFail();
-
-    $user = Auth::user();
-    $application = $user
-        ? StudentApplication::query()
-            ->where('user_id', $user->id)
-            ->where('opportunity_id', $opportunity->id)
-            ->first()
-        : null;
-
-    return view('pages.opportunity-details', [
-        'opportunity' => $opportunity,
-        'application' => $application,
-        'ctaState' => match (true) {
-            ! $user => 'guest',
-            $user->role !== User::ROLE_STUDENT => 'non_student',
-            (bool) $application => 'application_started',
-            default => 'student_can_apply',
-        },
-    ]);
-})->name('opportunities.show');
 
 Route::get('/pricing', function () {
     try {
@@ -421,6 +368,19 @@ Route::middleware('guest')->group(function (): void {
 
 Route::view('/setup-admin', 'auth.setup-admin')->name('setup-admin');
 
+
+Route::get('/notifications', function () {
+    $user = Auth::user();
+
+    abort_unless($user, 403);
+
+    return match ($user->role) {
+        User::ROLE_ADMIN => redirect('/admin/app-notifications'),
+        User::ROLE_INSTRUCTOR => redirect()->route('instructor.notifications'),
+        User::ROLE_MENTOR => redirect()->route('mentor.notifications'),
+        default => redirect()->route('student.notifications'),
+    };
+})->middleware('auth')->name('notifications.redirect');
 Route::post('/logout', function (Request $request) {
     Auth::logout();
 
@@ -446,7 +406,6 @@ Route::middleware(['auth', 'role:'.User::ROLE_ADMIN])
         Route::get('/payments', fn (Request $request) => app(AdminCsvExportService::class)->payments($request->query()))->name('payments');
         Route::get('/subscriptions', fn (Request $request) => app(AdminCsvExportService::class)->subscriptions($request->query()))->name('subscriptions');
         Route::get('/certificates', fn (Request $request) => app(AdminCsvExportService::class)->certificates($request->query()))->name('certificates');
-        Route::get('/applications', fn (Request $request) => app(AdminCsvExportService::class)->applications($request->query()))->name('applications');
         Route::get('/quiz-attempts', fn (Request $request) => app(AdminCsvExportService::class)->quizAttempts($request->query()))->name('quiz-attempts');
         Route::get('/assignment-submissions', fn (Request $request) => app(AdminCsvExportService::class)->assignmentSubmissions($request->query()))->name('assignment-submissions');
         Route::get('/course-reviews', fn (Request $request) => app(AdminCsvExportService::class)->courseReviews($request->query()))->name('course-reviews');
@@ -542,34 +501,6 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
                 ->where('status', Certificate::STATUS_ISSUED)
                 ->latest('issued_at')
                 ->first(),
-            'newOpportunitiesCount' => Schema::hasTable('opportunities')
-                ? Opportunity::query()->where('status', Opportunity::STATUS_PUBLISHED)->count()
-                : 0,
-            'pendingApplicationsCount' => Schema::hasTable('student_applications')
-                ? StudentApplication::query()
-                    ->where('user_id', $user->id)
-                    ->whereIn('status', [
-                        StudentApplication::STATUS_DRAFT,
-                        StudentApplication::STATUS_SUBMITTED,
-                        StudentApplication::STATUS_UNDER_REVIEW,
-                    ])
-                    ->count()
-                : 0,
-            'nearestOpportunityDeadline' => Schema::hasTable('opportunities')
-                ? Opportunity::query()
-                    ->where('status', Opportunity::STATUS_PUBLISHED)
-                    ->whereNotNull('deadline')
-                    ->whereDate('deadline', '>=', now()->toDateString())
-                    ->orderBy('deadline')
-                    ->first()
-                : null,
-            'recentOpportunities' => Schema::hasTable('opportunities')
-                ? Opportunity::query()
-                    ->where('status', Opportunity::STATUS_PUBLISHED)
-                    ->latest()
-                    ->take(3)
-                    ->get()
-                : collect(),
             'pendingPaymentsCount' => Schema::hasTable('payments')
                 ? Payment::query()
                     ->where('user_id', $user->id)
@@ -741,38 +672,6 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return back();
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.notifications.read-all');
 
-    Route::post('/opportunities/{opportunity}/apply', function (Opportunity $opportunity) {
-        $user = Auth::user();
-
-        abort_unless($user?->role === User::ROLE_STUDENT, 403);
-        abort_unless($opportunity->status === Opportunity::STATUS_PUBLISHED, 404);
-
-        $application = StudentApplication::firstOrCreate(
-            [
-                'opportunity_id' => $opportunity->id,
-                'user_id' => $user->id,
-            ],
-            [
-                'status' => StudentApplication::STATUS_DRAFT,
-            ],
-        );
-
-        $opportunity->load(['requirements' => fn ($query) => $query->orderBy('sort_order')]);
-
-        foreach ($opportunity->requirements as $requirement) {
-            ApplicationDocument::firstOrCreate(
-                [
-                    'student_application_id' => $application->id,
-                    'document_name' => $requirement->name,
-                ],
-                [
-                    'status' => ApplicationDocument::STATUS_PENDING,
-                ],
-            );
-        }
-
-        return redirect()->route('student.applications.show', $application);
-    })->middleware('role:'.User::ROLE_STUDENT)->name('opportunities.apply');
 
     Route::post('/subscriptions/{plan}/choose', function (SubscriptionPlan $plan) {
         $user = Auth::user();
@@ -894,37 +793,6 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return redirect()->route('student.payments.show', $pendingPayment);
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.subscriptions.renew');
 
-    Route::get('/student/opportunities', function (Request $request) {
-        $query = Opportunity::query()
-            ->where('status', Opportunity::STATUS_PUBLISHED)
-            ->orderByDesc('is_featured')
-            ->orderBy('deadline');
-
-        if ($request->filled('type')) {
-            $query->where('type', $request->query('type'));
-        }
-
-        if ($request->filled('country')) {
-            $query->where('country', $request->query('country'));
-        }
-
-        if ($request->query('deadline') === 'upcoming') {
-            $query->whereNotNull('deadline')
-                ->whereDate('deadline', '>=', now()->toDateString());
-        }
-
-        return view('student.opportunities', [
-            'opportunities' => $query->get(),
-            'types' => Opportunity::TYPES,
-            'countries' => Opportunity::query()
-                ->where('status', Opportunity::STATUS_PUBLISHED)
-                ->whereNotNull('country')
-                ->distinct()
-                ->orderBy('country')
-                ->pluck('country'),
-            'filters' => $request->only(['type', 'country', 'deadline']),
-        ]);
-    })->middleware('role:'.User::ROLE_STUDENT)->name('student.opportunities');
 
     Route::get('/student/documents', function () {
         $user = Auth::user();
@@ -980,149 +848,6 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return redirect()->route('student.documents');
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.documents.destroy');
 
-    Route::get('/student/applications', function () {
-        $user = Auth::user();
-
-        return view('student.applications', [
-            'applications' => StudentApplication::query()
-                ->with(['opportunity', 'documents'])
-                ->where('user_id', $user->id)
-                ->latest('updated_at')
-                ->get(),
-            'statuses' => StudentApplication::STATUSES,
-        ]);
-    })->middleware('role:'.User::ROLE_STUDENT)->name('student.applications');
-
-    Route::get('/student/applications/{application}', function (StudentApplication $application) {
-        $user = Auth::user();
-
-        abort_unless($application->user_id === $user->id, 403);
-
-        $application->load([
-            'opportunity.requirements' => fn ($query) => $query->orderBy('sort_order'),
-            'documents.studentDocument',
-            'statusHistories.changedBy',
-        ]);
-
-        foreach ($application->opportunity->requirements as $requirement) {
-            ApplicationDocument::firstOrCreate(
-                [
-                    'student_application_id' => $application->id,
-                    'document_name' => $requirement->name,
-                ],
-                [
-                    'status' => ApplicationDocument::STATUS_PENDING,
-                ],
-            );
-        }
-
-        $application->refresh()->load([
-            'opportunity.requirements' => fn ($query) => $query->orderBy('sort_order'),
-            'documents.studentDocument',
-            'statusHistories.changedBy',
-        ]);
-
-        return view('student.application-show', [
-            'application' => $application,
-            'studentDocuments' => StudentDocument::query()
-                ->where('user_id', $user->id)
-                ->latest()
-                ->get(),
-            'missingRequirements' => $application->opportunity->requirements
-                ->filter(fn ($requirement): bool => $requirement->is_required
-                    && ! $application->documents->contains(fn (ApplicationDocument $document): bool => $document->document_name === $requirement->name
-                        && (filled($document->file_path) || filled($document->external_link))))
-                ->values(),
-        ]);
-    })->middleware('role:'.User::ROLE_STUDENT)->name('student.applications.show');
-
-    Route::post('/student/applications/{application}/documents', function (Request $request, StudentApplication $application) {
-        $user = Auth::user();
-
-        abort_unless($application->user_id === $user->id, 403);
-        abort_if(in_array($application->status, [
-            StudentApplication::STATUS_APPROVED,
-            StudentApplication::STATUS_REJECTED,
-            StudentApplication::STATUS_WITHDRAWN,
-        ], true), 403);
-
-        $validated = $request->validate([
-            'application_document_id' => ['nullable', 'integer'],
-            'student_document_id' => ['nullable', 'integer'],
-            'document_name' => ['required', 'string', 'max:255'],
-            'document_file' => ['nullable', 'file', 'max:10240', 'mimes:pdf,doc,docx,txt,png,jpg,jpeg'],
-            'external_link' => ['nullable', 'url', 'max:255'],
-        ]);
-
-        $studentDocument = null;
-
-        if (! empty($validated['student_document_id'])) {
-            $studentDocument = StudentDocument::query()
-                ->where('user_id', $user->id)
-                ->whereKey($validated['student_document_id'])
-                ->firstOrFail();
-        }
-
-        if (! $studentDocument && ! $request->hasFile('document_file') && blank($validated['external_link'] ?? null)) {
-            return back()
-                ->withErrors(['document' => 'Upload a file or add an external link before saving.'])
-                ->withInput();
-        }
-
-        $document = null;
-
-        if (! empty($validated['application_document_id'])) {
-            $document = ApplicationDocument::query()
-                ->where('student_application_id', $application->id)
-                ->whereKey($validated['application_document_id'])
-                ->first();
-        }
-
-        $document ??= new ApplicationDocument([
-            'student_application_id' => $application->id,
-        ]);
-
-        $filePath = $studentDocument?->file_path ?? $document->file_path;
-
-        if ($request->hasFile('document_file')) {
-            $filePath = $request->file('document_file')->store('application-documents', 'public');
-        }
-
-        $document->fill([
-            'student_document_id' => $studentDocument?->id,
-            'document_name' => $validated['document_name'],
-            'file_path' => $filePath,
-            'external_link' => $validated['external_link'] ?? $document->external_link,
-            'status' => ApplicationDocument::STATUS_UPLOADED,
-            'uploaded_at' => now(),
-        ])->save();
-
-        return redirect()->route('student.applications.show', $application);
-    })->middleware('role:'.User::ROLE_STUDENT)->name('student.applications.documents.store');
-
-    Route::get('/student/applications/{application}/documents/{document}/download', function (StudentApplication $application, ApplicationDocument $document) {
-        $user = Auth::user();
-
-        abort_unless($application->user_id === $user->id, 403);
-        abort_unless($document->student_application_id === $application->id, 403);
-        abort_unless(filled($document->file_path) && Storage::disk('public')->exists($document->file_path), 404);
-
-        return Storage::disk('public')->download($document->file_path);
-    })->middleware('role:'.User::ROLE_STUDENT)->name('student.applications.documents.download');
-
-    Route::post('/student/applications/{application}/submit', function (StudentApplication $application) {
-        $user = Auth::user();
-
-        abort_unless($application->user_id === $user->id, 403);
-        abort_unless($application->status === StudentApplication::STATUS_DRAFT, 403);
-
-        $application->update([
-            'status' => StudentApplication::STATUS_SUBMITTED,
-            'submitted_at' => now(),
-        ]);
-
-        return redirect()->route('student.applications.show', $application);
-    })->middleware('role:'.User::ROLE_STUDENT)->name('student.applications.submit');
 
     Route::post('/courses/{course}/enroll', function (Course $course) use ($activeSubscriptionForCourse) {
         $user = Auth::user();
@@ -1850,6 +1575,8 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.live-classes.join');
 
     Route::get('/student/mentorship', function () {
+        abort_unless(config('mkscholars.features.mentorship_enabled', false), 404);
+
         $user = Auth::user();
 
         $assignments = MentorAssignment::query()
@@ -1916,11 +1643,18 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
     })->middleware('role:'.User::ROLE_ADMIN)->name('admin.certificates.download');
 
     $instructorCourseIds = function (User $instructor) {
-        return LiveClass::query()
+        $ownedCourseIds = Course::query()
+            ->where('instructor_id', $instructor->id)
+            ->pluck('id');
+
+        $liveClassCourseIds = LiveClass::query()
             ->with(['course', 'module.course', 'lesson.module.course'])
             ->where('instructor_id', $instructor->id)
             ->get()
-            ->map(fn (LiveClass $liveClass) => $liveClass->associatedCourse()?->id)
+            ->map(fn (LiveClass $liveClass) => $liveClass->associatedCourse()?->id);
+
+        return $ownedCourseIds
+            ->merge($liveClassCourseIds)
             ->filter()
             ->unique()
             ->values();
@@ -1928,12 +1662,27 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
     $instructorCoursesQuery = function (User $instructor) use ($instructorCourseIds) {
         return Course::query()
-            ->with('academy')
+            ->with(['academy', 'instructor'])
             ->whereKey($instructorCourseIds($instructor));
     };
 
     $abortUnlessInstructorCourse = function (User $instructor, Course $course) use ($instructorCourseIds): void {
         abort_unless($instructorCourseIds($instructor)->contains($course->id), 403);
+    };
+
+    $abortUnlessInstructorOwnsCourse = function (User $instructor, Course $course): void {
+        abort_unless($course->ownedBy($instructor), 403);
+    };
+
+    $lessonBelongsToInstructorCourse = function (Course $course, int $lessonId): Lesson {
+        $lesson = Lesson::query()
+            ->whereKey($lessonId)
+            ->whereHas('module', fn ($query) => $query->where('course_id', $course->id))
+            ->first();
+
+        abort_unless($lesson, 422, 'The selected lesson does not belong to this course.');
+
+        return $lesson;
     };
 
     $instructorLiveClassesForCourse = function (User $instructor, Course $course) {
@@ -2019,6 +1768,256 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         ]);
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.courses.index');
 
+
+    Route::get('/instructor/courses/create', function () {
+        return view('instructor.course-form', [
+            'course' => new Course([
+                'access_type' => Course::ACCESS_FREE,
+                'is_free' => true,
+                'currency' => 'RWF',
+                'status' => Course::STATUS_DRAFT,
+            ]),
+            'academies' => Academy::query()->orderBy('name')->get(),
+            'modules' => collect(),
+            'lessons' => collect(),
+            'quizzes' => collect(),
+            'assignments' => collect(),
+            'mode' => 'create',
+        ]);
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.courses.create');
+
+    Route::post('/instructor/courses', function (Request $request) {
+        $validated = $request->validate([
+            'academy_id' => ['required', 'exists:academies,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:255', 'alpha_dash', Rule::unique('courses', 'slug')],
+            'short_description' => ['required', 'string', 'max:600'],
+            'full_description' => ['nullable', 'string'],
+            'level' => ['required', 'string', 'max:80'],
+            'duration' => ['required', 'string', 'max:80'],
+            'access_type' => ['required', Rule::in([Course::ACCESS_FREE, Course::ACCESS_PAID])],
+            'price_amount' => ['nullable', 'numeric', 'min:0'],
+            'currency' => ['nullable', 'string', 'max:8'],
+            'status' => ['required', Rule::in(Course::STATUSES)],
+            'learning_outcomes' => ['nullable', 'string'],
+        ]);
+
+        $validated['slug'] = filled($validated['slug'] ?? null) ? Str::slug($validated['slug']) : Str::slug($validated['title']);
+        $validated['instructor_id'] = Auth::id();
+        $validated['is_free'] = $validated['access_type'] === Course::ACCESS_FREE;
+        $validated['currency'] = $validated['currency'] ?: 'RWF';
+        $validated['learning_outcomes'] = collect(preg_split('/\r\n|\r|\n/', (string) ($validated['learning_outcomes'] ?? '')))
+            ->map(fn ($outcome) => trim($outcome))
+            ->filter()
+            ->values()
+            ->all();
+
+        $course = Course::create($validated);
+
+        return redirect()->route('instructor.courses.edit', $course)->with('status', 'Course draft created. You can now add modules, lessons, quizzes, and assignments.');
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.courses.store');
+
+    Route::get('/instructor/courses/{course}/edit', function (Course $course) use ($abortUnlessInstructorOwnsCourse) {
+        $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
+
+        $course->load(['academy', 'modules.lessons.quizzes.questions.options', 'modules.lessons.assignments.questions']);
+
+        return view('instructor.course-form', [
+            'course' => $course,
+            'academies' => Academy::query()->orderBy('name')->get(),
+            'modules' => $course->modules()->with('lessons')->orderBy('sort_order')->orderBy('title')->get(),
+            'lessons' => Lesson::query()->whereHas('module', fn ($query) => $query->where('course_id', $course->id))->orderBy('sort_order')->orderBy('title')->get(),
+            'quizzes' => Quiz::query()->with('lesson.module')->whereHas('lesson.module', fn ($query) => $query->where('course_id', $course->id))->latest()->get(),
+            'assignments' => Assignment::query()->with('lesson.module')->whereHas('lesson.module', fn ($query) => $query->where('course_id', $course->id))->latest()->get(),
+            'mode' => 'edit',
+        ]);
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.courses.edit');
+
+    Route::put('/instructor/courses/{course}', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse) {
+        $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
+
+        $validated = $request->validate([
+            'academy_id' => ['required', 'exists:academies,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'slug' => ['required', 'string', 'max:255', 'alpha_dash', Rule::unique('courses', 'slug')->ignore($course)],
+            'short_description' => ['required', 'string', 'max:600'],
+            'full_description' => ['nullable', 'string'],
+            'level' => ['required', 'string', 'max:80'],
+            'duration' => ['required', 'string', 'max:80'],
+            'access_type' => ['required', Rule::in([Course::ACCESS_FREE, Course::ACCESS_PAID])],
+            'price_amount' => ['nullable', 'numeric', 'min:0'],
+            'currency' => ['nullable', 'string', 'max:8'],
+            'status' => ['required', Rule::in(Course::STATUSES)],
+            'learning_outcomes' => ['nullable', 'string'],
+        ]);
+
+        $validated['slug'] = Str::slug($validated['slug']);
+        $validated['is_free'] = $validated['access_type'] === Course::ACCESS_FREE;
+        $validated['currency'] = $validated['currency'] ?: 'RWF';
+        $validated['learning_outcomes'] = collect(preg_split('/\r\n|\r|\n/', (string) ($validated['learning_outcomes'] ?? '')))
+            ->map(fn ($outcome) => trim($outcome))
+            ->filter()
+            ->values()
+            ->all();
+
+        $course->update($validated);
+
+        return back()->with('status', 'Course details updated.');
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.courses.update');
+
+    Route::post('/instructor/courses/{course}/modules', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse) {
+        $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:255', 'alpha_dash'],
+            'summary' => ['nullable', 'string', 'max:600'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'status' => ['required', Rule::in(Course::STATUSES)],
+        ]);
+
+        $course->modules()->create([
+            'title' => $validated['title'],
+            'slug' => filled($validated['slug'] ?? null) ? Str::slug($validated['slug']) : Str::slug($validated['title']).'-'.$course->id.'-'.now()->timestamp,
+            'summary' => $validated['summary'] ?? null,
+            'sort_order' => $validated['sort_order'] ?? 0,
+            'status' => $validated['status'],
+        ]);
+
+        return back()->with('status', 'Module added.');
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.modules.store');
+
+    Route::post('/instructor/courses/{course}/lessons', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse) {
+        $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
+
+        $validated = $request->validate([
+            'module_id' => ['required', 'exists:modules,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:255', 'alpha_dash'],
+            'summary' => ['nullable', 'string', 'max:600'],
+            'lesson_type' => ['required', Rule::in(['video', 'text', 'quiz', 'assignment', 'live'])],
+            'video_url' => ['nullable', 'url', new YouTubeUrl()],
+            'content' => ['nullable', 'string'],
+            'duration_minutes' => ['nullable', 'integer', 'min:0'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'is_free_preview' => ['nullable', 'boolean'],
+            'status' => ['required', Rule::in(Course::STATUSES)],
+        ]);
+
+        $module = Module::query()->where('course_id', $course->id)->whereKey($validated['module_id'])->first();
+        abort_unless($module, 422, 'The selected module does not belong to this course.');
+
+        $module->lessons()->create([
+            'title' => $validated['title'],
+            'slug' => filled($validated['slug'] ?? null) ? Str::slug($validated['slug']) : Str::slug($validated['title']).'-'.$module->id.'-'.now()->timestamp,
+            'summary' => $validated['summary'] ?? null,
+            'lesson_type' => $validated['lesson_type'],
+            'video_url' => $validated['video_url'] ?? null,
+            'content' => $validated['content'] ?? null,
+            'duration_minutes' => $validated['duration_minutes'] ?? null,
+            'sort_order' => $validated['sort_order'] ?? 0,
+            'is_free_preview' => (bool) ($validated['is_free_preview'] ?? false),
+            'status' => $validated['status'],
+        ]);
+
+        return back()->with('status', 'Lesson added.');
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.lessons.store');
+
+    Route::post('/instructor/courses/{course}/quizzes', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse, $lessonBelongsToInstructorCourse) {
+        $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
+
+        $validated = $request->validate([
+            'lesson_id' => ['required', 'exists:lessons,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'passing_score' => ['required', 'integer', 'min:0', 'max:100'],
+            'max_attempts' => ['nullable', 'integer', 'min:1'],
+            'time_limit_minutes' => ['nullable', 'integer', 'min:1'],
+            'status' => ['required', Rule::in(Quiz::STATUSES)],
+            'question_text' => ['nullable', 'string', 'max:1200'],
+            'question_type' => ['nullable', Rule::in(QuizQuestion::TYPES)],
+            'option_a' => ['nullable', 'string', 'max:500'],
+            'option_b' => ['nullable', 'string', 'max:500'],
+            'correct_option' => ['nullable', Rule::in(['a', 'b'])],
+        ]);
+
+        $lesson = $lessonBelongsToInstructorCourse($course, (int) $validated['lesson_id']);
+
+        $quiz = $lesson->quizzes()->create([
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'passing_score' => $validated['passing_score'],
+            'max_attempts' => $validated['max_attempts'] ?? null,
+            'time_limit_minutes' => $validated['time_limit_minutes'] ?? null,
+            'status' => $validated['status'],
+        ]);
+
+        if (filled($validated['question_text'] ?? null)) {
+            $question = $quiz->questions()->create([
+                'question_text' => $validated['question_text'],
+                'question_type' => $validated['question_type'] ?? QuizQuestion::TYPE_MULTIPLE_CHOICE,
+                'points' => 1,
+                'sort_order' => 1,
+                'status' => QuizQuestion::STATUS_PUBLISHED,
+            ]);
+
+            $optionA = $validated['option_a'] ?? ($question->question_type === QuizQuestion::TYPE_TRUE_FALSE ? 'True' : null);
+            $optionB = $validated['option_b'] ?? ($question->question_type === QuizQuestion::TYPE_TRUE_FALSE ? 'False' : null);
+
+            foreach ([['a', $optionA], ['b', $optionB]] as [$key, $label]) {
+                if (filled($label)) {
+                    $question->options()->create([
+                        'option_text' => $label,
+                        'is_correct' => ($validated['correct_option'] ?? 'a') === $key,
+                        'sort_order' => $key === 'a' ? 1 : 2,
+                    ]);
+                }
+            }
+        }
+
+        return back()->with('status', 'Quiz added.');
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.quizzes.store');
+
+    Route::post('/instructor/courses/{course}/assignments', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse, $lessonBelongsToInstructorCourse) {
+        $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
+
+        $validated = $request->validate([
+            'lesson_id' => ['required', 'exists:lessons,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'instructions' => ['required', 'string'],
+            'submission_type' => ['required', Rule::in([Assignment::TYPE_TEXT, Assignment::TYPE_FILE, Assignment::TYPE_LINK, Assignment::TYPE_MIXED])],
+            'max_score' => ['required', 'integer', 'min:1'],
+            'due_days_after_enrollment' => ['nullable', 'integer', 'min:0'],
+            'allow_late_submission' => ['nullable', 'boolean'],
+            'status' => ['required', Rule::in([Assignment::STATUS_DRAFT, Assignment::STATUS_PUBLISHED, Assignment::STATUS_ARCHIVED])],
+            'question_text' => ['nullable', 'string', 'max:1200'],
+            'question_type' => ['nullable', Rule::in(AssignmentQuestion::TYPES)],
+        ]);
+
+        $lesson = $lessonBelongsToInstructorCourse($course, (int) $validated['lesson_id']);
+
+        $assignment = $lesson->assignments()->create([
+            'title' => $validated['title'],
+            'instructions' => $validated['instructions'],
+            'submission_type' => $validated['submission_type'],
+            'max_score' => $validated['max_score'],
+            'due_days_after_enrollment' => $validated['due_days_after_enrollment'] ?? null,
+            'allow_late_submission' => (bool) ($validated['allow_late_submission'] ?? true),
+            'status' => $validated['status'],
+        ]);
+
+        if (filled($validated['question_text'] ?? null)) {
+            $assignment->questions()->create([
+                'question_text' => $validated['question_text'],
+                'question_type' => $validated['question_type'] ?? AssignmentQuestion::TYPE_TEXTAREA,
+                'points' => $validated['max_score'],
+                'sort_order' => 1,
+                'is_required' => true,
+            ]);
+        }
+
+        return back()->with('status', 'Assignment added.');
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.assignments.store');
     Route::get('/instructor/courses/{course}', function (Course $course) use ($abortUnlessInstructorCourse, $instructorLiveClassesForCourse) {
         $user = Auth::user();
 
@@ -2242,6 +2241,11 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return redirect()->route('mentor.check-ins');
     })->middleware('role:'.User::ROLE_MENTOR)->name('mentor.check-ins.complete');
 });
+
+
+
+
+
 
 
 

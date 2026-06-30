@@ -3,7 +3,7 @@
             <x-section-header
                 eyebrow="Instructor dashboard"
                 title="Teaching command center"
-                description="Review your assigned courses, learners, submissions, quizzes, and live teaching schedule."
+                description="Build your owned courses and review learners, submissions, quizzes, and live teaching schedule."
             />
 
             <x-card highlighted class="min-w-0">
@@ -11,7 +11,7 @@
                     <div>
                         <x-badge tone="gold">Teaching workspace</x-badge>
                         <h2 class="mt-4 text-2xl font-extrabold text-mk-navy">Welcome, {{ auth()->user()->name }}</h2>
-                        <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Manage your assigned courses, live classes, learner activity, submissions, and platform updates from one role-focused dashboard.</p>
+                        <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Manage your owned and assigned courses, live classes, learner activity, submissions, and platform updates from one role-focused dashboard.</p>
                     </div>
                     <div class="grid w-full gap-3 sm:w-auto sm:grid-cols-2">
                         <x-button :href="route('instructor.courses.index')">View Courses</x-button>
@@ -24,7 +24,7 @@
                 <x-card class="min-w-0">
                     <x-badge>Classes</x-badge>
                     <h3 class="mt-5 text-3xl font-extrabold text-mk-navy">{{ $coursesCount }}</h3>
-                    <p class="mt-3 text-sm leading-6 text-slate-600">Assigned courses inferred from your scheduled live classes.</p>
+                    <p class="mt-3 text-sm leading-6 text-slate-600">Owned courses plus assigned live-teaching courses.</p>
                 </x-card>
                 <x-card class="min-w-0">
                     <x-badge tone="green">Learners</x-badge>
@@ -54,9 +54,9 @@
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <x-badge tone="blue">My courses</x-badge>
-                            <h2 class="mt-4 text-xl font-bold text-mk-navy">Assigned course preview</h2>
+                            <h2 class="mt-4 text-xl font-bold text-mk-navy">Course studio preview</h2>
                         </div>
-                        <x-button :href="route('instructor.courses.index')" size="sm">View All</x-button>
+                        <div class="flex flex-wrap gap-2"><x-button :href="route('instructor.courses.create')" size="sm">Create Course</x-button><x-button :href="route('instructor.courses.index')" size="sm" variant="secondary">View All</x-button></div>
                     </div>
                     <div class="mt-6 divide-y divide-slate-100 rounded-lg border border-slate-100">
                         @forelse ($courses as $course)
@@ -69,10 +69,13 @@
                                     <x-badge tone="gray">{{ $course->enrollments_count }} students</x-badge>
                                     <x-badge tone="blue">{{ $course->instructor_live_classes_count }} live</x-badge>
                                     <x-button :href="route('instructor.courses.show', $course)" size="sm" variant="secondary">Open</x-button>
+                                    @if ((int) $course->instructor_id === (int) auth()->id())
+                                        <x-button :href="route('instructor.courses.edit', $course)" size="sm">Builder</x-button>
+                                    @endif
                                 </div>
                             </div>
                         @empty
-                            <p class="p-4 text-sm leading-6 text-slate-600">No courses are assigned yet. Admins can assign you by scheduling a live class for a course.</p>
+                            <p class="p-4 text-sm leading-6 text-slate-600">No courses yet. Create a draft course or ask an admin to assign you to a live class.</p>
                         @endforelse
                     </div>
                 </x-card>
@@ -115,5 +118,7 @@
             </x-card>
             </div>
 </x-dashboard-layout>
+
+
 
 

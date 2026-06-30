@@ -28,7 +28,7 @@ class CertificateIssuedEmail extends Notification
             ->greeting('Hello '.$this->studentName.',')
             ->line('Your certificate for '.$this->courseTitle.' has been issued.')
             ->line('You can view, print, and share the public verification link from your certificate page.')
-            ->line('MK Scholars - Learn skills. Get coached. Earn certificates. Apply for opportunities.');
+            ->line('MK Scholars - Learn skills. Get coached. Earn certificates. Track your progress.');
 
         return $this->actionUrl
             ? $message->action('View certificate', $this->actionUrl)

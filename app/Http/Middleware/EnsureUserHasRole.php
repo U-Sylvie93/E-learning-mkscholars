@@ -15,6 +15,13 @@ class EnsureUserHasRole
 
         abort_if(! $user || ! in_array($user->role, $roles, true), 403);
 
+        abort_if(
+            $user->role === 'mentor'
+                && in_array('mentor', $roles, true)
+                && ! config('mkscholars.features.mentorship_enabled', false),
+            404
+        );
+
         if (! $user->canAccessProtectedArea()) {
             if ($request->expectsJson()) {
                 abort(403, $user->approvalMessage());
@@ -34,3 +41,4 @@ class EnsureUserHasRole
         return $next($request);
     }
 }
+

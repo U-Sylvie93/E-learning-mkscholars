@@ -84,9 +84,7 @@ class AdminReportsUiTest extends TestCase
             '/admin/reports/payments',
             '/admin/reports/learning',
             '/admin/reports/live-classes',
-            '/admin/reports/mentorship',
             '/admin/reports/certificates',
-            '/admin/reports/opportunities',
         ];
 
         foreach ($paths as $path) {
@@ -103,6 +101,26 @@ class AdminReportsUiTest extends TestCase
                 ->assertDontSee('password_hash')
                 ->assertDontSee('provider_payload');
         }
+    }
+    public function test_mentorship_and_opportunity_report_pages_are_removed(): void
+    {
+        $admin = $this->user(User::ROLE_ADMIN, 'reports-no-opportunities-admin@mkscholars.test');
+
+        $this->actingAs($admin)
+            ->get('/admin/reports')
+            ->assertOk()
+            ->assertDontSee('Mentorship Report')
+            ->assertDontSee('/admin/reports/mentorship', false)
+            ->assertDontSee('Opportunity Report')
+            ->assertDontSee('/admin/reports/opportunities', false);
+
+        $this->actingAs($admin)
+            ->get('/admin/reports/mentorship')
+            ->assertNotFound();
+
+        $this->actingAs($admin)
+            ->get('/admin/reports/opportunities')
+            ->assertNotFound();
     }
     public function test_guest_cannot_access_admin_reports_page(): void
     {
@@ -133,3 +151,5 @@ class AdminReportsUiTest extends TestCase
         ]);
     }
 }
+
+

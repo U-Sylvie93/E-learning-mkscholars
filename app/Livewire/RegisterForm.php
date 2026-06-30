@@ -28,12 +28,11 @@ class RegisterForm extends Component
             'role' => ['required', Rule::in([
                 User::ROLE_STUDENT,
                 User::ROLE_INSTRUCTOR,
-                User::ROLE_MENTOR,
             ])],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
-        $approvalStatus = in_array($validated['role'], [User::ROLE_INSTRUCTOR, User::ROLE_MENTOR], true)
+        $approvalStatus = in_array($validated['role'], [User::ROLE_INSTRUCTOR], true)
             ? User::APPROVAL_PENDING
             : User::APPROVAL_APPROVED;
 
@@ -63,3 +62,4 @@ class RegisterForm extends Component
         return view('livewire.register-form');
     }
 }
+

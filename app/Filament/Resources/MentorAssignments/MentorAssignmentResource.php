@@ -32,6 +32,15 @@ class MentorAssignmentResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Mentorship';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return (bool) config('mkscholars.features.mentorship_enabled', false);
+    }
+
+    public static function canViewAny(): bool
+    {
+        return (bool) config('mkscholars.features.mentorship_enabled', false);
+    }
     public static function form(Schema $schema): Schema
     {
         return $schema
@@ -140,3 +149,4 @@ class MentorAssignmentResource extends Resource
         ];
     }
 }
+

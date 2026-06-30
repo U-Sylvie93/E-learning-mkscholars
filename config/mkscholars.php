@@ -1,10 +1,16 @@
 <?php
 
 return [
+    'features' => [
+        'mentorship_enabled' => env('MK_MENTORSHIP_ENABLED', false),
+    ],
+
     'email_notifications' => [
         'enabled' => env('MK_EMAIL_NOTIFICATIONS_ENABLED', false),
     ],
 
+    // SWAP IMAGES: replace each 'image' URL below with your own uploaded photo.
+    // These are free Unsplash placeholders sized for the card aspect ratio.
     'academies' => [
         [
             'name' => 'Junior Scholars Academy',
@@ -91,7 +97,7 @@ return [
             'name' => 'Scholar',
             'price' => 'Coming soon',
             'description' => 'For learners who want guided support and stronger accountability.',
-            'features' => ['Live class support', 'Practice resources', 'Mentor feedback'],
+            'features' => ['Live class support', 'Practice resources', 'Student feedback'],
             'highlighted' => true,
         ],
         [
@@ -102,3 +108,5 @@ return [
         ],
     ],
 ];
+
+

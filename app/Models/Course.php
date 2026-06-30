@@ -27,6 +27,7 @@ class Course extends Model
 
     protected $fillable = [
         'academy_id',
+        'instructor_id',
         'title',
         'slug',
         'short_description',
@@ -58,6 +59,15 @@ class Course extends Model
         return $this->belongsTo(Academy::class);
     }
 
+    public function instructor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'instructor_id');
+    }
+
+    public function ownedBy(?User $user): bool
+    {
+        return $user !== null && (int) $this->instructor_id === (int) $user->id;
+    }
     public function modules(): HasMany
     {
         return $this->hasMany(Module::class);
@@ -163,28 +173,29 @@ class Course extends Model
         ];
     }
 
-    public function coverImageUrl(): string
+    public function coverImageUrl(): ?string
     {
         if (filled($this->featured_image_path)) {
-            return asset('storage/'.$this->featured_image_path);
+            $path = (string) $this->featured_image_path;
+
+            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '//')) {
+                return null;
+            }
+
+            return asset('storage/'.$path);
         }
 
         return self::fallbackImageForAcademy($this->academy?->name);
     }
 
-    public static function fallbackImageForAcademy(?string $academyName): string
+    public static function fallbackImageForAcademy(?string $academyName): ?string
     {
-        $name = str($academyName ?? '')->lower();
-
-        return match (true) {
-            $name->contains('coding') || $name->contains('tech') || $name->contains('stem') => 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=85',
-            $name->contains('language') || $name->contains('english') => 'https://images.unsplash.com/photo-1513258496099-48168024aec0?auto=format&fit=crop&w=1200&q=85',
-            $name->contains('test') || $name->contains('prep') => 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=1200&q=85',
-            $name->contains('career') || $name->contains('interview') => 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1200&q=85',
-            $name->contains('scholarship') || $name->contains('abroad') => 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1200&q=85',
-            default => 'https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=1200&q=85',
-        };
+        return null;
     }
 }
+
+
+
+
 
 

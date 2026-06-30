@@ -51,12 +51,11 @@ class DashboardLayoutTest extends TestCase
         }
     }
 
-    public function test_role_dashboards_render_shared_dashboard_shell_without_public_footer(): void
+    public function test_active_role_dashboards_render_shared_dashboard_shell_without_public_footer(): void
     {
         $dashboards = [
             [User::ROLE_STUDENT, 'student.dashboard', 'Student workspace', 'Continue Learning'],
             [User::ROLE_INSTRUCTOR, 'instructor.dashboard', 'Instructor workspace', 'View Courses'],
-            [User::ROLE_MENTOR, 'mentor.dashboard', 'Mentor workspace', 'View Students'],
         ];
 
         foreach ($dashboards as [$role, $route, $workspaceLabel, $primaryAction]) {
@@ -67,6 +66,9 @@ class DashboardLayoutTest extends TestCase
                 ->assertOk()
                 ->assertSee('data-testid="dashboard-shell"', false)
                 ->assertSee('data-testid="dashboard-sidebar"', false)
+                ->assertSee('data-testid="dashboard-sidebar-toggle"', false)
+                ->assertSee('data-testid="dashboard-nav-item"', false)
+                ->assertSee('data-testid="dashboard-sidebar-collapsed-icon"', false)
                 ->assertSee('data-testid="dashboard-topbar"', false)
                 ->assertSee('mk-dashboard-content', false)
                 ->assertSee($workspaceLabel)
@@ -78,6 +80,28 @@ class DashboardLayoutTest extends TestCase
                 ->assertDontSee('Quick links')
                 ->assertDontSee('Premium learning support');
         }
+    }
+
+    public function test_student_sidebar_hides_disabled_navigation_items(): void
+    {
+        $student = $this->approvedUser(User::ROLE_STUDENT, 'student-sidebar-hidden@mkscholars.test');
+
+        $this->actingAs($student)
+            ->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertSee('data-testid="dashboard-sidebar"', false)
+            ->assertSee('data-testid="dashboard-sidebar-toggle"', false)
+            ->assertSee('data-testid="dashboard-nav-item"', false)
+            ->assertSee('data-testid="dashboard-sidebar-collapsed-icon"', false)
+            ->assertSee('My Courses')
+            ->assertSee('Assignments')
+            ->assertSee('Certificates')
+            ->assertSee('Payments')
+            ->assertSee('Documents')
+            ->assertSee('Live Classes')
+            ->assertDontSee('Mentorship')
+            ->assertDontSee('Subscriptions')
+            ->assertDontSee('Opportunities');
     }
 
     public function test_student_dashboard_uses_responsive_card_grid_markers(): void
@@ -97,7 +121,6 @@ class DashboardLayoutTest extends TestCase
     {
         $student = $this->approvedUser(User::ROLE_STUDENT, 'student-linked-shell@mkscholars.test');
         $instructor = $this->approvedUser(User::ROLE_INSTRUCTOR, 'instructor-linked-shell@mkscholars.test');
-        $mentor = $this->approvedUser(User::ROLE_MENTOR, 'mentor-linked-shell@mkscholars.test');
 
         $studentRoutes = ['student.my-courses', 'student.assignments', 'student.payments', 'student.notifications', 'student.settings'];
         foreach ($studentRoutes as $route) {
@@ -117,17 +140,23 @@ class DashboardLayoutTest extends TestCase
                 ->assertSee('mk-dashboard-content', false)
                 ->assertDontSee('Premium learning support');
         }
-
-        foreach (['mentor.students', 'mentor.check-ins', 'mentor.notifications', 'mentor.settings'] as $route) {
-            $this->actingAs($mentor)
-                ->get(route($route))
-                ->assertOk()
-                ->assertSee('data-testid="dashboard-shell"', false)
-                ->assertSee('mk-dashboard-content', false)
-                ->assertDontSee('Premium learning support');
-        }
     }
 
+    public function test_mentorship_routes_are_temporarily_disabled_for_approved_mentors_and_students(): void
+    {
+        $mentor = $this->approvedUser(User::ROLE_MENTOR, 'mentor-disabled-routes@mkscholars.test');
+        $student = $this->approvedUser(User::ROLE_STUDENT, 'student-disabled-mentorship@mkscholars.test');
+
+        foreach (['mentor.dashboard', 'mentor.students', 'mentor.check-ins', 'mentor.notifications', 'mentor.settings'] as $route) {
+            $this->actingAs($mentor)
+                ->get(route($route))
+                ->assertNotFound();
+        }
+
+        $this->actingAs($student)
+            ->get(route('student.mentorship'))
+            ->assertNotFound();
+    }
 
     public function test_notification_badge_is_hidden_when_unread_count_is_zero(): void
     {
@@ -186,6 +215,7 @@ class DashboardLayoutTest extends TestCase
             ->assertOk()
             ->assertDontSee('data-testid="notification-badge"', false);
     }
+
     public function test_dashboard_routes_remain_role_protected(): void
     {
         $student = $this->approvedUser(User::ROLE_STUDENT, 'student-role-block@mkscholars.test');
@@ -222,5 +252,3 @@ class DashboardLayoutTest extends TestCase
         ]);
     }
 }
-
-

@@ -28,7 +28,7 @@ class SubscriptionRejectedEmail extends Notification
             ->greeting('Hello '.$this->studentName.',')
             ->line('Your payment for the '.$this->planName.' subscription could not be approved yet.')
             ->line('Please review your payment proof and resubmit when ready.')
-            ->line('MK Scholars - Learn skills. Get coached. Earn certificates. Apply for opportunities.');
+            ->line('MK Scholars - Learn skills. Get coached. Earn certificates. Track your progress.');
 
         return $this->actionUrl
             ? $message->action('Review subscription payment', $this->actionUrl)

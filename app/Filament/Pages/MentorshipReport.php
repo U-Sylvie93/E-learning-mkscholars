@@ -20,6 +20,16 @@ class MentorshipReport extends Page
 
     protected string $view = 'filament.pages.admin-report';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return (bool) config('mkscholars.features.mentorship_enabled', false);
+    }
+
+    public function mount(): void
+    {
+        abort_unless(config('mkscholars.features.mentorship_enabled', false), 404);
+    }
+
     protected function getViewData(): array
     {
         return app(AdminReportService::class)->mentorship(request()->only(['from', 'to', 'course_id', 'status']));

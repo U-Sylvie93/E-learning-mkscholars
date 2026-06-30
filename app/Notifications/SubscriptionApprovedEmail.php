@@ -28,7 +28,7 @@ class SubscriptionApprovedEmail extends Notification
             ->greeting('Hello '.$this->studentName.',')
             ->line('Your '.$this->planName.' subscription has been approved.')
             ->line('You can now access the courses included in your active plan.')
-            ->line('MK Scholars - Learn skills. Get coached. Earn certificates. Apply for opportunities.');
+            ->line('MK Scholars - Learn skills. Get coached. Earn certificates. Track your progress.');
 
         return $this->actionUrl
             ? $message->action('View subscription', $this->actionUrl)

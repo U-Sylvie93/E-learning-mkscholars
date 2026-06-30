@@ -47,7 +47,7 @@ class UserApprovalTest extends TestCase
         $this->assertSame(User::APPROVAL_PENDING, $instructor->approval_status);
     }
 
-    public function test_mentor_registration_creates_pending_account(): void
+    public function test_mentor_registration_is_temporarily_disabled(): void
     {
         Livewire::test(RegisterForm::class)
             ->set('name', 'Pending Mentor')
@@ -56,12 +56,10 @@ class UserApprovalTest extends TestCase
             ->set('password', 'password123')
             ->set('password_confirmation', 'password123')
             ->call('register')
-            ->assertRedirect(route('login'));
-
-        $mentor = User::where('email', 'pending-mentor@mkscholars.test')->firstOrFail();
+            ->assertHasErrors(['role']);
 
         $this->assertGuest();
-        $this->assertSame(User::APPROVAL_PENDING, $mentor->approval_status);
+        $this->assertDatabaseMissing('users', ['email' => 'pending-mentor@mkscholars.test']);
     }
 
     public function test_pending_instructor_cannot_access_instructor_dashboard(): void
@@ -76,16 +74,15 @@ class UserApprovalTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_pending_mentor_cannot_access_mentor_dashboard(): void
+    public function test_pending_mentor_workspace_is_temporarily_disabled(): void
     {
         $mentor = $this->user(User::ROLE_MENTOR, User::APPROVAL_PENDING, 'pending-dashboard-mentor@mkscholars.test');
 
         $this->actingAs($mentor)
             ->get(route('mentor.dashboard'))
-            ->assertRedirect(route('login'))
-            ->assertSessionHas('status', 'Your account is pending admin approval.');
+            ->assertNotFound();
 
-        $this->assertGuest();
+        $this->assertAuthenticatedAs($mentor);
     }
 
     public function test_admin_can_approve_instructor_and_instructor_can_access_dashboard(): void
@@ -147,5 +144,3 @@ class UserApprovalTest extends TestCase
         ]);
     }
 }
-
-

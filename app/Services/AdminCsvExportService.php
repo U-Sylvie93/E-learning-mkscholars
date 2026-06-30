@@ -8,7 +8,6 @@ use App\Models\CourseReview;
 use App\Models\Enrollment;
 use App\Models\Payment;
 use App\Models\QuizAttempt;
-use App\Models\StudentApplication;
 use App\Models\Subscription;
 use App\Models\User;
 use DateTimeInterface;
@@ -25,7 +24,6 @@ class AdminCsvExportService
             $this->link('Payments', 'admin.reports.exports.payments', 'Manual payment review summary.'),
             $this->link('Subscriptions', 'admin.reports.exports.subscriptions', 'Plan status and subscription windows.'),
             $this->link('Certificates', 'admin.reports.exports.certificates', 'Issued credentials and verification links.'),
-            $this->link('Applications', 'admin.reports.exports.applications', 'Opportunity application tracker.'),
             $this->link('Quiz Attempts', 'admin.reports.exports.quiz-attempts', 'Quiz scores and pass/fail outcomes.'),
             $this->link('Assignment Submissions', 'admin.reports.exports.assignment-submissions', 'Assignment submission and grading status.'),
             $this->link('Course Reviews', 'admin.reports.exports.course-reviews', 'Student feedback moderation export.'),
@@ -36,7 +34,7 @@ class AdminCsvExportService
     {
         $query = User::query()
             ->where('role', User::ROLE_STUDENT)
-            ->withCount(['enrollments', 'certificates', 'studentApplications'])
+            ->withCount(['enrollments', 'certificates'])
             ->orderBy('id');
 
         $this->applyDate($query, $filters);
@@ -47,7 +45,6 @@ class AdminCsvExportService
             'Email',
             'Enrollments',
             'Certificates',
-            'Applications',
             'Joined At',
         ], $query, fn (User $user): array => [
             $user->id,
@@ -55,7 +52,6 @@ class AdminCsvExportService
             $user->email,
             $user->enrollments_count,
             $user->certificates_count,
-            $user->student_applications_count,
             $this->date($user->created_at),
         ]);
     }
@@ -200,38 +196,6 @@ class AdminCsvExportService
             $certificate->status,
             $this->date($certificate->issued_at),
             $this->date($certificate->revoked_at),
-        ]);
-    }
-
-    public function applications(array $filters = []): StreamedResponse
-    {
-        $query = StudentApplication::query()
-            ->with(['user', 'opportunity'])
-            ->orderBy('id');
-
-        $this->applyDate($query, $filters);
-        $this->applyStatus($query, $filters);
-
-        return $this->download('applications', [
-            'ID',
-            'Student',
-            'Student Email',
-            'Opportunity',
-            'Opportunity Type',
-            'Status',
-            'Submitted At',
-            'Reviewed At',
-            'Updated At',
-        ], $query, fn (StudentApplication $application): array => [
-            $application->id,
-            $application->user?->name,
-            $application->user?->email,
-            $application->opportunity?->title,
-            $application->opportunity?->type,
-            $application->status,
-            $this->date($application->submitted_at),
-            $this->date($application->reviewed_at),
-            $this->date($application->updated_at),
         ]);
     }
 

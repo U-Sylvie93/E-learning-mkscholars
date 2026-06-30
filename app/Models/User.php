@@ -146,6 +146,10 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(LiveClass::class, 'instructor_id');
     }
 
+    public function instructedCourses(): HasMany
+    {
+        return $this->hasMany(Course::class, 'instructor_id');
+    }
     public function mentorAssignments(): HasMany
     {
         return $this->hasMany(MentorAssignment::class, 'mentor_id');
@@ -206,6 +210,8 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(ApplicationStatusHistory::class, 'changed_by');
     }
 }
+
+
 
 
 

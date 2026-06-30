@@ -3,17 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Academy;
-use App\Models\ApplicationDocument;
 use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
 use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\CourseReview;
 use App\Models\Payment;
-use App\Models\Opportunity;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
-use App\Models\StudentApplication;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -102,43 +99,6 @@ class AdminCsvExportTest extends TestCase
         $this->assertStringNotContainsString('payment-proofs/private-proof.pdf', $content);
         $this->assertStringNotContainsString('provider_payload', $content);
         $this->assertStringNotContainsString('provider-secret-value', $content);
-    }
-
-    public function test_applications_csv_excludes_private_document_paths(): void
-    {
-        $admin = $this->user(User::ROLE_ADMIN, 'application-admin@mkscholars.test');
-        $student = $this->user(User::ROLE_STUDENT, 'application-student@mkscholars.test');
-        $opportunity = Opportunity::create([
-            'title' => 'Private Path Scholarship',
-            'slug' => 'private-path-scholarship',
-            'type' => Opportunity::TYPE_SCHOLARSHIP,
-            'description' => 'Scholarship opportunity',
-            'status' => Opportunity::STATUS_PUBLISHED,
-        ]);
-        $application = StudentApplication::create([
-            'opportunity_id' => $opportunity->id,
-            'user_id' => $student->id,
-            'status' => StudentApplication::STATUS_SUBMITTED,
-            'submitted_at' => now(),
-        ]);
-
-        ApplicationDocument::create([
-            'student_application_id' => $application->id,
-            'document_name' => 'Passport',
-            'file_path' => 'application-documents/passport-private.pdf',
-            'external_link' => 'https://private.example.test/document',
-            'status' => ApplicationDocument::STATUS_UPLOADED,
-            'uploaded_at' => now(),
-        ]);
-
-        $content = $this->actingAs($admin)
-            ->get(route('admin.reports.exports.applications'))
-            ->assertOk()
-            ->streamedContent();
-
-        $this->assertStringContainsString('Private Path Scholarship', $content);
-        $this->assertStringNotContainsString('application-documents/passport-private.pdf', $content);
-        $this->assertStringNotContainsString('private.example.test/document', $content);
     }
 
     public function test_assignment_submissions_csv_excludes_file_paths(): void
@@ -385,7 +345,6 @@ class AdminCsvExportTest extends TestCase
             'admin.reports.exports.payments',
             'admin.reports.exports.subscriptions',
             'admin.reports.exports.certificates',
-            'admin.reports.exports.applications',
             'admin.reports.exports.quiz-attempts',
             'admin.reports.exports.assignment-submissions',
             'admin.reports.exports.course-reviews',

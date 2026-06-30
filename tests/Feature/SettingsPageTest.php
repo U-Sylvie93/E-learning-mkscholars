@@ -35,15 +35,13 @@ class SettingsPageTest extends TestCase
             ->assertSee('Approved');
     }
 
-    public function test_approved_mentor_settings_page_loads(): void
+    public function test_approved_mentor_settings_page_is_temporarily_disabled(): void
     {
         $mentor = $this->user(User::ROLE_MENTOR, User::APPROVAL_APPROVED, 'settings-mentor@mkscholars.test');
 
         $this->actingAs($mentor)
             ->get(route('mentor.settings'))
-            ->assertOk()
-            ->assertSee('Mentor account')
-            ->assertSee('Approved');
+            ->assertNotFound();
     }
 
     public function test_guest_is_redirected_from_settings_pages(): void
@@ -79,8 +77,7 @@ class SettingsPageTest extends TestCase
 
             $this->actingAs($mentor)
                 ->get(route('mentor.settings'))
-                ->assertRedirect(route('login'))
-                ->assertSessionHas('status', $mentor->approvalMessage());
+                ->assertNotFound();
         }
     }
 
@@ -175,4 +172,6 @@ class SettingsPageTest extends TestCase
         ]);
     }
 }
+
+
 

@@ -28,7 +28,7 @@ class PaymentRejectedEmail extends Notification
             ->greeting('Hello '.$this->studentName.',')
             ->line('Your payment for '.$this->paymentFor.' could not be approved yet.')
             ->line('Please review the payment page and upload updated proof if needed.')
-            ->line('MK Scholars - Learn skills. Get coached. Earn certificates. Apply for opportunities.');
+            ->line('MK Scholars - Learn skills. Get coached. Earn certificates. Track your progress.');
 
         return $this->actionUrl
             ? $message->action('Review payment', $this->actionUrl)

@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\AppNotification;
-use App\Models\ApplicationDocument;
 use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
 use App\Models\Certificate;
@@ -14,10 +13,8 @@ use App\Models\LiveClass;
 use App\Models\LiveClassAttendance;
 use App\Models\MentorAssignment;
 use App\Models\MentorCheckIn;
-use App\Models\Opportunity;
 use App\Models\Payment;
 use App\Models\QuizAttempt;
-use App\Models\StudentApplication;
 use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -34,7 +31,6 @@ class AdminReportService
                 $this->card('Students', User::query()->where('role', User::ROLE_STUDENT)->count(), 'Registered learners'),
                 $this->card('Courses', Course::query()->count(), 'Total courses'),
                 $this->card('Payments', Payment::query()->where('status', Payment::STATUS_PENDING)->count(), 'Pending review'),
-                $this->card('Applications', StudentApplication::query()->whereIn('status', [StudentApplication::STATUS_SUBMITTED, StudentApplication::STATUS_UNDER_REVIEW])->count(), 'Active applications'),
                 $this->card('Certificates', Certificate::query()->where('status', Certificate::STATUS_ISSUED)->count(), 'Issued certificates'),
                 $this->card('Notifications', AppNotification::query()->whereNull('read_at')->count(), 'Unread in-app items'),
             ],
@@ -71,22 +67,6 @@ class AdminReportService
                             $payment->course?->title ?? 'Course',
                             number_format((float) $payment->amount, 0).' '.$payment->currency,
                             $payment->submitted_at?->format('M j, Y') ?? 'Not submitted',
-                        ])
-                        ->all(),
-                ],
-                [
-                    'title' => 'Recent applications',
-                    'columns' => ['Student', 'Opportunity', 'Status', 'Updated'],
-                    'rows' => StudentApplication::query()
-                        ->with(['user', 'opportunity'])
-                        ->latest('updated_at')
-                        ->take(8)
-                        ->get()
-                        ->map(fn (StudentApplication $application): array => [
-                            $application->user?->name ?? 'Student',
-                            $application->opportunity?->title ?? 'Opportunity',
-                            str($application->status)->replace('_', ' ')->headline()->toString(),
-                            $application->updated_at?->format('M j, Y') ?? 'N/A',
                         ])
                         ->all(),
                 ],
@@ -398,47 +378,6 @@ class AdminReportService
         ];
     }
 
-    public function opportunities(array $filters): array
-    {
-        return [
-            'title' => 'Opportunity Report',
-            'description' => 'Opportunity publishing, applications, document review, and outcomes.',
-            'filters' => $this->statusFilters(Opportunity::STATUSES),
-            'cards' => [
-                $this->card('Published opportunities', Opportunity::query()->where('status', Opportunity::STATUS_PUBLISHED)->count()),
-                $this->card('Submitted applications', StudentApplication::query()->where('status', StudentApplication::STATUS_SUBMITTED)->count()),
-                $this->card('Under review', StudentApplication::query()->where('status', StudentApplication::STATUS_UNDER_REVIEW)->count()),
-                $this->card('Approved', StudentApplication::query()->where('status', StudentApplication::STATUS_APPROVED)->count()),
-                $this->card('Rejected', StudentApplication::query()->where('status', StudentApplication::STATUS_REJECTED)->count()),
-                $this->card('Documents pending', ApplicationDocument::query()->where('status', ApplicationDocument::STATUS_PENDING)->count()),
-            ],
-            'tables' => [
-                [
-                    'title' => 'Applications by status',
-                    'columns' => ['Status', 'Applications'],
-                    'rows' => StudentApplication::query()
-                        ->select('status', DB::raw('count(*) as total'))
-                        ->groupBy('status')
-                        ->orderByDesc('total')
-                        ->get()
-                        ->map(fn (StudentApplication $application): array => [str($application->status)->replace('_', ' ')->headline()->toString(), $application->total])
-                        ->all(),
-                ],
-                [
-                    'title' => 'Applications by opportunity',
-                    'columns' => ['Opportunity', 'Applications'],
-                    'rows' => Opportunity::query()
-                        ->withCount('studentApplications')
-                        ->orderByDesc('student_applications_count')
-                        ->take(12)
-                        ->get()
-                        ->map(fn (Opportunity $opportunity): array => [$opportunity->title, $opportunity->student_applications_count])
-                        ->all(),
-                ],
-            ],
-        ];
-    }
-
     public function reportLinks(): array
     {
         return [
@@ -447,9 +386,7 @@ class AdminReportService
             ['label' => 'Payments', 'url' => '/admin/reports/payments'],
             ['label' => 'Learning', 'url' => '/admin/reports/learning'],
             ['label' => 'Live Classes', 'url' => '/admin/reports/live-classes'],
-            ['label' => 'Mentorship', 'url' => '/admin/reports/mentorship'],
             ['label' => 'Certificates', 'url' => '/admin/reports/certificates'],
-            ['label' => 'Opportunities', 'url' => '/admin/reports/opportunities'],
         ];
     }
 
@@ -529,3 +466,4 @@ class AdminReportService
         return $value.'%';
     }
 }
+

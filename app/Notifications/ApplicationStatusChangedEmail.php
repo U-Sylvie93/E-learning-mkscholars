@@ -12,7 +12,7 @@ class ApplicationStatusChangedEmail extends Notification
 
     public function __construct(
         public string $studentName,
-        public string $opportunityTitle,
+        public string $applicationTitle,
         public string $status,
         public ?string $actionUrl = null,
     ) {}
@@ -27,12 +27,12 @@ class ApplicationStatusChangedEmail extends Notification
         $message = (new MailMessage)
             ->subject('MK Scholars application status updated')
             ->greeting('Hello '.$this->studentName.',')
-            ->line('Your application for '.$this->opportunityTitle.' is now '.$this->status.'.')
-            ->line('Open your application tracker to review the latest status and next steps.')
-            ->line('MK Scholars - Learn skills. Get coached. Earn certificates. Apply for opportunities.');
+            ->line('Your learning request for '.$this->applicationTitle.' is now '.$this->status.'.')
+            ->line('Review the latest status and next steps inside your MK Scholars workspace.')
+            ->line('MK Scholars - Learn skills. Get coached. Earn certificates. Track your progress.');
 
         return $this->actionUrl
-            ? $message->action('View application', $this->actionUrl)
+            ? $message->action('Open workspace', $this->actionUrl)
             : $message;
     }
 }
