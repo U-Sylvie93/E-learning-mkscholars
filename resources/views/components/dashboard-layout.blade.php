@@ -16,7 +16,6 @@
             ['label' => 'Assignments', 'route' => 'student.assignments', 'icon' => 'assignments'],
             ['label' => 'Certificates', 'route' => 'student.certificates', 'icon' => 'certificates'],
             ['label' => 'Payments', 'route' => 'student.payments', 'icon' => 'payments'],
-            ['label' => 'Documents', 'route' => 'student.documents', 'icon' => 'documents'],
             ['label' => 'Live Classes', 'route' => 'student.live-classes', 'icon' => 'live'],
             ['label' => 'Notifications', 'route' => 'student.notifications', 'icon' => 'notifications'],
             ['label' => 'Settings', 'route' => 'student.settings', 'icon' => 'settings'],
@@ -27,6 +26,13 @@
             ['label' => 'Live Classes', 'route' => 'instructor.live-classes.index', 'icon' => 'live'],
             ['label' => 'Notifications', 'route' => 'instructor.notifications', 'icon' => 'notifications'],
             ['label' => 'Settings', 'route' => 'instructor.settings', 'icon' => 'settings'],
+        ],
+        'support' => [
+            ['label' => 'Dashboard', 'route' => 'mentor.dashboard', 'icon' => 'dashboard'],
+            ['label' => 'Students', 'route' => 'mentor.students', 'icon' => 'courses'],
+            ['label' => 'Check-ins', 'route' => 'mentor.check-ins', 'icon' => 'live'],
+            ['label' => 'Notifications', 'route' => 'mentor.notifications', 'icon' => 'notifications'],
+            ['label' => 'Settings', 'route' => 'mentor.settings', 'icon' => 'settings'],
         ],
     ];
 
@@ -151,12 +157,12 @@
     </head>
     <body class="overflow-x-hidden bg-slate-100 text-slate-800 antialiased">
         <div class="min-h-screen lg:grid" data-testid="dashboard-shell" data-sidebar-collapsed="false">
-            <aside class="hidden bg-mk-navy text-white shadow-2xl shadow-mk-navy/20 lg:flex lg:flex-col" data-testid="dashboard-sidebar">
+            <aside class="hidden bg-mk-navy text-white shadow-2xl shadow-mk-navy/20 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col" data-testid="dashboard-sidebar">
                 <div class="border-b border-white/10 p-4">
                     <div class="flex items-center justify-between gap-3">
-                        <div class="min-w-0 mk-sidebar-brand-text">
+                        <a href="{{ route('home') }}" class="min-w-0 mk-sidebar-brand-text rounded-md mk-focus" title="Back to MK Scholars home">
                             <x-brand-logo text-class="text-white" tagline-class="text-mk-gold" />
-                        </div>
+                        </a>
                         <button type="button" id="dashboard-sidebar-toggle" data-testid="dashboard-sidebar-toggle" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 text-slate-200 transition hover:border-mk-gold hover:bg-white/10 hover:text-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold" aria-label="Toggle dashboard sidebar">
                             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                 <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/>
@@ -174,10 +180,10 @@
                             title="{{ $item['label'] }}"
                             data-testid="dashboard-nav-item"
                             @if ($isActive) aria-current="page" @endif
-                            class="mk-sidebar-nav-item flex items-center justify-between gap-3 rounded-xl px-3 py-3 text-sm font-bold transition {{ $isActive ? 'bg-mk-gold text-mk-navy shadow-sm' : 'text-slate-200 hover:bg-white/10 hover:text-white' }}"
+                            class="mk-sidebar-nav-item flex items-center justify-between gap-3 rounded-xl border-l-4 px-3 py-3 text-sm font-bold outline-none transition focus-visible:ring-2 focus-visible:ring-mk-gold focus-visible:ring-offset-2 focus-visible:ring-offset-mk-navy {{ $isActive ? 'border-mk-gold bg-mk-gold/15 text-white shadow-sm' : 'border-transparent text-slate-200 hover:border-white/30 hover:bg-white/10 hover:text-white' }}"
                         >
                             <span class="flex min-w-0 items-center gap-3">
-                                <span data-testid="dashboard-sidebar-collapsed-icon" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg {{ $isActive ? 'bg-mk-navy/10' : 'bg-white/10' }}">
+                                <span data-testid="dashboard-sidebar-collapsed-icon" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg {{ $isActive ? 'bg-mk-gold text-mk-navy' : 'bg-white/10' }}">
                                     <x-dashboard-icon :name="$item['icon']" class="h-5 w-5" />
                                 </span>
                                 <span class="mk-sidebar-label truncate">{{ $item['label'] }}</span>
@@ -190,9 +196,15 @@
                 </nav>
 
                 <div class="border-t border-white/10 p-3">
+                    <a href="{{ route('home') }}" data-testid="dashboard-back-to-site" class="mk-sidebar-logout-button mb-2 flex w-full items-center gap-3 rounded-xl border border-white/15 px-3 py-3 text-left text-sm font-bold text-slate-200 outline-none transition hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-mk-gold focus-visible:ring-offset-2 focus-visible:ring-offset-mk-navy">
+                        <span data-testid="dashboard-sidebar-collapsed-icon" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 17l-5-5 5-5M6 12h12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </span>
+                        <span class="mk-sidebar-logout-label">Back to Site</span>
+                    </a>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="mk-sidebar-logout-button flex w-full items-center gap-3 rounded-xl border border-white/15 px-3 py-3 text-left text-sm font-bold text-slate-200 transition hover:bg-white/10 hover:text-white">
+                        <button type="submit" class="mk-sidebar-logout-button flex w-full items-center gap-3 rounded-xl border border-white/15 px-3 py-3 text-left text-sm font-bold text-slate-200 outline-none transition hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-mk-gold focus-visible:ring-offset-2 focus-visible:ring-offset-mk-navy">
                             <span data-testid="dashboard-sidebar-collapsed-icon" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10">
                                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9" stroke-linecap="round" stroke-linejoin="round"/></svg>
                             </span>
@@ -236,10 +248,13 @@
                                             </a>
                                         @endforeach
                                     </nav>
-                                    <form method="POST" action="{{ route('logout') }}" class="mt-3 border-t border-slate-100 pt-3">
-                                        @csrf
-                                        <button type="submit" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-left text-sm font-bold text-mk-navy transition hover:border-mk-gold hover:bg-mk-goldSoft">Logout</button>
-                                    </form>
+                                    <div class="mt-3 border-t border-slate-100 pt-3">
+                                        <a href="{{ route('home') }}" data-testid="dashboard-back-to-site-mobile" class="mb-2 block w-full rounded-xl border border-slate-200 px-3 py-2 text-left text-sm font-bold text-mk-navy transition hover:border-mk-gold hover:bg-mk-goldSoft">Back to Site</a>
+                                        <form method="POST" action="{{ route('logout') }}">
+                                            @csrf
+                                            <button type="submit" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-left text-sm font-bold text-mk-navy transition hover:border-mk-gold hover:bg-mk-goldSoft">Logout</button>
+                                        </form>
+                                    </div>
                                 </div>
                             </details>
                             <div class="min-w-0">

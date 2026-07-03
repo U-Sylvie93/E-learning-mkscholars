@@ -11,6 +11,26 @@
         --mk-cloud: #f3f8fb;
         --mk-ink: #102a3a;
         --mk-border: #dbe7ee;
+
+        /* Semantic status roles: used for pass/fail (quizzes) and approval states */
+        --mk-success: #047857;
+        --mk-success-soft: #d1fae5;
+        --mk-danger: #b91c1c;
+        --mk-danger-soft: #fee2e2;
+        --mk-warning: #b45309;
+        --mk-warning-soft: #fef3c7;
+
+        /* Surface / text roles */
+        --mk-surface: #ffffff;
+        --mk-surface-muted: #f8fafc;
+        --mk-text: #102a3a;
+        --mk-text-muted: #475569;
+
+        /* Shared radius + shadow scale */
+        --mk-radius-sm: 0.5rem;
+        --mk-radius-md: 0.75rem;
+        --mk-radius-lg: 1rem;
+        --mk-shadow-soft: 0 18px 60px -32px rgba(7, 54, 83, 0.35);
     }
 
     html {

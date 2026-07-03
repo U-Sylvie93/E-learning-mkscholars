@@ -7,6 +7,7 @@ use App\Filament\Resources\Courses\Pages\EditCourse;
 use App\Filament\Resources\Courses\Pages\ListCourses;
 use App\Filament\Resources\Courses\RelationManagers\ModulesRelationManager;
 use App\Models\Course;
+use App\Models\User;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -51,11 +52,19 @@ class CourseResource extends Resource
                     ->required(),
                 Select::make('instructor_id')
                     ->label('Instructor owner')
-                    ->relationship('instructor', 'name')
+                    ->relationship(
+                        name: 'instructor',
+                        titleAttribute: 'name',
+                        modifyQueryUsing: fn ($query) => $query
+                            ->where('role', User::ROLE_INSTRUCTOR)
+                            ->where(fn ($q) => $q
+                                ->where('approval_status', User::APPROVAL_APPROVED)
+                                ->orWhereNull('approval_status')),
+                    )
                     ->searchable()
                     ->preload()
                     ->nullable()
-                    ->helperText('Optional owner for instructor course builder access.'),
+                    ->helperText('Optional owner for instructor course builder access. Only approved instructors are listed.'),
                 TextInput::make('title')
                     ->required()
                     ->maxLength(255)

@@ -30,7 +30,7 @@
                             <h2 class="mt-5 text-xl font-bold text-mk-navy">{{ $assignment->student?->name ?? 'Student' }}</h2>
                             <p class="mt-2 text-sm text-slate-600">{{ $assignment->student?->email }}</p>
                             <p class="mt-4 text-sm leading-6 text-slate-600">{{ $assignment->notes ?? 'No support notes yet.' }}</p>
-                            <x-button :href="route('support.check-ins')" size="sm" class="mt-5">View Check-ins</x-button>
+                            <x-button :href="route('mentor.check-ins')" size="sm" class="mt-5">View Check-ins</x-button>
                         </x-card>
                     @endforeach
                 </div>

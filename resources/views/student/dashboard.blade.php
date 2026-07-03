@@ -21,45 +21,55 @@
         </x-card>
 
         <div data-testid="student-dashboard-grid" class="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            <x-card data-testid="student-dashboard-card" class="min-w-0">
-                <x-badge>Courses</x-badge>
-                <h3 class="mt-5 text-xl font-bold text-mk-navy">Active courses</h3>
-                <p class="mt-3 text-sm leading-6 text-slate-600">Course enrollment and lesson progress appear in your learning workspace.</p>
-                <x-button :href="route('student.my-courses')" size="sm" class="mt-5">My Courses</x-button>
-            </x-card>
+            <x-stat-card
+                data-testid="student-dashboard-card"
+                label="Courses"
+                value="Active courses"
+                description="Course enrollment and lesson progress appear in your learning workspace."
+                actionLabel="My Courses"
+                :actionHref="route('student.my-courses')"
+            />
 
-            <x-card data-testid="student-dashboard-card" class="min-w-0">
-                <x-badge tone="blue">Progress</x-badge>
-                <h3 class="mt-5 text-xl font-bold text-mk-navy">Study momentum</h3>
-                <p class="mt-3 text-sm leading-6 text-slate-600">Track lessons, quizzes, assignments, and certificate readiness as you learn.</p>
-            </x-card>
+            <x-stat-card
+                data-testid="student-dashboard-card"
+                tone="blue"
+                label="Progress"
+                value="Study momentum"
+                description="Track lessons, quizzes, assignments, and certificate readiness as you learn."
+            />
 
-            <x-card data-testid="student-dashboard-card" class="min-w-0">
-                <x-badge tone="gold">Certificates</x-badge>
-                <h3 class="mt-5 text-xl font-bold text-mk-navy">{{ $certificateCount }} issued</h3>
+            <x-stat-card data-testid="student-dashboard-card" label="Certificates" :value="$certificateCount.' issued'">
                 @if ($latestCertificate)
                     <p class="mt-3 text-sm leading-6 text-slate-600">Latest: {{ $latestCertificate->course_title }}</p>
                     <x-button :href="route('student.certificates.show', $latestCertificate)" size="sm" class="mt-5">View Certificate</x-button>
                 @else
                     <p class="mt-3 text-sm leading-6 text-slate-600">Issued certificates will appear here after course completion.</p>
                 @endif
-            </x-card>
+            </x-stat-card>
 
-            <x-card data-testid="student-dashboard-card" class="min-w-0">
-                <x-badge tone="gold">Payments</x-badge>
-                <h3 class="mt-5 text-xl font-bold text-mk-navy">{{ $pendingPaymentsCount }} pending</h3>
+            <x-stat-card
+                data-testid="student-dashboard-card"
+                label="Payments"
+                :value="$pendingPaymentsCount.' pending'"
+                actionLabel="View Payments"
+                :actionHref="route('student.payments')"
+            >
                 <p class="mt-3 text-sm leading-6 text-slate-600">
                     {{ $approvedPaymentsCount }} approved payments.
                     @if ($rejectedPaymentsCount)
                         {{ $rejectedPaymentsCount }} need attention.
                     @endif
                 </p>
-                <x-button :href="route('student.payments')" size="sm" class="mt-5">View Payments</x-button>
-            </x-card>
+            </x-stat-card>
 
-            <x-card data-testid="student-dashboard-card" class="min-w-0">
-                <x-badge tone="blue">Subscription</x-badge>
-                <h3 class="mt-5 text-xl font-bold text-mk-navy">{{ $activeSubscription?->subscriptionPlan?->name ?? 'No active plan' }}</h3>
+            <x-stat-card
+                data-testid="student-dashboard-card"
+                tone="blue"
+                label="Subscription"
+                :value="$activeSubscription?->subscriptionPlan?->name ?? 'No active plan'"
+                actionLabel="View Plans"
+                :actionHref="route('student.subscriptions')"
+            >
                 @if ($activeSubscription)
                     <p class="mt-3 text-sm leading-6 text-slate-600">Expires {{ $activeSubscription->ends_at?->format('M j, Y') ?? 'when cancelled' }}.</p>
                 @elseif ($pendingSubscription)
@@ -67,8 +77,7 @@
                 @else
                     <p class="mt-3 text-sm leading-6 text-slate-600">Choose a plan for bundled course access.</p>
                 @endif
-                <x-button :href="route('student.subscriptions')" size="sm" class="mt-5">View Plans</x-button>
-            </x-card>
+            </x-stat-card>
         </div>
 
         @if ($expiringSubscription || $expiredSubscription)
@@ -136,7 +145,11 @@
                             <p class="mt-1 text-sm leading-6 text-slate-600">{{ $notification->message }}</p>
                         </div>
                     @empty
-                        <p class="text-sm leading-6 text-slate-600">No unread notifications right now.</p>
+                        <x-empty-state
+                            icon="notifications"
+                            title="No unread notifications"
+                            description="Updates and reminders will appear here as soon as there's something new."
+                        />
                     @endforelse
                 </div>
             </x-card>

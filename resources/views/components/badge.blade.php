@@ -7,6 +7,9 @@
         'blue' => 'bg-sky-50 text-sky-800 ring-sky-100',
         'green' => 'bg-emerald-50 text-emerald-800 ring-emerald-100',
         'gray' => 'bg-slate-100 text-slate-700 ring-slate-200',
+        'success' => 'bg-mk-successSoft text-mk-success ring-emerald-200',
+        'danger' => 'bg-mk-dangerSoft text-mk-danger ring-red-200',
+        'warning' => 'bg-mk-warningSoft text-mk-warning ring-amber-200',
     ];
 @endphp
 

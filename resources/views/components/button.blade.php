@@ -16,6 +16,7 @@
         'secondary' => 'bg-white text-mk-navy ring-1 ring-slate-200 hover:bg-slate-50',
         'navy' => 'bg-mk-navy text-white hover:bg-mk-blue',
         'ghost' => 'text-mk-navy hover:bg-slate-100',
+        'danger' => 'bg-mk-danger text-white shadow-sm hover:bg-red-800',
     ];
     $classes = $base.' '.($sizes[$size] ?? $sizes['md']).' '.($variants[$variant] ?? $variants['primary']);
 @endphp
