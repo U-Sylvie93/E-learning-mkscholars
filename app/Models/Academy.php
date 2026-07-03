@@ -61,7 +61,7 @@ class Academy extends Model
     }
 
     /**
-     * @return array<string, string>
+     * @return array<string string>
      */
     public static function iconOptions(): array
     {
