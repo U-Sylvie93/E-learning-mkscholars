@@ -143,14 +143,58 @@ jobs:
                 exit 1
               fi
 
-              composer install --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
+              PHP_BIN=""
 
-              php artisan migrate --force
-              php artisan storage:link || true
+              if command -v php8.4 >/dev/null 2>&1; then
+                PHP_BIN="$(command -v php8.4)"
+              elif [ -x "/usr/bin/php8.4" ]; then
+                PHP_BIN="/usr/bin/php8.4"
+              elif [ -x "/usr/local/bin/php8.4" ]; then
+                PHP_BIN="/usr/local/bin/php8.4"
+              elif [ -x "/opt/alt/php84/usr/bin/php" ]; then
+                PHP_BIN="/opt/alt/php84/usr/bin/php"
+              elif [ -x "/usr/local/php8.4/bin/php" ]; then
+                PHP_BIN="/usr/local/php8.4/bin/php"
+              else
+                echo "ERROR: PHP 8.4 binary was not found on Hostinger SSH."
+                echo "Current default PHP version:"
+                php -v || true
+                echo "Available PHP binaries:"
+                ls /usr/bin/php* 2>/dev/null || true
+                ls /usr/local/bin/php* 2>/dev/null || true
+                ls /opt/alt/php*/usr/bin/php 2>/dev/null || true
+                exit 1
+              fi
 
-              php artisan optimize:clear
-              php artisan config:cache
-              php artisan view:cache
+              echo "Using PHP binary: $PHP_BIN"
+              "$PHP_BIN" -v
+
+              EXPECTED_PHP_VERSION="$("$PHP_BIN" -r 'echo PHP_VERSION;')"
+              echo "Detected PHP version: $EXPECTED_PHP_VERSION"
+
+              export PHP_BINARY="$PHP_BIN"
+
+              if command -v composer >/dev/null 2>&1; then
+                COMPOSER_BIN="$(command -v composer)"
+              elif [ -f "composer.phar" ]; then
+                COMPOSER_BIN="composer.phar"
+              else
+                echo "ERROR: Composer was not found on Hostinger."
+                exit 1
+              fi
+
+              if [ "$COMPOSER_BIN" = "composer.phar" ]; then
+                "$PHP_BIN" composer.phar install --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
+              else
+                "$PHP_BIN" "$COMPOSER_BIN" install --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
+              fi
+
+              "$PHP_BIN" artisan migrate --force
+              "$PHP_BIN" artisan storage:link || true
+
+              "$PHP_BIN" artisan optimize:clear
+              "$PHP_BIN" artisan config:cache
+              "$PHP_BIN" artisan view:cache
 
               chmod -R 775 storage bootstrap/cache
 
