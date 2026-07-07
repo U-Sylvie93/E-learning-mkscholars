@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Academies;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\Academies\Pages\CreateAcademy;
 use App\Filament\Resources\Academies\Pages\EditAcademy;
 use App\Filament\Resources\Academies\Pages\ListAcademies;
@@ -27,6 +28,8 @@ use UnitEnum;
 
 class AcademyResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = Academy::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedAcademicCap;

@@ -24,7 +24,9 @@ class QuizAttempt extends Model
         'percentage',
         'status',
         'started_at',
+        'expires_at',
         'submitted_at',
+        'current_question_index',
     ];
 
     protected function casts(): array
@@ -34,7 +36,9 @@ class QuizAttempt extends Model
             'total_points' => 'integer',
             'percentage' => 'integer',
             'started_at' => 'datetime',
+            'expires_at' => 'datetime',
             'submitted_at' => 'datetime',
+            'current_question_index' => 'integer',
         ];
     }
 
@@ -53,5 +57,4 @@ class QuizAttempt extends Model
         return $this->hasMany(QuizAnswer::class);
     }
 }
-
 

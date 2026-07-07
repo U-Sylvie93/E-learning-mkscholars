@@ -33,7 +33,7 @@
     <body class="min-h-screen bg-mk-surface-muted text-slate-800 antialiased">
         <div class="min-h-screen lg:grid" data-testid="player-shell">
             {{-- Desktop outline sidebar: independent scroll, sticky full height --}}
-            <aside class="hidden border-r border-slate-200 bg-white lg:sticky lg:top-0 lg:block lg:h-screen" data-testid="player-outline">
+            <aside class="hidden border-r border-slate-200 bg-white lg:sticky lg:top-0 lg:block lg:h-screen" data-testid="learning-sidebar">
                 <x-course-outline
                     :course="$course"
                     :completed-lesson-ids="$completedLessonIds"
@@ -48,7 +48,7 @@
                     <div class="flex min-h-14 items-center justify-between gap-3 px-4 sm:px-6">
                         <div class="flex min-w-0 items-center gap-3">
                             {{-- Mobile outline drawer --}}
-                            <details class="relative lg:hidden" data-testid="player-mobile-outline">
+                            <details class="relative lg:hidden" data-testid="learning-sidebar-toggle">
                                 <summary class="mk-focus inline-flex cursor-pointer list-none items-center gap-2 rounded-mk-sm border border-slate-200 px-3 py-2 text-sm font-bold text-mk-navy shadow-sm marker:hidden">
                                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/></svg>
                                     Contents
@@ -65,7 +65,7 @@
                                 </div>
                             </details>
                             <div class="min-w-0">
-                                <p class="text-[11px] font-bold uppercase tracking-wide text-mk-gold">Course player</p>
+                                <p class="text-[11px] font-bold uppercase tracking-wide text-mk-gold">Student dashboard</p>
                                 <h1 class="truncate text-sm font-extrabold text-mk-navy sm:text-base">{{ $title }}</h1>
                             </div>
                         </div>
@@ -84,7 +84,7 @@
                     </div>
                 </header>
 
-                <main class="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6" data-testid="player-main">
+                <main class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6" data-testid="learning-main-content">
                     {{ $slot }}
                 </main>
             </div>

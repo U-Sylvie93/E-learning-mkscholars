@@ -27,12 +27,13 @@ class QuizBuilderPolishTest extends TestCase
         $this->actingAs($student)
             ->get(route('student.quizzes.show', $quiz))
             ->assertOk()
-            ->assertSee('Quiz overview')
+            ->assertSee('data-testid="quiz-instructions"', false)
             ->assertSee($quiz->title)
-            ->assertSee($question->question_text)
-            ->assertSee($correctOption->option_text)
-            ->assertSee('Pass: 50%')
-            ->assertSee('Submit Quiz');
+            ->assertSee('Timer starts only after you press Start Quiz')
+            ->assertSee('Passing Score')
+            ->assertSee('Start Quiz')
+            ->assertDontSee($question->question_text)
+            ->assertDontSee($correctOption->option_text);
     }
 
     public function test_unenrolled_student_cannot_open_or_submit_quiz(): void
@@ -142,7 +143,7 @@ class QuizBuilderPolishTest extends TestCase
             ->get(route('student.quizzes.show', ['quiz' => $quiz, 'attempt' => $attempt->id]))
             ->assertOk()
             ->assertDontSee('Quiz result')
-            ->assertSee('Quiz overview');
+            ->assertSee('Start Quiz');
     }
 
     public function test_learning_page_quiz_card_shows_question_count_and_attempt_status(): void
@@ -176,7 +177,13 @@ class QuizBuilderPolishTest extends TestCase
         $this->actingAs($student)
             ->get(route('student.quizzes.show', $quiz))
             ->assertOk()
-            ->assertSee('No answer options have been published for this question.');
+            ->assertSee('Start Quiz');
+
+        $this->actingAs($student)
+            ->from(route('student.quizzes.show', $quiz))
+            ->post(route('student.quizzes.start', $quiz))
+            ->assertRedirect(route('student.quizzes.show', $quiz))
+            ->assertSessionHasErrors('quiz');
 
         $this->actingAs($student)
             ->from(route('student.quizzes.show', $quiz))
@@ -184,7 +191,7 @@ class QuizBuilderPolishTest extends TestCase
                 'answers' => [$question->id => 9999],
             ])
             ->assertRedirect(route('student.quizzes.show', $quiz))
-            ->assertSessionHasErrors('answers');
+            ->assertSessionHasErrors('quiz');
     }
 
 
@@ -230,7 +237,14 @@ class QuizBuilderPolishTest extends TestCase
         $this->actingAs($student)
             ->get(route('student.quizzes.show', $quiz))
             ->assertOk()
-            ->assertSee('No published questions yet');
+            ->assertSee('0')
+            ->assertSee('Start Quiz');
+
+        $this->actingAs($student)
+            ->from(route('student.quizzes.show', $quiz))
+            ->post(route('student.quizzes.start', $quiz))
+            ->assertRedirect(route('student.quizzes.show', $quiz))
+            ->assertSessionHasErrors('quiz');
 
         $this->actingAs($student)
             ->from(route('student.quizzes.show', $quiz))
@@ -314,7 +328,8 @@ class QuizBuilderPolishTest extends TestCase
             ->assertOk()
             ->assertDontSee('Answer review')
             ->assertDontSee('Correct answer:')
-            ->assertDontSee('Incorrect');
+            ->assertDontSee('Incorrect')
+            ->assertDontSee($quiz->questions()->first()->options()->where('is_correct', true)->first()->option_text);
     }
 
     public function test_answer_for_another_quiz_question_is_rejected(): void
@@ -379,14 +394,20 @@ class QuizBuilderPolishTest extends TestCase
         ]);
 
         $this->actingAs($student)
-            ->get(route('student.quizzes.show', $quiz))
+            ->post(route('student.quizzes.start', $quiz))
+            ->assertRedirect();
+
+        $attempt = QuizAttempt::query()->where('quiz_id', $quiz->id)->where('user_id', $student->id)->firstOrFail();
+
+        $this->actingAs($student)
+            ->get(route('student.quizzes.question', ['quiz' => $quiz, 'attempt' => $attempt, 'questionIndex' => 0]))
             ->assertOk()
             ->assertSeeInOrder([
                 $question->question_text,
                 'First option',
                 'Second option',
-                $laterQuestion->question_text,
-            ]);
+            ])
+            ->assertDontSee($laterQuestion->question_text);
     }
     private function createQuizScenario(bool $enroll = true): array
     {
@@ -464,4 +485,3 @@ class QuizBuilderPolishTest extends TestCase
         return [$student, $course, $lesson, $quiz, $question, $correctOption];
     }
 }
-

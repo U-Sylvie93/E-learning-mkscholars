@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\QuizQuestions;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\QuizQuestions\Pages\CreateQuizQuestion;
 use App\Filament\Resources\QuizQuestions\Pages\EditQuizQuestion;
 use App\Filament\Resources\QuizQuestions\Pages\ListQuizQuestions;
@@ -23,6 +24,8 @@ use UnitEnum;
 
 class QuizQuestionResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = QuizQuestion::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChatBubbleBottomCenterText;

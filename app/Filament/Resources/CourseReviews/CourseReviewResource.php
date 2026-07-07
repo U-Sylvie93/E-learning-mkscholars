@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\CourseReviews;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\CourseReviews\Pages\EditCourseReview;
 use App\Filament\Resources\CourseReviews\Pages\ListCourseReviews;
 use App\Models\CourseReview;
@@ -22,6 +23,8 @@ use UnitEnum;
 
 class CourseReviewResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = CourseReview::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChatBubbleBottomCenterText;

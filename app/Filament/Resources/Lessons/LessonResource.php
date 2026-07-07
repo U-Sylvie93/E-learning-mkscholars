@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Lessons;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\Lessons\Pages\CreateLesson;
 use App\Filament\Resources\Lessons\Pages\EditLesson;
 use App\Filament\Resources\Lessons\Pages\ListLessons;
@@ -29,6 +30,8 @@ use UnitEnum;
 
 class LessonResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = Lesson::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;

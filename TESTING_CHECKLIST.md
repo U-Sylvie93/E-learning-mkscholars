@@ -807,4 +807,102 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - [ ] Collapsed desktop sidebar shows icons with `data-testid="dashboard-sidebar-collapsed-icon"` and active state remains visible.
 - [ ] Mobile dashboard drawer opens cleanly, stacks navigation links, and has no horizontal overflow.
 - [ ] Notification dropdown and unread badge still work after the sidebar polish.
+# Phase 38A Modern Learning Workspace QA
 
+- Student learning page uses dashboard shell, not public navbar/footer.
+- Course sidebar shows modules, lessons, progress, current lesson, and completed state.
+- Lesson content renders as clean reading content with headings, paragraphs, lists, videos, and empty states.
+- Previous and Next lesson buttons follow correct lesson order.
+- Mark Lesson Complete updates progress and does not duplicate records.
+- Course completion rules remain respected.
+- Valid YouTube videos render responsively.
+- Invalid videos do not render broken iframes.
+- Mobile layout stacks cleanly without horizontal overflow.
+- Free, approved payment, and active subscription access still work.
+- Pending/rejected/unpaid access remains blocked.
+
+# Phase 38B Guided Quiz Exam Mode QA
+
+- Quiz opens first on an instruction page.
+- Timer does not start before Start Quiz.
+- Start Quiz creates/resumes the correct attempt.
+- One question appears per screen.
+- Save and Next saves the selected answer immediately.
+- Final question shows Finish Quiz.
+- Timer continues correctly after refresh.
+- Expired quiz blocks late answers or auto-submits safely.
+- Quiz result shows score, percentage, pass/fail, and answer review after submission only.
+- Student cannot view another student's attempt/result.
+- Quiz page disables normal copying, selection, and right-click deterrents.
+- Mobile quiz layout is clean and readable.
+
+# Phase 39A Instructor Course Creation Studio QA
+
+- Approved instructor can open course creation page.
+- Pending/rejected/suspended instructor cannot open course creation page.
+- Student, mentor, guest, and unrelated users cannot access instructor course creation.
+- Instructor course creation page uses instructor dashboard shell, not public navbar/footer.
+- Instructor can enter title, summary, academy/category, overview, outcomes, and allowed pricing/status fields.
+- Instructor can upload JPG, PNG, JPEG, or WebP course image within allowed size.
+- Invalid image type is rejected.
+- Oversized image is rejected.
+- Course image preview appears on edit page.
+- Missing course image shows a clean fallback.
+- Uploaded instructor course image appears on course cards/detail pages where course images are already used.
+- Instructor can update course image without exposing local file paths.
+- Instructor can save draft course without breaking existing course listing.
+- Instructor can continue to course builder after saving.
+- Instructor can add modules and lessons through existing builder flow.
+- Instructor cannot edit another instructor's course by changing the URL.
+- Mobile layout remains clean with no horizontal overflow.
+
+# Phase 40A Admin Control Center QA
+
+## Certificate Admin QA
+
+- Admin can create a certificate from the admin panel.
+- Admin can add student, course, issue date, certificate number, verification code, and status.
+- Admin can add signer name and signer title if supported.
+- Admin can upload or display signature image if supported.
+- Certificate preview/design looks professional with MK Scholars navy/gold branding.
+- Certificate HTML/print fallback does not crash.
+- Certificate PDF download still works if DomPDF is installed.
+- Printable HTML fallback works if DomPDF is not installed.
+- Certificate verification page still works publicly.
+- Missing signature image does not show broken image.
+- Revoked or invalid certificates are not verified publicly.
+
+## Admin Settings QA
+
+- Admin can open account settings from Filament.
+- Admin can update own name/email where allowed.
+- Admin can change password only with correct current password.
+- Wrong current password shows validation error.
+- Admin cannot change role from personal settings.
+- Password hashes and internal sensitive data are not exposed.
+
+## Viewer Account QA
+
+- Admin can create a read-only viewer account.
+- Viewer can access the admin panel only if allowed.
+- Viewer can see allowed sections in read-only mode.
+- Viewer cannot create, edit, delete, approve, reject, upload, or perform destructive actions.
+- Viewer cannot change users, roles, payments, certificates, subscriptions, or settings.
+- Viewer cannot promote self to admin.
+- Student, instructor, mentor, guest, and pending users cannot access admin panel.
+
+## Subscription Admin QA
+
+- Admin can see subscriber list in the admin panel.
+- Subscriber list shows user, email, plan, status, start date, end date, and payment status where available.
+- Admin can filter subscribers by status and plan.
+- Admin can view subscription details.
+- Admin subscription actions respect existing payment/subscription rules.
+- Viewer can only read allowed subscription data and cannot modify subscriptions.
+- Manual payment flow remains unchanged.
+
+## Admin Navigation QA
+
+- Admin panel has a Back to Home or View Website button.
+- Button redirects to the public home page.
+- Button is visible without breaking Filament navigation.

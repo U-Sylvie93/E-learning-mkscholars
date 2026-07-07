@@ -19,12 +19,14 @@ class User extends Authenticatable implements FilamentUser
     public const ROLE_INSTRUCTOR = 'instructor';
     public const ROLE_MENTOR = 'mentor';
     public const ROLE_ADMIN = 'admin';
+    public const ROLE_VIEWER = 'viewer';
 
     public const ROLES = [
         self::ROLE_STUDENT,
         self::ROLE_INSTRUCTOR,
         self::ROLE_MENTOR,
         self::ROLE_ADMIN,
+        self::ROLE_VIEWER,
     ];
 
     public const APPROVAL_PENDING = 'pending';
@@ -106,14 +108,22 @@ class User extends Authenticatable implements FilamentUser
         return match ($this->role) {
             self::ROLE_INSTRUCTOR => '/instructor/dashboard',
             self::ROLE_MENTOR => '/mentor/dashboard',
-            self::ROLE_ADMIN => '/admin',
+            self::ROLE_ADMIN,
+            self::ROLE_VIEWER => '/admin',
             default => '/student/dashboard',
         };
     }
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return $panel->getId() === 'admin' && $this->role === self::ROLE_ADMIN && $this->isApproved();
+        return $panel->getId() === 'admin'
+            && in_array($this->role, [self::ROLE_ADMIN, self::ROLE_VIEWER], true)
+            && $this->isApproved();
+    }
+
+    public function isReadOnlyAdminViewer(): bool
+    {
+        return $this->role === self::ROLE_VIEWER;
     }
 
     public function enrollments(): HasMany
@@ -210,7 +220,6 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(ApplicationStatusHistory::class, 'changed_by');
     }
 }
-
 
 
 

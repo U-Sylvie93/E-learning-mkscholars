@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\SubscriptionPlans;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\SubscriptionPlans\Pages\CreateSubscriptionPlan;
 use App\Filament\Resources\SubscriptionPlans\Pages\EditSubscriptionPlan;
 use App\Filament\Resources\SubscriptionPlans\Pages\ListSubscriptionPlans;
@@ -25,6 +26,8 @@ use UnitEnum;
 
 class SubscriptionPlanResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = SubscriptionPlan::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCreditCard;

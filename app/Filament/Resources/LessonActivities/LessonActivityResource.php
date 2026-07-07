@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\LessonActivities;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\LessonActivities\Pages\CreateLessonActivity;
 use App\Filament\Resources\LessonActivities\Pages\EditLessonActivity;
 use App\Filament\Resources\LessonActivities\Pages\ListLessonActivities;
@@ -24,6 +25,8 @@ use UnitEnum;
 
 class LessonActivityResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = LessonActivity::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedQueueList;

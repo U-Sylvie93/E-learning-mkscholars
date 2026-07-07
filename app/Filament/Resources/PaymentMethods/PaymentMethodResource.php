@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\PaymentMethods;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\PaymentMethods\Pages\CreatePaymentMethod;
 use App\Filament\Resources\PaymentMethods\Pages\EditPaymentMethod;
 use App\Filament\Resources\PaymentMethods\Pages\ListPaymentMethods;
@@ -23,6 +24,8 @@ use UnitEnum;
 
 class PaymentMethodResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = PaymentMethod::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;

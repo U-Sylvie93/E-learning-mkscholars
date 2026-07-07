@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Quizzes;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\Quizzes\Pages\CreateQuiz;
 use App\Filament\Resources\Quizzes\Pages\EditQuiz;
 use App\Filament\Resources\Quizzes\Pages\ListQuizzes;
@@ -23,6 +24,8 @@ use UnitEnum;
 
 class QuizResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = Quiz::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedQuestionMarkCircle;

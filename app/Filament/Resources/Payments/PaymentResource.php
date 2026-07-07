@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Payments;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\Payments\Pages\EditPayment;
 use App\Filament\Resources\Payments\Pages\ListPayments;
 use App\Models\Payment;
@@ -22,6 +23,8 @@ use UnitEnum;
 
 class PaymentResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = Payment::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedInboxStack;
@@ -91,7 +94,9 @@ class PaymentResource extends Resource
                 SelectFilter::make('course')->relationship('course', 'title')->searchable()->preload(),
             ])
             ->defaultSort('updated_at', 'desc')
-            ->recordActions([EditAction::make()]);
+            ->recordActions([
+                EditAction::make()->visible(fn (): bool => ! self::isReadOnlyViewer()),
+            ]);
     }
 
     public static function getPages(): array

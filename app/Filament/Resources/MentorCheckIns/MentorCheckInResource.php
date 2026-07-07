@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\MentorCheckIns;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\MentorCheckIns\Pages\CreateMentorCheckIn;
 use App\Filament\Resources\MentorCheckIns\Pages\EditMentorCheckIn;
 use App\Filament\Resources\MentorCheckIns\Pages\ListMentorCheckIns;
@@ -24,6 +25,8 @@ use UnitEnum;
 
 class MentorCheckInResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = MentorCheckIn::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;

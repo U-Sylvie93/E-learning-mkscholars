@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\CourseCompletions;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\CourseCompletions\Pages\ListCourseCompletions;
 use App\Models\CourseCompletion;
 use BackedEnum;
@@ -15,6 +16,8 @@ use UnitEnum;
 
 class CourseCompletionResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = CourseCompletion::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartBar;

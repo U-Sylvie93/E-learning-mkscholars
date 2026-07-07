@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\MentorAssignments;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\MentorAssignments\Pages\CreateMentorAssignment;
 use App\Filament\Resources\MentorAssignments\Pages\EditMentorAssignment;
 use App\Filament\Resources\MentorAssignments\Pages\ListMentorAssignments;
@@ -24,6 +25,8 @@ use UnitEnum;
 
 class MentorAssignmentResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = MentorAssignment::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;

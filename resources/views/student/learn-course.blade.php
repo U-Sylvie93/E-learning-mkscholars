@@ -17,6 +17,7 @@
         $firstAssignment = $currentAssignments->first();
         $firstAssignmentSubmission = $firstAssignment?->submissions?->first();
         $moduleTitle = $currentLesson?->module?->title ?? 'Learning path';
+        $renderedLessonContent = $currentLesson ? \App\Support\CourseContentRenderer::render($currentLesson->content) : '';
     @endphp
 
     <div class="space-y-5" data-testid="learning-workspace">
@@ -47,8 +48,13 @@
                     @if ($isCompleted)
                         <span class="inline-flex shrink-0 items-center gap-2 rounded-mk-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-800">
                             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            Completed
+                            Lesson Completed
                         </span>
+                    @else
+                        <form method="POST" action="{{ route('student.lessons.complete', ['course' => $course, 'lesson' => $currentLesson]) }}" class="shrink-0">
+                            @csrf
+                            <x-button type="submit" size="sm">Mark Lesson Complete</x-button>
+                        </form>
                     @endif
                 </div>
             </section>
@@ -66,18 +72,35 @@
                             allowfullscreen
                         ></iframe>
                     </div>
+                    <div class="border-t border-slate-100 bg-white px-4 py-3 text-right">
+                        <a href="{{ $youtubeEmbedUrl }}" target="_blank" rel="noopener noreferrer" class="mk-focus inline-flex rounded-sm text-xs font-black uppercase tracking-wide text-mk-navy underline decoration-mk-gold underline-offset-4" data-testid="learning-video-fullscreen">Open video</a>
+                    </div>
                 </section>
             @elseif ($currentLesson->lesson_type === 'video')
                 <x-empty-state icon="live" title="Video coming soon" description="The video link for this lesson is not available yet." />
             @endif
 
             {{-- Lesson notes --}}
-            @if ($currentLesson->content)
-                <section class="rounded-mk-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                    <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Lesson notes</p>
-                    <div class="mt-3 whitespace-pre-wrap break-words text-base leading-8 text-slate-700">{{ $currentLesson->content }}</div>
+            <section class="rounded-mk-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+                <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Lesson notes</p>
+                @if ($renderedLessonContent)
+                    <div class="mk-rich-content mt-4">
+                        {!! $renderedLessonContent !!}
+                    </div>
+                @else
+                    <div class="mt-4 rounded-mk-md border border-dashed border-slate-200 bg-slate-50 p-5">
+                        <h3 class="text-base font-extrabold text-mk-navy">No written notes yet</h3>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">Use the video, quiz, assignment, or materials attached to this lesson while written notes are being prepared.</p>
+                    </div>
+                @endif
+            </section>
+
+            <aside class="space-y-5" data-testid="learning-tools-panel">
+                <section class="rounded-mk-lg border border-slate-200 bg-white p-5 shadow-sm">
+                    <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Learning tools</p>
+                    <h3 class="mt-1 text-lg font-extrabold text-mk-navy">Lesson Tools</h3>
+                    <p class="mt-1 text-sm leading-6 text-slate-600">Open the activities attached to this lesson when you are ready.</p>
                 </section>
-            @endif
 
             {{-- Quiz --}}
             @if ($currentQuiz)
@@ -94,6 +117,10 @@
                         @if ($latestQuizAttempt)<x-status-badge :status="$latestQuizAttempt->status" />@else<x-badge tone="blue">Ready</x-badge>@endif
                     </div>
                     <x-button :href="route('student.quizzes.show', $currentQuiz)" size="sm" class="mt-4">{{ $latestQuizAttempt ? 'Review or Retake Quiz' : 'Start Quiz' }}</x-button>
+                </section>
+            @else
+                <section class="rounded-mk-lg border border-dashed border-slate-200 bg-white p-5">
+                    <p class="text-sm font-semibold text-slate-600">No quiz is attached to this lesson.</p>
                 </section>
             @endif
 
@@ -115,12 +142,17 @@
                     @endif
                     <x-button :href="route('student.assignments.show', $firstAssignment)" size="sm" variant="secondary" class="mt-4">{{ $firstAssignmentSubmission ? 'View submission' : 'Open Assignment' }}</x-button>
                 </section>
+            @else
+                <section class="rounded-mk-lg border border-dashed border-slate-200 bg-white p-5">
+                    <p class="text-sm font-semibold text-slate-600">No assignments are attached to this lesson yet.</p>
+                </section>
             @endif
 
             {{-- Materials --}}
             @if ($upcomingActivities->isNotEmpty())
                 <section class="rounded-mk-lg border border-slate-200 bg-white p-5 shadow-sm">
                     <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Materials</p>
+                    <h3 class="mt-1 text-lg font-extrabold text-mk-navy">Resources</h3>
                     <div class="mt-3 space-y-2">
                         @foreach ($upcomingActivities as $activity)
                             <div class="rounded-mk-md border border-slate-100 bg-slate-50 p-3">
@@ -133,6 +165,10 @@
                             </div>
                         @endforeach
                     </div>
+                </section>
+            @else
+                <section class="rounded-mk-lg border border-dashed border-slate-200 bg-white p-5">
+                    <p class="text-sm font-semibold text-slate-600">No materials attached.</p>
                 </section>
             @endif
 
@@ -162,6 +198,7 @@
                     </div>
                 </section>
             @endif
+            </aside>
 
             {{-- Completion + review --}}
             <div class="grid gap-5 lg:grid-cols-2">
@@ -217,15 +254,15 @@
 
             {{-- Prev / Next --}}
             <section class="rounded-mk-lg border border-slate-200 bg-white p-4 shadow-sm">
-                <div class="grid gap-3 sm:grid-cols-2">
-                    <div>
-                        @if ($previousLesson)
-                            <x-button :href="route('student.courses.learn', ['course' => $course, 'lesson' => $previousLesson->id])" variant="secondary" class="w-full">← {{ $previousLesson->title }}</x-button>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            @if ($previousLesson)
+                            <x-button :href="route('student.courses.learn', ['course' => $course, 'lesson' => $previousLesson->id])" variant="secondary" class="w-full">Previous: {{ $previousLesson->title }}</x-button>
                         @endif
                     </div>
                     <div class="sm:text-right">
                         @if ($nextLesson)
-                            <x-button :href="route('student.courses.learn', ['course' => $course, 'lesson' => $nextLesson->id])" variant="navy" class="w-full">{{ $nextLesson->title }} →</x-button>
+                            <x-button :href="route('student.courses.learn', ['course' => $course, 'lesson' => $nextLesson->id])" variant="navy" class="w-full">Next: {{ $nextLesson->title }}</x-button>
                         @else
                             <x-button :href="route('student.my-courses')" variant="secondary" class="w-full">Back to My Courses</x-button>
                         @endif

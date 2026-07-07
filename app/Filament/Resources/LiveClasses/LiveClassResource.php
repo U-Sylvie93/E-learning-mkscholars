@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\LiveClasses;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\LiveClasses\Pages\CreateLiveClass;
 use App\Filament\Resources\LiveClasses\Pages\EditLiveClass;
 use App\Filament\Resources\LiveClasses\Pages\ListLiveClasses;
@@ -25,6 +26,8 @@ use UnitEnum;
 
 class LiveClassResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = LiveClass::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedVideoCamera;

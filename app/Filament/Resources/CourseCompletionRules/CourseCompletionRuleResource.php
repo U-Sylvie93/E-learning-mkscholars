@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\CourseCompletionRules;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\CourseCompletionRules\Pages\CreateCourseCompletionRule;
 use App\Filament\Resources\CourseCompletionRules\Pages\EditCourseCompletionRule;
 use App\Filament\Resources\CourseCompletionRules\Pages\ListCourseCompletionRules;
@@ -24,6 +25,8 @@ use UnitEnum;
 
 class CourseCompletionRuleResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = CourseCompletionRule::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentCheck;

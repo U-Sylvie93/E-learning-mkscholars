@@ -257,7 +257,7 @@ class InstructorCoursePreviewTest extends TestCase
         $this->actingAs($instructor)
             ->get(route('instructor.courses.edit', $ownedCourse))
             ->assertOk()
-            ->assertSee('Build course content');
+            ->assertSee('Course profile and builder');
 
         $this->actingAs($instructor)
             ->get(route('instructor.courses.edit', $otherCourse))
@@ -431,5 +431,4 @@ class InstructorCoursePreviewTest extends TestCase
         ]);
     }
 }
-
 

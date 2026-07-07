@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Assignments;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\Assignments\Pages\CreateAssignment;
 use App\Filament\Resources\Assignments\Pages\EditAssignment;
 use App\Filament\Resources\Assignments\Pages\ListAssignments;
@@ -28,6 +29,8 @@ use UnitEnum;
 
 class AssignmentResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = Assignment::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;

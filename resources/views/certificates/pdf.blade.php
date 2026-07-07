@@ -27,9 +27,9 @@
 
         .certificate {
             min-height: 680px;
-            border: 8px solid #ffc40c;
+            border: 10px double #ffc40c;
             background: #ffffff;
-            padding: 48px;
+            padding: 46px;
         }
 
         .logo {
@@ -43,7 +43,7 @@
             color: #ffc40c;
             font-size: 14px;
             font-weight: 700;
-            letter-spacing: 2px;
+            letter-spacing: 4px;
             text-align: center;
             text-transform: uppercase;
         }
@@ -54,6 +54,13 @@
             font-size: 42px;
             line-height: 1.15;
             text-align: center;
+        }
+
+        .gold-rule {
+            width: 160px;
+            height: 5px;
+            margin: 18px auto 22px;
+            background: #ffc40c;
         }
 
         .intro,
@@ -192,6 +199,7 @@
             @endif
             <div class="brand">MK Scholars</div>
             <h1>Certificate of Completion</h1>
+            <div class="gold-rule"></div>
 
             <p class="intro">This certificate is proudly presented to</p>
             <div class="student">{{ $certificate->student_name ?: ($certificate->user?->name ?? 'MK Scholars Student') }}</div>

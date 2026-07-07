@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Users;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
+use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Models\AppNotification;
@@ -20,11 +22,12 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Illuminate\Validation\Rule;
 use UnitEnum;
 
 class UserResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = User::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
@@ -47,6 +50,13 @@ class UserResource extends Resource
                 ->required()
                 ->options(self::approvalOptions())
                 ->disabled(fn (?User $record): bool => $record?->role === User::ROLE_ADMIN || $record?->id === auth()->id()),
+            TextInput::make('password')
+                ->password()
+                ->revealable()
+                ->maxLength(255)
+                ->required(fn (string $operation): bool => $operation === 'create')
+                ->dehydrated(fn (?string $state): bool => filled($state))
+                ->helperText('Set a temporary password for new admin/viewer accounts. Leave blank on edit to keep the current password.'),
             DateTimePicker::make('approved_at')->disabled()->dehydrated(false),
             Placeholder::make('approved_by_name')
                 ->label('Approved by')
@@ -74,19 +84,19 @@ class UserResource extends Resource
                 Action::make('approve')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->visible(fn (User $record): bool => self::canModerate($record) && $record->approval_status !== User::APPROVAL_APPROVED)
+                    ->visible(fn (User $record): bool => ! self::isReadOnlyViewer() && self::canModerate($record) && $record->approval_status !== User::APPROVAL_APPROVED)
                     ->action(fn (User $record) => self::setApprovalStatus($record, User::APPROVAL_APPROVED)),
                 Action::make('reject')
                     ->color('warning')
                     ->requiresConfirmation()
-                    ->visible(fn (User $record): bool => self::canModerate($record) && $record->approval_status !== User::APPROVAL_REJECTED)
+                    ->visible(fn (User $record): bool => ! self::isReadOnlyViewer() && self::canModerate($record) && $record->approval_status !== User::APPROVAL_REJECTED)
                     ->action(fn (User $record) => self::setApprovalStatus($record, User::APPROVAL_REJECTED)),
                 Action::make('suspend')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->visible(fn (User $record): bool => self::canModerate($record) && $record->approval_status !== User::APPROVAL_SUSPENDED)
+                    ->visible(fn (User $record): bool => ! self::isReadOnlyViewer() && self::canModerate($record) && $record->approval_status !== User::APPROVAL_SUSPENDED)
                     ->action(fn (User $record) => self::setApprovalStatus($record, User::APPROVAL_SUSPENDED)),
-                EditAction::make(),
+                EditAction::make()->visible(fn (): bool => ! self::isReadOnlyViewer()),
             ]);
     }
 
@@ -94,6 +104,7 @@ class UserResource extends Resource
     {
         return [
             'index' => ListUsers::route('/'),
+            'create' => CreateUser::route('/create'),
             'edit' => EditUser::route('/{record}/edit'),
         ];
     }

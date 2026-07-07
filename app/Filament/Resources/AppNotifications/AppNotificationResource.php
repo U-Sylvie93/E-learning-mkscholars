@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\AppNotifications;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\AppNotifications\Pages\CreateAppNotification;
 use App\Filament\Resources\AppNotifications\Pages\EditAppNotification;
 use App\Filament\Resources\AppNotifications\Pages\ListAppNotifications;
@@ -25,6 +26,8 @@ use UnitEnum;
 
 class AppNotificationResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = AppNotification::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedInboxStack;

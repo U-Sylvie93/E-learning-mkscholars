@@ -32,6 +32,33 @@ Do not convert the project to React. Continue using Laravel, Blade, Livewire, Ta
 
 ## Recently Completed Phase
 
+### Phase 39A: Instructor Course Creation Studio
+
+Code changes added for owner verification:
+
+- Instructor course create/edit form is now a guided course studio inside the instructor dashboard shell.
+- Instructor course image upload now reuses the existing `featured_image_path` field, `public` disk, `courses` directory, and JPG/PNG/WebP 4MB rule used by admin Filament.
+- Instructor course list and instructor course preview show course cover images with clean fallback states.
+- Existing instructor ownership checks remain in the route layer.
+- Manual payment/free course fields remain on the existing `access_type`, `price_amount`, and `currency` fields.
+- `TESTING_CHECKLIST.md` includes Phase 39A manual QA.
+
+Manual verification is still required because this phase was code-only: run migrations if needed, run tests, build assets, and check the instructor flow in a browser.
+
+### Phase 40A: Admin Control Center Improvements
+
+Code changes added for owner verification:
+
+- Certificate pages now use a more formal MK Scholars academy-style certificate design while preserving existing PDF and printable HTML fallback behavior.
+- Admin account settings were added inside Filament for own-profile updates and password changes with current-password confirmation.
+- A `viewer` role was added as a read-only admin observer role.
+- Filament resources now share a read-only viewer guard that blocks create, edit, delete, and bulk delete permissions for viewer accounts.
+- Subscription admin tables now show subscriber email, plan, amount, payment status, expiry state, and useful filters.
+- The Filament user menu includes a View Website link back to the public home page.
+- `TESTING_CHECKLIST.md` includes Phase 40A manual QA.
+
+Manual verification is still required because this phase was code-only: run migrations if needed, run tests, build assets, and check the admin panel in a browser.
+
 ### Phase 14A: Subscriptions and Advanced Payment Plans
 
 Completed:

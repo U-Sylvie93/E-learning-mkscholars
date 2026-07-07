@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\AssignmentSubmissions;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\AssignmentSubmissions\Pages\EditAssignmentSubmission;
 use App\Filament\Resources\AssignmentSubmissions\Pages\ListAssignmentSubmissions;
 use App\Models\AssignmentSubmission;
@@ -23,6 +24,8 @@ use UnitEnum;
 
 class AssignmentSubmissionResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = AssignmentSubmission::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedInboxStack;

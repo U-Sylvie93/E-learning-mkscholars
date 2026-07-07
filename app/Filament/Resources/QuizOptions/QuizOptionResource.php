@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\QuizOptions;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\QuizOptions\Pages\CreateQuizOption;
 use App\Filament\Resources\QuizOptions\Pages\EditQuizOption;
 use App\Filament\Resources\QuizOptions\Pages\ListQuizOptions;
@@ -25,6 +26,8 @@ use UnitEnum;
 
 class QuizOptionResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = QuizOption::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedListBullet;

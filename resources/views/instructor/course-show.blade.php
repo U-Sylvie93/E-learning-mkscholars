@@ -1,13 +1,33 @@
 <x-dashboard-layout role="instructor" :title="$course->title" description="MK Scholars instructor course preview.">
     <section class="bg-white py-16">
         <div class="mk-container">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <x-section-header
-                    eyebrow="Course preview"
-                    :title="$course->title"
-                    :description="$course->short_description ?? 'Read-only course summary for instructors.'"
-                />
-                <x-button :href="route('instructor.courses.index')" variant="secondary">Back to Courses</x-button>
+            <div class="overflow-hidden rounded-mk-lg border border-slate-200 bg-white shadow-sm">
+                <div class="grid gap-0 lg:grid-cols-[1.05fr_0.95fr]">
+                    <div class="p-6 sm:p-8">
+                        <x-section-header
+                            eyebrow="Course preview"
+                            :title="$course->title"
+                            :description="$course->short_description ?? 'Read-only course summary for instructors.'"
+                        />
+                        <div class="mt-6 flex flex-wrap gap-3">
+                            <x-button :href="route('instructor.courses.index')" variant="secondary">Back to Courses</x-button>
+                            @if ((int) $course->instructor_id === (int) auth()->id())
+                                <x-button :href="route('instructor.courses.edit', $course)">Edit in Studio</x-button>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="relative min-h-72 overflow-hidden bg-mk-navy">
+                        @if ($course->coverImageUrl())
+                            <img src="{{ $course->coverImageUrl() }}" alt="{{ $course->title }} cover image" class="h-full min-h-72 w-full object-cover">
+                            <div class="absolute inset-0 bg-gradient-to-t from-mk-navy/75 via-transparent to-transparent"></div>
+                        @else
+                            <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,196,12,0.30),transparent_34%),linear-gradient(135deg,#073653_0%,#0e4a72_56%,#102a3a_100%)]"></div>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span class="rounded-mk-md border border-mk-gold/40 bg-white/10 px-4 py-3 text-sm font-black text-mk-gold">No course image yet</span>
+                            </div>
+                        @endif
+                    </div>
+                </div>
             </div>
 
             @include('instructor.partials.nav')
@@ -63,4 +83,3 @@
         </div>
     </section>
 </x-dashboard-layout>
-

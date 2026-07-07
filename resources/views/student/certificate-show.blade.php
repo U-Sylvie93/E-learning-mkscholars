@@ -17,15 +17,17 @@
                 $signatureUrl = $certificate->signatureImageUrl();
             @endphp
 
-            <div class="mx-auto max-w-5xl rounded-lg border-4 border-mk-gold bg-white p-8 shadow-sm print:border print:shadow-none sm:p-12">
+            <div class="mx-auto max-w-5xl rounded-[2rem] border border-mk-gold/60 bg-white p-4 shadow-soft print:border print:shadow-none sm:p-6">
+                <div class="rounded-[1.5rem] border-4 border-double border-mk-gold bg-[radial-gradient(circle_at_top_left,rgba(255,196,12,0.16),transparent_28%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-8 sm:p-12">
                 <div class="text-center">
                     <x-brand-logo size="lg" class="justify-center" />
-                    <p class="mt-5 text-sm font-bold uppercase tracking-wide text-mk-gold">MK Scholars</p>
+                    <p class="mt-5 text-sm font-black uppercase tracking-[0.35em] text-mk-gold">MK Scholars Academy</p>
                     <h1 class="mt-4 text-4xl font-extrabold tracking-normal text-mk-navy sm:text-5xl">Certificate of Completion</h1>
-                    <p class="mt-6 text-sm leading-6 text-slate-600">This certificate is proudly presented to</p>
-                    <p class="mt-3 text-3xl font-extrabold text-mk-navy">{{ $certificate->student_name }}</p>
+                    <p class="mx-auto mt-5 h-1 w-32 rounded-full bg-mk-gold"></p>
+                    <p class="mt-6 text-sm font-semibold leading-6 text-slate-600">This certificate is proudly presented to</p>
+                    <p class="mt-3 break-words text-4xl font-black text-mk-navy">{{ $certificate->student_name }}</p>
                     <p class="mt-6 text-sm leading-6 text-slate-600">for successfully completing</p>
-                    <p class="mt-3 text-2xl font-bold text-mk-navy">{{ $certificate->course_title }}</p>
+                    <p class="mx-auto mt-3 max-w-3xl break-words text-2xl font-black text-mk-navy">{{ $certificate->course_title }}</p>
                 </div>
 
                 <div class="mt-10 grid gap-4 sm:grid-cols-3">
@@ -74,8 +76,8 @@
                     <p class="text-xs font-bold uppercase tracking-wide text-mk-gold">Verification Link</p>
                     <p class="mt-2 break-all text-sm font-bold text-mk-navy">{{ route('certificates.verify', $certificate->verification_code) }}</p>
                 </div>
+                </div>
             </div>
         </div>
     </section>
 </x-dashboard-layout>
-

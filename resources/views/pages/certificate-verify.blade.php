@@ -6,7 +6,8 @@
                     $signatureUrl = $certificate->signatureImageUrl();
                 @endphp
                 <div class="mx-auto max-w-4xl">
-                    <x-card highlighted>
+                    <div class="rounded-[2rem] border border-mk-gold/60 bg-white p-4 shadow-soft">
+                    <div class="rounded-[1.5rem] border-4 border-double border-mk-gold bg-[radial-gradient(circle_at_top_left,rgba(255,196,12,0.16),transparent_30%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-6 sm:p-8">
                         <div class="text-center">
                             <x-badge tone="green">Valid certificate</x-badge>
                             <h1 class="mt-5 text-4xl font-extrabold tracking-normal text-mk-navy">Certificate Verified</h1>
@@ -57,7 +58,8 @@
                                 @endforelse
                             </div>
                         </div>
-                    </x-card>
+                    </div>
+                    </div>
                 </div>
             @else
                 <div class="mx-auto max-w-2xl text-center">

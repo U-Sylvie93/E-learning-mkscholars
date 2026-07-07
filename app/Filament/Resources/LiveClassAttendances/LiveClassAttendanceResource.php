@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\LiveClassAttendances;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\LiveClassAttendances\Pages\ListLiveClassAttendances;
 use App\Models\LiveClassAttendance;
 use BackedEnum;
@@ -14,6 +15,8 @@ use UnitEnum;
 
 class LiveClassAttendanceResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = LiveClassAttendance::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentCheck;

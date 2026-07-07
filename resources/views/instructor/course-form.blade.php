@@ -1,10 +1,49 @@
-<x-dashboard-layout role="instructor" :title="$mode === 'create' ? 'Create Course' : 'Course Builder'" description="MK Scholars instructor course builder.">
+<x-dashboard-layout role="instructor" :title="$mode === 'create' ? 'Create Course' : 'Course Studio'" description="MK Scholars instructor course builder.">
+    @php
+        $coverImageUrl = $course->exists && $course->featured_image_path ? $course->coverImageUrl() : null;
+        $outcomesValue = old('learning_outcomes', collect($course->learning_outcomes ?? [])->implode("\n"));
+    @endphp
+
     <div class="space-y-6">
+        <div class="overflow-hidden rounded-mk-lg border border-slate-200 bg-white shadow-sm">
+            <div class="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
+                <div class="p-6 sm:p-8">
+                    <x-badge tone="gold">Instructor course studio</x-badge>
+                    <h1 class="mt-4 text-3xl font-black tracking-normal text-mk-navy sm:text-4xl">
+                        {{ $mode === 'create' ? 'Create a professional course' : 'Polish your course and builder' }}
+                    </h1>
+                    <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
+                        Build a clear course profile first, then continue into modules, lessons, quizzes, and assignments without leaving your instructor workspace.
+                    </p>
+                    <div class="mt-6 flex flex-wrap gap-3">
+                        <x-button :href="route('instructor.courses.index')" variant="secondary">Back to My Courses</x-button>
+                        @if ($course->exists)
+                            <x-button :href="route('instructor.courses.show', $course)" variant="navy">Open Preview</x-button>
+                        @endif
+                    </div>
+                </div>
+                <div class="relative min-h-64 overflow-hidden bg-mk-navy">
+                    @if ($coverImageUrl)
+                        <img src="{{ $coverImageUrl }}" alt="{{ $course->title }} cover image" class="h-full min-h-64 w-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-mk-navy/80 via-transparent to-transparent"></div>
+                    @else
+                        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,196,12,0.30),transparent_34%),linear-gradient(135deg,#073653_0%,#0e4a72_56%,#102a3a_100%)]"></div>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="rounded-mk-lg border border-mk-gold/40 bg-white/10 px-5 py-4 text-center text-white backdrop-blur">
+                                <p class="text-sm font-black uppercase tracking-wide text-mk-gold">Cover image</p>
+                                <p class="mt-2 text-sm font-semibold">Upload JPG, PNG, JPEG, or WebP</p>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <x-section-header
-                eyebrow="Instructor studio"
-                :title="$mode === 'create' ? 'Create a course draft' : 'Build course content'"
-                description="Create and polish your own MK Scholars courses. Admins can still supervise, publish, and review everything from Filament."
+                eyebrow="Guided setup"
+                :title="$mode === 'create' ? 'Course profile' : 'Course profile and builder'"
+                description="Use the sections below to shape the public course profile, pricing, image, outcomes, and learning content."
             />
             <div class="flex flex-wrap gap-3">
                 <x-button :href="route('instructor.courses.index')" variant="secondary">My Courses</x-button>
@@ -30,13 +69,19 @@
         @endif
 
         <x-card highlighted>
-            <form method="POST" action="{{ $course->exists ? route('instructor.courses.update', $course) : route('instructor.courses.store') }}" class="space-y-5">
+            <form method="POST" action="{{ $course->exists ? route('instructor.courses.update', $course) : route('instructor.courses.store') }}" enctype="multipart/form-data" class="space-y-8">
                 @csrf
                 @if ($course->exists)
                     @method('PUT')
                 @endif
 
-                <div class="grid gap-4 md:grid-cols-2">
+                <section class="space-y-4">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Section A</p>
+                        <h2 class="mt-1 text-xl font-black text-mk-navy">Course identity</h2>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">Give students the core facts they need to understand the course quickly.</p>
+                    </div>
+                    <div class="grid gap-4 md:grid-cols-2">
                     <label class="block text-sm font-bold text-mk-navy">
                         Academy
                         <select name="academy_id" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" required>
@@ -48,6 +93,7 @@
                     <label class="block text-sm font-bold text-mk-navy">
                         Title
                         <input name="title" value="{{ old('title', $course->title) }}" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" required>
+                        <span class="mt-1 block text-xs font-semibold text-slate-500">Use a clear student-facing title.</span>
                     </label>
                     <label class="block text-sm font-bold text-mk-navy">
                         Slug
@@ -61,6 +107,68 @@
                         Duration
                         <input name="duration" value="{{ old('duration', $course->duration ?? '4 weeks') }}" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" required>
                     </label>
+                    </div>
+                </section>
+
+                <section class="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Section B</p>
+                        <h2 class="mt-1 text-xl font-black text-mk-navy">Course cover image</h2>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">This image appears on public course cards and detail pages. Leave blank to keep the current image or fallback.</p>
+                    </div>
+                    <div class="rounded-mk-md border border-slate-200 bg-slate-50 p-4">
+                        <div class="overflow-hidden rounded-mk-md border border-slate-200 bg-mk-navy">
+                            @if ($coverImageUrl)
+                                <img src="{{ $coverImageUrl }}" alt="{{ $course->title }} current cover image" class="h-52 w-full object-cover">
+                            @else
+                                <div class="flex h-52 w-full items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(255,196,12,0.30),transparent_34%),linear-gradient(135deg,#073653_0%,#0e4a72_56%,#102a3a_100%)]">
+                                    <span class="rounded-mk-md border border-mk-gold/40 bg-white/10 px-4 py-3 text-sm font-black text-mk-gold">No image yet</span>
+                                </div>
+                            @endif
+                        </div>
+                        <label class="mt-4 block text-sm font-bold text-mk-navy">
+                            Upload or replace image
+                            <input name="featured_image" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-mk-gold file:px-4 file:py-2 file:text-sm file:font-bold file:text-mk-navy focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30">
+                            <span class="mt-1 block text-xs font-semibold text-slate-500">JPG, JPEG, PNG, or WebP. Maximum 4MB. Stored using the same public course image field as admin.</span>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="space-y-4">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Section C</p>
+                        <h2 class="mt-1 text-xl font-black text-mk-navy">Course overview</h2>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">Markdown-style headings, paragraphs, lists, links, and tables are rendered safely on public pages.</p>
+                    </div>
+                    <label class="block text-sm font-bold text-mk-navy">
+                        Short description
+                        <textarea name="short_description" rows="3" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" required>{{ old('short_description', $course->short_description) }}</textarea>
+                    </label>
+                    <label class="block text-sm font-bold text-mk-navy">
+                        Full course overview
+                        <textarea name="full_description" rows="8" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm leading-6 focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" placeholder="# What students will learn&#10;&#10;Describe the course, projects, lessons, and support students receive.">{{ old('full_description', $course->full_description) }}</textarea>
+                    </label>
+                </section>
+
+                <section class="space-y-4">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Section D</p>
+                        <h2 class="mt-1 text-xl font-black text-mk-navy">Learning outcomes</h2>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">Add one outcome per line. These become public course outcomes.</p>
+                    </div>
+                    <label class="block text-sm font-bold text-mk-navy">
+                        Outcomes
+                        <textarea name="learning_outcomes" rows="5" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" placeholder="One outcome per line">{{ $outcomesValue }}</textarea>
+                    </label>
+                </section>
+
+                <section class="space-y-4">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Sections E and F</p>
+                        <h2 class="mt-1 text-xl font-black text-mk-navy">Pricing, access, and status</h2>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">Manual payment behavior remains unchanged. Admins can still supervise courses in Filament.</p>
+                    </div>
+                    <div class="grid gap-4 md:grid-cols-2">
                     <label class="block text-sm font-bold text-mk-navy">
                         Status
                         <select name="status" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" required>
@@ -87,21 +195,14 @@
                         </label>
                     </div>
                 </div>
+                </section>
 
-                <label class="block text-sm font-bold text-mk-navy">
-                    Short description
-                    <textarea name="short_description" rows="3" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" required>{{ old('short_description', $course->short_description) }}</textarea>
-                </label>
-                <label class="block text-sm font-bold text-mk-navy">
-                    Full description
-                    <textarea name="full_description" rows="5" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30">{{ old('full_description', $course->full_description) }}</textarea>
-                </label>
-                <label class="block text-sm font-bold text-mk-navy">
-                    Learning outcomes
-                    <textarea name="learning_outcomes" rows="4" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" placeholder="One outcome per line">{{ old('learning_outcomes', collect($course->learning_outcomes ?? [])->implode("\n")) }}</textarea>
-                </label>
-                <div class="flex justify-end">
-                    <x-button type="submit">{{ $course->exists ? 'Save Course' : 'Create Course' }}</x-button>
+                <div class="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="text-sm font-semibold text-slate-500">{{ $course->exists ? 'Save changes, then keep building modules and lessons below.' : 'Create the course draft, then continue to the builder.' }}</p>
+                    <div class="flex flex-wrap gap-3">
+                        <x-button :href="route('instructor.courses.index')" variant="secondary">Back to My Courses</x-button>
+                        <x-button type="submit">{{ $course->exists ? 'Save Course' : 'Save & Continue to Builder' }}</x-button>
+                    </div>
                 </div>
             </form>
         </x-card>

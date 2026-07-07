@@ -4,6 +4,8 @@ MK Scholars is a Laravel-based e-learning platform for student courses, mentorsh
 
 The project uses Blade and Livewire for the application UI, Tailwind CSS for the MK Scholars navy/gold/white design system, Filament for admin operations, and migrations that are ready for SQLite local testing and MySQL production deployment.
 
+Filament is the Laravel admin panel used by MK Scholars. It provides the `/admin` dashboard where authorized admins manage users, courses, academies, payments, subscriptions, certificates, reports, and other operational records through secure tables, forms, filters, and actions. Viewer accounts are read-only admin observers for safe inspection without mutation rights.
+
 ## Requirements
 
 - PHP 8.2+

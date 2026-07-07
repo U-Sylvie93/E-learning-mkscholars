@@ -16,6 +16,15 @@
             <div class="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                 @forelse ($courses as $course)
                     <x-card>
+                        <div class="mb-5 overflow-hidden rounded-mk-md border border-slate-200 bg-mk-navy">
+                            @if ($course->coverImageUrl())
+                                <img src="{{ $course->coverImageUrl() }}" alt="{{ $course->title }} cover image" class="h-44 w-full object-cover">
+                            @else
+                                <div class="flex h-44 w-full items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(255,196,12,0.30),transparent_34%),linear-gradient(135deg,#073653_0%,#0e4a72_56%,#102a3a_100%)]">
+                                    <span class="rounded-mk-md border border-mk-gold/40 bg-white/10 px-4 py-3 text-sm font-black text-mk-gold">Course image</span>
+                                </div>
+                            @endif
+                        </div>
                         <div class="flex flex-wrap items-center gap-2">
                             <x-badge :tone="$course->status === \App\Models\Course::STATUS_PUBLISHED ? 'green' : 'gray'">{{ $course->status }}</x-badge>
                             <x-badge tone="blue">{{ $course->academy?->name ?? 'MK Scholars' }}</x-badge>
@@ -53,5 +62,4 @@
         </div>
     </section>
 </x-dashboard-layout>
-
 

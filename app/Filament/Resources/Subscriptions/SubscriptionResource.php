@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Subscriptions;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\Subscriptions\Pages\EditSubscription;
 use App\Filament\Resources\Subscriptions\Pages\ListSubscriptions;
 use App\Models\Subscription;
@@ -16,11 +17,15 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
 class SubscriptionResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = Subscription::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;
@@ -45,11 +50,18 @@ class SubscriptionResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('user.name')->label('Student')->searchable()->sortable(),
+                TextColumn::make('user.email')->label('Email')->searchable()->toggleable(),
                 TextColumn::make('subscriptionPlan.name')->label('Plan')->searchable()->sortable(),
+                TextColumn::make('payment.amount')->label('Amount')->money('RWF')->placeholder('N/A'),
                 TextColumn::make('payment.status')->label('Payment')->badge()->placeholder('No payment'),
                 TextColumn::make('status')->badge()->sortable(),
                 TextColumn::make('starts_at')->dateTime()->sortable()->placeholder('Not started'),
                 TextColumn::make('ends_at')->dateTime()->sortable()->placeholder('No expiry'),
+                TextColumn::make('expiry_state')
+                    ->label('Expiry')
+                    ->state(fn (Subscription $record): string => $record->isExpired() ? 'Expired' : ($record->isExpiringSoon() ? 'Expiring soon' : 'Current'))
+                    ->badge(),
+                TextColumn::make('created_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
@@ -59,13 +71,16 @@ class SubscriptionResource extends Resource
                     ->relationship('subscriptionPlan', 'name')
                     ->searchable()
                     ->preload(),
+                Filter::make('expired')
+                    ->label('Expired by date')
+                    ->query(fn (Builder $query): Builder => $query->whereNotNull('ends_at')->where('ends_at', '<', now())),
             ])
             ->defaultSort('updated_at', 'desc')
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()->visible(fn (): bool => ! self::isReadOnlyViewer()),
                 Action::make('cancel')
                     ->requiresConfirmation()
-                    ->visible(fn (Subscription $record): bool => in_array($record->status, [Subscription::STATUS_PENDING, Subscription::STATUS_ACTIVE], true))
+                    ->visible(fn (Subscription $record): bool => ! self::isReadOnlyViewer() && in_array($record->status, [Subscription::STATUS_PENDING, Subscription::STATUS_ACTIVE], true))
                     ->action(fn (Subscription $record) => $record->update([
                         'status' => Subscription::STATUS_CANCELLED,
                         'cancelled_at' => now(),
@@ -73,7 +88,7 @@ class SubscriptionResource extends Resource
                 Action::make('markExpired')
                     ->label('Mark expired')
                     ->requiresConfirmation()
-                    ->visible(fn (Subscription $record): bool => $record->status === Subscription::STATUS_ACTIVE)
+                    ->visible(fn (Subscription $record): bool => ! self::isReadOnlyViewer() && $record->status === Subscription::STATUS_ACTIVE)
                     ->action(fn (Subscription $record) => $record->update([
                         'status' => Subscription::STATUS_EXPIRED,
                         'ends_at' => $record->ends_at && $record->ends_at->isPast() ? $record->ends_at : now(),
@@ -87,7 +102,7 @@ class SubscriptionResource extends Resource
                             ->default(30)
                             ->required(),
                     ])
-                    ->visible(fn (Subscription $record): bool => in_array($record->status, [Subscription::STATUS_ACTIVE, Subscription::STATUS_EXPIRED], true))
+                    ->visible(fn (Subscription $record): bool => ! self::isReadOnlyViewer() && in_array($record->status, [Subscription::STATUS_ACTIVE, Subscription::STATUS_EXPIRED], true))
                     ->action(function (Subscription $record, array $data): void {
                         $base = $record->ends_at && $record->ends_at->isFuture() ? $record->ends_at : now();
 

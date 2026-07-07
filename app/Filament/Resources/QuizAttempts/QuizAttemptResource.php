@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\QuizAttempts;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\QuizAttempts\Pages\ListQuizAttempts;
 use App\Models\QuizAttempt;
 use BackedEnum;
@@ -14,6 +15,8 @@ use UnitEnum;
 
 class QuizAttemptResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = QuizAttempt::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartBar;

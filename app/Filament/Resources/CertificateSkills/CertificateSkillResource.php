@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\CertificateSkills;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\CertificateSkills\Pages\CreateCertificateSkill;
 use App\Filament\Resources\CertificateSkills\Pages\EditCertificateSkill;
 use App\Filament\Resources\CertificateSkills\Pages\ListCertificateSkills;
@@ -21,6 +22,8 @@ use UnitEnum;
 
 class CertificateSkillResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = CertificateSkill::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSparkles;

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Certificates;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\Certificates\Pages\CreateCertificate;
 use App\Filament\Resources\Certificates\Pages\EditCertificate;
 use App\Filament\Resources\Certificates\Pages\ListCertificates;
@@ -29,6 +30,8 @@ use UnitEnum;
 
 class CertificateResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = Certificate::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedAcademicCap;
@@ -161,11 +164,11 @@ class CertificateResource extends Resource
                     ->url(fn (Certificate $record): string => route('admin.certificates.download', $record))
                     ->openUrlInNewTab()
                     ->visible(fn (Certificate $record): bool => $record->status === Certificate::STATUS_ISSUED),
-                EditAction::make(),
+                EditAction::make()->visible(fn (): bool => ! self::isReadOnlyViewer()),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()->visible(fn (): bool => ! self::isReadOnlyViewer()),
                 ]),
             ]);
     }

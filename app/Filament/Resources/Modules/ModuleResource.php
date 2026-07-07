@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Modules;
 
+use App\Filament\Concerns\ProtectsReadOnlyViewers;
 use App\Filament\Resources\Modules\Pages\CreateModule;
 use App\Filament\Resources\Modules\Pages\EditModule;
 use App\Filament\Resources\Modules\Pages\ListModules;
@@ -25,6 +26,8 @@ use UnitEnum;
 
 class ModuleResource extends Resource
 {
+    use ProtectsReadOnlyViewers;
+
     protected static ?string $model = Module::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

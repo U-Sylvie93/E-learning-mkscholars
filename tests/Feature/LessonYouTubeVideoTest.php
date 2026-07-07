@@ -188,7 +188,7 @@ class LessonYouTubeVideoTest extends TestCase
             ->assertOk()
             ->assertDontSee('<iframe src="https://evil.example/embed"', false)
             ->assertSee('Written lesson notes display safely.')
-            ->assertSee('&lt;iframe src=&quot;https://evil.example/embed&quot;&gt;&lt;/iframe&gt;', false);
+            ->assertDontSee('&lt;iframe src=&quot;https://evil.example/embed&quot;&gt;&lt;/iframe&gt;', false);
     }
 
     public function test_student_must_have_course_access_to_view_video_lesson(): void
@@ -371,7 +371,6 @@ class LessonYouTubeVideoTest extends TestCase
         return [$student, $course, $lesson];
     }
 }
-
 
 
 
