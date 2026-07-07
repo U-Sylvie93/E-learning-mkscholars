@@ -13,6 +13,9 @@
         $currentLessonNumber = $currentLesson ? $allLessons->search(fn ($lesson) => $lesson->id === $currentLesson->id) + 1 : null;
         $totalLessons = $allLessons->count();
         $latestQuizAttempt = $currentQuiz?->attempts?->first();
+        $latestQuizStatusLabel = $latestQuizAttempt
+            ? str_replace('_', ' ', $latestQuizAttempt->status)
+            : null;
         $quizPassed = $latestQuizAttempt?->status === \App\Models\QuizAttempt::STATUS_PASSED;
         $firstAssignment = $currentAssignments->first();
         $firstAssignmentSubmission = $firstAssignment?->submissions?->first();
@@ -111,7 +114,7 @@
                             <h3 class="mt-1 break-words text-lg font-extrabold text-mk-navy">{{ $currentQuiz->title }}</h3>
                             <p class="mt-1 text-xs font-semibold text-slate-500">
                                 {{ $currentQuiz->questions_count ?? 0 }} questions
-                                @if ($latestQuizAttempt)· Latest: {{ $latestQuizAttempt->percentage }}%@endif
+                                @if ($latestQuizAttempt)· Latest: {{ $latestQuizAttempt->percentage }}% {{ $latestQuizStatusLabel }}@endif
                             </p>
                         </div>
                         @if ($latestQuizAttempt)<x-status-badge :status="$latestQuizAttempt->status" />@else<x-badge tone="blue">Ready</x-badge>@endif

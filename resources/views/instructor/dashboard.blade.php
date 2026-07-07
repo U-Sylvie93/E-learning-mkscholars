@@ -2,7 +2,7 @@
     <div class="space-y-6">
         <x-section-header
             eyebrow="Instructor dashboard"
-            title="Welcome, {{ auth()->user()->name }}"
+            title="Teaching command center"
             description="Track your courses, learners, and everything waiting on your attention."
         />
 

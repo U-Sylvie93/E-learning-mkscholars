@@ -24,8 +24,9 @@
                                 {!! \App\Support\CourseContentRenderer::render($quiz->description) !!}
                             </div>
                         @else
-                            <p class="mt-4 max-w-3xl text-sm leading-7 text-slate-600">Read the rules, then start when you are ready. The timer starts only after you press Start Quiz.</p>
+                            <p class="mt-4 max-w-3xl text-sm leading-7 text-slate-600">Read the rules, then start when you are ready.</p>
                         @endif
+                        <p class="mt-4 max-w-3xl text-sm font-semibold leading-7 text-slate-700">Timer starts only after you press Start Quiz.</p>
                     </div>
                     <x-button :href="route('student.courses.learn', ['course' => $course, 'lesson' => $quiz->lesson_id])" variant="secondary">Back to Lesson</x-button>
                 </div>
@@ -52,10 +53,10 @@
                 <div class="mt-8 rounded-mk-md border border-mk-gold/40 bg-mk-goldSoft/50 p-5">
                     <h2 class="text-lg font-black text-mk-navy">Important rules</h2>
                     <ul class="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-                        <li>The timer starts only after you press Start Quiz.</li>
+                        <li>Timer starts only after you press Start Quiz.</li>
                         <li>Each answer is saved when you click Save and Next.</li>
                         <li>Refreshes do not reset the timer.</li>
-                        <li>Answer review is shown only after final submission.</li>
+                        <li>You can review your answers after finishing the quiz.</li>
                     </ul>
                 </div>
 

@@ -34,6 +34,9 @@
         <div class="min-h-screen lg:grid" data-testid="player-shell">
             {{-- Desktop outline sidebar: independent scroll, sticky full height --}}
             <aside class="hidden border-r border-slate-200 bg-white lg:sticky lg:top-0 lg:block lg:h-screen" data-testid="learning-sidebar">
+                <div class="border-b border-slate-100 px-5 py-4">
+                    <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Learning path</p>
+                </div>
                 <x-course-outline
                     :course="$course"
                     :completed-lesson-ids="$completedLessonIds"
@@ -55,6 +58,9 @@
                                 </summary>
                                 <div class="absolute left-0 top-12 z-40 max-h-[80vh] w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-mk-lg border border-slate-200 bg-white shadow-xl">
                                     <div class="max-h-[80vh] overflow-y-auto">
+                                        <div class="border-b border-slate-100 px-5 py-4">
+                                            <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Learning path</p>
+                                        </div>
                                         <x-course-outline
                                             :course="$course"
                                             :completed-lesson-ids="$completedLessonIds"

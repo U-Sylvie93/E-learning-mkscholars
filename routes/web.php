@@ -1460,7 +1460,17 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
                 ]);
             }
 
-            $quizAttemptService->saveAnswer($attempt, $quiz, $index, (int) $answers[$question->id]);
+            try {
+                $quizAttemptService->saveAnswer($attempt, $quiz, $index, (int) $answers[$question->id]);
+            } catch (ValidationException $exception) {
+                if (array_key_exists('option_id', $exception->errors())) {
+                    throw ValidationException::withMessages([
+                        'answers.'.$question->id => 'The selected answer does not belong to this question.',
+                    ]);
+                }
+
+                throw $exception;
+            }
         }
 
         $quizAttemptService->submit($attempt, $quiz);
@@ -2397,8 +2407,6 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return redirect()->route('mentor.check-ins');
     })->middleware('role:'.User::ROLE_MENTOR)->name('mentor.check-ins.complete');
 });
-
-
 
 
 
