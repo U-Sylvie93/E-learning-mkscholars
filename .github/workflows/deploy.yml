@@ -4,13 +4,10 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
-  laravel-tests:
-    name: Laravel Tests
+  deploy:
+    name: Deploy to Hostinger
     runs-on: ubuntu-latest
 
     steps:
@@ -21,32 +18,59 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: mbstring, bcmath, pdo_mysql
+          extensions: mbstring, bcmath, pdo_mysql, fileinfo, gd, intl, zip
           tools: composer
 
-      - name: Prepare Laravel directories
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install PHP dependencies
+        run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Prepare SSH key
         run: |
-          mkdir -p bootstrap/cache
-          mkdir -p storage/framework/cache
-          mkdir -p storage/framework/sessions
-          mkdir -p storage/framework/views
-          mkdir -p storage/framework/testing
-          mkdir -p storage/logs
-          touch bootstrap/cache/.gitkeep
-          touch storage/framework/views/.gitkeep
-          touch storage/framework/cache/.gitkeep
-          touch storage/framework/sessions/.gitkeep
-          chmod -R 775 bootstrap/cache storage
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/hostinger_key
+          chmod 600 ~/.ssh/hostinger_key
+          ssh-keyscan -p "${{ secrets.HOSTINGER_PORT }}" "${{ secrets.HOSTINGER_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
-
-      - name: Prepare environment file
+      - name: Upload files to Hostinger
         run: |
-          cp .env.example .env
+          rsync -az --delete \
+            --exclude=".git" \
+            --exclude=".github" \
+            --exclude=".env" \
+            --exclude="node_modules" \
+            --exclude="tests" \
+            --exclude="storage/logs/*" \
+            --exclude="storage/framework/cache/*" \
+            --exclude="storage/framework/sessions/*" \
+            --exclude="storage/framework/views/*" \
+            -e "ssh -i ~/.ssh/hostinger_key -p ${{ secrets.HOSTINGER_PORT }}" \
+            ./ ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.HOSTINGER_PATH }}
 
-      - name: Generate application key
-        run: php artisan key:generate
+      - name: Run Laravel deployment commands
+        run: |
+          ssh -i ~/.ssh/hostinger_key -p "${{ secrets.HOSTINGER_PORT }}" \
+            ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }} << 'EOF'
+              cd "${{ secrets.HOSTINGER_PATH }}"
 
-      - name: Run Laravel tests
-        run: php artisan test
+              composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+              php artisan migrate --force
+              php artisan storage:link || true
+
+              php artisan optimize:clear
+              php artisan config:cache
+              php artisan view:cache
+
+              chmod -R 775 storage bootstrap/cache
+            EOF
