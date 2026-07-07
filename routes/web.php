@@ -452,7 +452,7 @@ $updatePassword = function (Request $request) {
     return back()->with('password_status', 'Your password has been updated.');
 };
 Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $courseProgress, $activeSubscriptionForCourse, $hasCourseAccess, $settingsPage, $updateProfile, $updatePassword): void {
-    Route::get('/student/dashboard', function () {
+    Route::get('/student/dashboard', function () use ($courseProgress) {
         $user = Auth::user();
         $notificationService = app(AppNotificationService::class);
 
@@ -484,6 +484,19 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         }
 
         return view('student.dashboard', [
+            'enrolledCourses' => Enrollment::query()
+                ->with('course.academy')
+                ->where('user_id', $user->id)
+                ->where('status', Enrollment::STATUS_ACTIVE)
+                ->latest('enrolled_at')
+                ->take(3)
+                ->get()
+                ->filter(fn (Enrollment $enrollment): bool => (bool) $enrollment->course)
+                ->map(fn (Enrollment $enrollment): array => [
+                    'course' => $enrollment->course,
+                    'progress' => $courseProgress($user, $enrollment->course),
+                ])
+                ->values(),
             'mentorAssignment' => $mentorAssignment,
             'nextCheckIn' => $mentorAssignment?->checkIns
                 ->where('status', MentorCheckIn::STATUS_SCHEDULED)
@@ -1064,6 +1077,25 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $currentIndex = $currentLesson ? $lessons->search(fn (Lesson $lesson): bool => $lesson->id === $currentLesson->id) : false;
         $previousLesson = $currentIndex !== false && $currentIndex > 0 ? $lessons->get($currentIndex - 1) : null;
         $nextLesson = $currentIndex !== false ? $lessons->get($currentIndex + 1) : null;
+
+        // Auto-complete the opened lesson so per-lesson progress + the outline reflect it on this render.
+        if ($currentLesson) {
+            $lessonProgress = LessonProgress::firstOrNew([
+                'user_id' => $user->id,
+                'lesson_id' => $currentLesson->id,
+            ]);
+
+            if ($lessonProgress->status !== LessonProgress::STATUS_COMPLETED) {
+                $lessonProgress->fill([
+                    'course_id' => $course->id,
+                    'status' => LessonProgress::STATUS_COMPLETED,
+                    'progress_percent' => 100,
+                    'started_at' => $lessonProgress->started_at ?? now(),
+                    'completed_at' => now(),
+                ])->save();
+            }
+        }
+
         $upcomingActivities = $currentLesson
             ? $currentLesson->activities->take(3)
             : collect();
@@ -1709,8 +1741,18 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $quizAttempts = QuizAttempt::query()
             ->whereHas('quiz.lesson.module', fn ($query) => $query->whereIn('course_id', $courseIds));
 
+        // Average lesson-completion per course (used for the metric row + per-course cards).
+        $completionByCourse = \App\Models\CourseCompletion::query()
+            ->selectRaw('course_id, AVG(lesson_percentage) as avg_lessons')
+            ->whereIn('course_id', $courseIds)
+            ->groupBy('course_id')
+            ->pluck('avg_lessons', 'course_id');
+
         return view('instructor.dashboard', [
             'coursesCount' => $courseIds->count(),
+            'publishedCoursesCount' => Course::query()->whereKey($courseIds)->where('status', Course::STATUS_PUBLISHED)->count(),
+            'draftCoursesCount' => Course::query()->whereKey($courseIds)->where('status', Course::STATUS_DRAFT)->count(),
+            'avgCompletionRate' => $completionByCourse->isNotEmpty() ? (int) round($completionByCourse->avg()) : 0,
             'studentsCount' => Enrollment::query()
                 ->whereIn('course_id', $courseIds)
                 ->where('status', Enrollment::STATUS_ACTIVE)
@@ -1718,6 +1760,12 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
                 ->count('user_id'),
             'pendingSubmissionsCount' => (clone $pendingSubmissions)->count(),
             'recentSubmissions' => (clone $pendingSubmissions)->take(5)->get(),
+            'newestEnrollments' => Enrollment::query()
+                ->with(['user', 'course'])
+                ->whereIn('course_id', $courseIds)
+                ->latest('enrolled_at')
+                ->take(5)
+                ->get(),
             'upcomingLiveClasses' => LiveClass::query()
                 ->with(['course', 'module.course', 'lesson.module.course'])
                 ->where('instructor_id', $user->id)
@@ -1731,10 +1779,11 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'courses' => $instructorCoursesQuery($user)
                 ->withCount(['enrollments', 'modules'])
                 ->orderBy('title')
-                ->take(4)
+                ->take(6)
                 ->get()
-                ->map(function (Course $course) use ($user, $instructorLiveClassesForCourse): Course {
+                ->map(function (Course $course) use ($user, $instructorLiveClassesForCourse, $completionByCourse): Course {
                     $course->instructor_live_classes_count = $instructorLiveClassesForCourse($user, $course)->count();
+                    $course->completion_percentage = (int) round($completionByCourse[$course->id] ?? 0);
 
                     return $course;
                 }),
