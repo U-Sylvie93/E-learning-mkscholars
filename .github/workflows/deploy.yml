@@ -1,47 +1,52 @@
-name: MK Scholars CI
+name: Deploy Laravel Application
 
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  laravel-check:
+  laravel-tests:
+    name: Laravel Tests
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
+          extensions: mbstring, bcmath, pdo_mysql
+          tools: composer
 
-      - name: Copy Environment
-        run: cp .env.example .env
-
-      - name: Prepare Laravel Directories
+      - name: Prepare Laravel directories
         run: |
           mkdir -p bootstrap/cache
-          chmod -R 775 bootstrap/cache
+          mkdir -p storage/framework/cache
+          mkdir -p storage/framework/sessions
+          mkdir -p storage/framework/views
+          mkdir -p storage/framework/testing
+          mkdir -p storage/logs
+          touch bootstrap/cache/.gitkeep
+          touch storage/framework/views/.gitkeep
+          touch storage/framework/cache/.gitkeep
+          touch storage/framework/sessions/.gitkeep
+          chmod -R 775 bootstrap/cache storage
 
-      - name: Install Composer Dependencies
+      - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
-      - name: Generate Application Key
+      - name: Prepare environment file
+        run: |
+          cp .env.example .env
+
+      - name: Generate application key
         run: php artisan key:generate
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install NPM Dependencies
-        run: npm install
-
-      - name: Build Frontend
-        run: npm run build
-
-      - name: Success
-        run: echo "MK Scholars build completed successfully."
+      - name: Run Laravel tests
+        run: php artisan test
