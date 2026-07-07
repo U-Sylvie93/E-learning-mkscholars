@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup PHP 8.4
         uses: shivammathur/setup-php@v2
@@ -22,12 +22,15 @@ jobs:
           tools: composer
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
+          package-manager-cache: false
 
       - name: Prepare Laravel directories on GitHub runner
         run: |
+          set -e
+
           mkdir -p bootstrap/cache
           mkdir -p storage/framework/cache
           mkdir -p storage/framework/sessions
@@ -45,16 +48,24 @@ jobs:
           chmod -R 775 bootstrap/cache storage
 
       - name: Install PHP dependencies
-        run: composer install --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
+        run: |
+          set -e
+          composer install --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
 
       - name: Install Node dependencies
-        run: npm install
+        run: |
+          set -e
+          npm install
 
       - name: Build frontend assets
-        run: npm run build
+        run: |
+          set -e
+          npm run build
 
       - name: Check required deployment secrets
         run: |
+          set -e
+
           test -n "${{ secrets.HOSTINGER_HOST }}" || (echo "HOSTINGER_HOST is missing" && exit 1)
           test -n "${{ secrets.HOSTINGER_USER }}" || (echo "HOSTINGER_USER is missing" && exit 1)
           test -n "${{ secrets.HOSTINGER_PORT }}" || (echo "HOSTINGER_PORT is missing" && exit 1)
@@ -63,13 +74,25 @@ jobs:
 
       - name: Prepare SSH key
         run: |
+          set -e
+
           mkdir -p ~/.ssh
           printf '%s\n' "${{ secrets.HOSTINGER_SSH_KEY }}" | tr -d '\r' > ~/.ssh/hostinger_key
           chmod 600 ~/.ssh/hostinger_key
+
           ssh-keyscan -p "${{ secrets.HOSTINGER_PORT }}" "${{ secrets.HOSTINGER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Validate SSH private key format
+        run: |
+          set -e
+
+          ssh-keygen -y -f ~/.ssh/hostinger_key > ~/.ssh/hostinger_key.pub
+          echo "SSH private key format is valid."
 
       - name: Test SSH connection
         run: |
+          set -e
+
           ssh -i ~/.ssh/hostinger_key -p "${{ secrets.HOSTINGER_PORT }}" \
             -o BatchMode=yes \
             -o ConnectTimeout=20 \
@@ -78,6 +101,8 @@ jobs:
 
       - name: Upload files to Hostinger
         run: |
+          set -e
+
           rsync -az --delete \
             --exclude=".git" \
             --exclude=".github" \
@@ -95,6 +120,8 @@ jobs:
 
       - name: Run Laravel deployment commands on Hostinger
         run: |
+          set -e
+
           ssh -i ~/.ssh/hostinger_key -p "${{ secrets.HOSTINGER_PORT }}" \
             ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }} << 'EOF'
               set -e
