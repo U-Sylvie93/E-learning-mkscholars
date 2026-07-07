@@ -80,8 +80,6 @@ jobs:
           printf '%s\n' "${{ secrets.HOSTINGER_SSH_KEY }}" | tr -d '\r' > ~/.ssh/hostinger_key
           chmod 600 ~/.ssh/hostinger_key
 
-          ssh-keyscan -p "${{ secrets.HOSTINGER_PORT }}" "${{ secrets.HOSTINGER_HOST }}" >> ~/.ssh/known_hosts
-
       - name: Validate SSH private key format
         run: |
           set -e
@@ -96,6 +94,7 @@ jobs:
           ssh -i ~/.ssh/hostinger_key -p "${{ secrets.HOSTINGER_PORT }}" \
             -o BatchMode=yes \
             -o ConnectTimeout=20 \
+            -o StrictHostKeyChecking=accept-new \
             ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }} \
             "echo 'SSH connection successful' && pwd && php -v && composer --version || true"
 
@@ -115,7 +114,7 @@ jobs:
             --exclude="storage/framework/sessions/*" \
             --exclude="storage/framework/views/*" \
             --exclude="storage/framework/testing/*" \
-            -e "ssh -i ~/.ssh/hostinger_key -p ${{ secrets.HOSTINGER_PORT }}" \
+            -e "ssh -i ~/.ssh/hostinger_key -p ${{ secrets.HOSTINGER_PORT }} -o StrictHostKeyChecking=accept-new" \
             ./ ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.HOSTINGER_PATH }}
 
       - name: Create remote Laravel deployment script
@@ -206,6 +205,7 @@ jobs:
           set -e
 
           scp -i ~/.ssh/hostinger_key -P "${{ secrets.HOSTINGER_PORT }}" \
+            -o StrictHostKeyChecking=accept-new \
             /tmp/hostinger_laravel_deploy.sh \
             ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:/tmp/hostinger_laravel_deploy_${{ github.run_id }}.sh
 
@@ -214,12 +214,15 @@ jobs:
           set -e
 
           ssh -i ~/.ssh/hostinger_key -p "${{ secrets.HOSTINGER_PORT }}" \
+            -o StrictHostKeyChecking=accept-new \
             ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }} \
             "HOSTINGER_PATH='${{ secrets.HOSTINGER_PATH }}' bash /tmp/hostinger_laravel_deploy_${{ github.run_id }}.sh"
 
       - name: Remove remote deployment script
         if: always()
         run: |
-          ssh -i ~/.ssh/hostinger_key -p "${{ secrets.HOSTINGER_PORT }}" \
+          timeout 20 ssh -i ~/.ssh/hostinger_key -p "${{ secrets.HOSTINGER_PORT }}" \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=10 \
             ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }} \
             "rm -f /tmp/hostinger_laravel_deploy_${{ github.run_id }}.sh" || true
