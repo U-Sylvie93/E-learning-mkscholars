@@ -29,9 +29,7 @@
 /database/database_corrupted_*.sqlite
 /database/database_recovered.sqlite
 
-# Build output
-/public/build/
-/public/build/assets/
+
 
 # Test/cache files
 .phpunit.cache
