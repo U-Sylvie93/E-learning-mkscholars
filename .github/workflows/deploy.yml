@@ -21,6 +21,11 @@ jobs:
       - name: Copy Environment
         run: cp .env.example .env
 
+      - name: Prepare Laravel Directories
+        run: |
+          mkdir -p bootstrap/cache
+          chmod -R 775 bootstrap/cache
+
       - name: Install Composer Dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
@@ -30,7 +35,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: '22'
 
       - name: Install NPM Dependencies
         run: npm install
