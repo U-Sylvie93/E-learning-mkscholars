@@ -21,12 +21,12 @@ jobs:
           extensions: mbstring, bcmath, pdo_mysql, fileinfo, gd, intl, zip
           tools: composer
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Prepare Laravel directories
+      - name: Prepare Laravel directories on GitHub runner
         run: |
           mkdir -p bootstrap/cache
           mkdir -p storage/framework/cache
@@ -64,7 +64,7 @@ jobs:
       - name: Prepare SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/hostinger_key
+          printf '%s\n' "${{ secrets.HOSTINGER_SSH_KEY }}" | tr -d '\r' > ~/.ssh/hostinger_key
           chmod 600 ~/.ssh/hostinger_key
           ssh-keyscan -p "${{ secrets.HOSTINGER_PORT }}" "${{ secrets.HOSTINGER_HOST }}" >> ~/.ssh/known_hosts
 
@@ -93,7 +93,7 @@ jobs:
             -e "ssh -i ~/.ssh/hostinger_key -p ${{ secrets.HOSTINGER_PORT }}" \
             ./ ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.HOSTINGER_PATH }}
 
-      - name: Run Laravel deployment commands
+      - name: Run Laravel deployment commands on Hostinger
         run: |
           ssh -i ~/.ssh/hostinger_key -p "${{ secrets.HOSTINGER_PORT }}" \
             ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }} << 'EOF'
@@ -111,7 +111,8 @@ jobs:
               chmod -R 775 bootstrap/cache storage
 
               if [ ! -f ".env" ]; then
-                echo "ERROR: .env file is missing on Hostinger. Create it manually on the server first."
+                echo "ERROR: .env file is missing on Hostinger."
+                echo "Create the production .env file manually on Hostinger before deploying."
                 exit 1
               fi
 
@@ -125,4 +126,6 @@ jobs:
               php artisan view:cache
 
               chmod -R 775 storage bootstrap/cache
+
+              echo "Deployment completed successfully."
             EOF
