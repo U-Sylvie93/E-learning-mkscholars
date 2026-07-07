@@ -16,6 +16,7 @@
             ['label' => 'Assignments', 'route' => 'student.assignments', 'icon' => 'assignments'],
             ['label' => 'Certificates', 'route' => 'student.certificates', 'icon' => 'certificates'],
             ['label' => 'Payments', 'route' => 'student.payments', 'icon' => 'payments'],
+            ['label' => 'Documents', 'route' => 'student.documents', 'icon' => 'documents'],
             ['label' => 'Live Classes', 'route' => 'student.live-classes', 'icon' => 'live'],
             ['label' => 'Notifications', 'route' => 'student.notifications', 'icon' => 'notifications'],
             ['label' => 'Settings', 'route' => 'student.settings', 'icon' => 'settings'],

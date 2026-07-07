@@ -7,7 +7,7 @@
         />
 
         {{-- Metric row --}}
-        <div data-testid="student-dashboard-grid" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div data-testid="student-dashboard-grid" class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             <x-stat-card data-testid="student-dashboard-card" tone="gold" label="Certificates" :value="$certificateCount" description="Issued certificates." />
             <x-stat-card data-testid="student-dashboard-card" tone="warning" label="Pending payments" :value="$pendingPaymentsCount" description="Awaiting approval." />
             <x-stat-card data-testid="student-dashboard-card" tone="success" label="Approved payments" :value="$approvedPaymentsCount" description="Cleared payments." />
@@ -44,7 +44,7 @@
             <div class="flex items-end justify-between gap-3">
                 <div>
                     <p class="text-xs font-bold uppercase tracking-wide text-mk-gold">Keep going</p>
-                    <h2 class="mt-1 text-xl font-extrabold text-mk-navy">Continue learning</h2>
+                    <h2 class="mt-1 text-xl font-extrabold text-mk-navy">Continue Learning</h2>
                 </div>
                 <x-button :href="route('student.my-courses')" variant="secondary" size="sm">All courses</x-button>
             </div>
@@ -64,7 +64,7 @@
                             :course="$item['course']"
                             :href="route('student.courses.learn', $item['course'])"
                             :progress="$item['progress']"
-                            action-label="Resume"
+                            action-label="Continue Learning"
                         >
                             <x-slot:meta>
                                 <x-badge tone="blue">{{ $item['course']->level }}</x-badge>

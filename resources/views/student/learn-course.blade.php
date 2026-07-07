@@ -141,7 +141,10 @@
                         @if ($firstAssignmentSubmission)<x-status-badge :status="$firstAssignmentSubmission->status" />@else<x-badge tone="blue">Pending</x-badge>@endif
                     </div>
                     @if ($firstAssignment->instruction_file_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($firstAssignment->instruction_file_path))
-                        <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($firstAssignment->instruction_file_path) }}" class="mk-focus mt-3 inline-flex rounded-sm text-sm font-bold text-mk-navy underline decoration-mk-gold underline-offset-4" target="_blank" rel="noopener noreferrer">View assignment document</a>
+                        <div class="mt-3 flex flex-wrap items-center gap-2">
+                            <x-badge tone="gray">Document</x-badge>
+                            <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($firstAssignment->instruction_file_path) }}" class="mk-focus inline-flex rounded-sm text-sm font-bold text-mk-navy underline decoration-mk-gold underline-offset-4" target="_blank" rel="noopener noreferrer">View assignment document</a>
+                        </div>
                     @endif
                     <x-button :href="route('student.assignments.show', $firstAssignment)" size="sm" variant="secondary" class="mt-4">{{ $firstAssignmentSubmission ? 'View submission' : 'Open Assignment' }}</x-button>
                 </section>
@@ -208,7 +211,7 @@
                 <section class="rounded-mk-lg border border-slate-200 bg-white p-5 shadow-sm">
                     <div class="flex items-start justify-between gap-3">
                         <div>
-                            <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Progress</p>
+                            <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Completion</p>
                             <h3 class="mt-1 text-lg font-extrabold text-mk-navy">Course completion</h3>
                         </div>
                         <x-badge :tone="$completion->is_eligible_for_certificate ? 'success' : 'warning'">{{ $completion->is_eligible_for_certificate ? 'Certificate eligible' : 'In progress' }}</x-badge>

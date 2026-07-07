@@ -67,7 +67,7 @@
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <x-button :href="route('instructor.courses.create')" size="sm">Create Course</x-button>
-                    <x-button :href="route('instructor.courses.index')" size="sm" variant="secondary">View all</x-button>
+                    <x-button :href="route('instructor.courses.index')" size="sm" variant="secondary">View Courses</x-button>
                 </div>
             </div>
 
