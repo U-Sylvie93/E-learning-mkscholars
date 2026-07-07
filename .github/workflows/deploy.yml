@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup PHP
+      - name: Setup PHP 8.4
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
@@ -48,10 +48,18 @@ jobs:
         run: composer install --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
 
       - name: Install Node dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build frontend assets
         run: npm run build
+
+      - name: Check required deployment secrets
+        run: |
+          test -n "${{ secrets.HOSTINGER_HOST }}" || (echo "HOSTINGER_HOST is missing" && exit 1)
+          test -n "${{ secrets.HOSTINGER_USER }}" || (echo "HOSTINGER_USER is missing" && exit 1)
+          test -n "${{ secrets.HOSTINGER_PORT }}" || (echo "HOSTINGER_PORT is missing" && exit 1)
+          test -n "${{ secrets.HOSTINGER_PATH }}" || (echo "HOSTINGER_PATH is missing" && exit 1)
+          test -n "${{ secrets.HOSTINGER_SSH_KEY }}" || (echo "HOSTINGER_SSH_KEY is missing" && exit 1)
 
       - name: Prepare SSH key
         run: |
@@ -59,6 +67,14 @@ jobs:
           echo "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/hostinger_key
           chmod 600 ~/.ssh/hostinger_key
           ssh-keyscan -p "${{ secrets.HOSTINGER_PORT }}" "${{ secrets.HOSTINGER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: |
+          ssh -i ~/.ssh/hostinger_key -p "${{ secrets.HOSTINGER_PORT }}" \
+            -o BatchMode=yes \
+            -o ConnectTimeout=20 \
+            ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }} \
+            "echo 'SSH connection successful' && pwd && php -v && composer --version || true"
 
       - name: Upload files to Hostinger
         run: |
@@ -93,6 +109,11 @@ jobs:
               mkdir -p storage/logs
 
               chmod -R 775 bootstrap/cache storage
+
+              if [ ! -f ".env" ]; then
+                echo "ERROR: .env file is missing on Hostinger. Create it manually on the server first."
+                exit 1
+              fi
 
               composer install --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
 
