@@ -69,7 +69,8 @@ jobs:
           test -n "${{ secrets.HOSTINGER_HOST }}" || (echo "HOSTINGER_HOST is missing" && exit 1)
           test -n "${{ secrets.HOSTINGER_USER }}" || (echo "HOSTINGER_USER is missing" && exit 1)
           test -n "${{ secrets.HOSTINGER_PORT }}" || (echo "HOSTINGER_PORT is missing" && exit 1)
-          test -n "${{ secrets.HOSTINGER_PATH }}" || (echo "HOSTINGER_PATH is missing" && exit 1)
+          test -n "${{ secrets.HOSTINGER_APP_PATH }}" || (echo "HOSTINGER_APP_PATH is missing" && exit 1)
+          test -n "${{ secrets.HOSTINGER_PUBLIC_PATH }}" || (echo "HOSTINGER_PUBLIC_PATH is missing" && exit 1)
           test -n "${{ secrets.HOSTINGER_SSH_KEY }}" || (echo "HOSTINGER_SSH_KEY is missing" && exit 1)
 
       - name: Prepare SSH key
@@ -98,7 +99,7 @@ jobs:
             ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }} \
             "echo 'SSH connection successful' && pwd && php -v && composer --version || true"
 
-      - name: Upload files to Hostinger
+      - name: Upload Laravel app files to private app folder
         run: |
           set -e
 
@@ -108,6 +109,7 @@ jobs:
             --exclude=".env" \
             --exclude="node_modules" \
             --exclude="tests" \
+            --exclude="public/build" \
             --exclude="storage/app/*" \
             --exclude="storage/logs/*" \
             --exclude="storage/framework/cache/*" \
@@ -115,7 +117,16 @@ jobs:
             --exclude="storage/framework/views/*" \
             --exclude="storage/framework/testing/*" \
             -e "ssh -i ~/.ssh/hostinger_key -p ${{ secrets.HOSTINGER_PORT }} -o StrictHostKeyChecking=accept-new" \
-            ./ ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.HOSTINGER_PATH }}
+            ./ ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.HOSTINGER_APP_PATH }}
+
+      - name: Upload Laravel public files to public_html
+        run: |
+          set -e
+
+          rsync -az --delete \
+            --exclude="storage" \
+            -e "ssh -i ~/.ssh/hostinger_key -p ${{ secrets.HOSTINGER_PORT }} -o StrictHostKeyChecking=accept-new" \
+            public/ ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.HOSTINGER_PUBLIC_PATH }}
 
       - name: Create remote Laravel deployment script
         run: |
@@ -125,7 +136,10 @@ jobs:
           #!/usr/bin/env bash
           set -e
 
-          cd "$HOSTINGER_PATH"
+          APP_PATH="$HOSTINGER_APP_PATH"
+          PUBLIC_PATH="$HOSTINGER_PUBLIC_PATH"
+
+          cd "$APP_PATH"
 
           mkdir -p bootstrap/cache
           mkdir -p storage/framework/cache
@@ -133,12 +147,14 @@ jobs:
           mkdir -p storage/framework/views
           mkdir -p storage/framework/testing
           mkdir -p storage/logs
+          mkdir -p storage/app/public
 
           chmod -R 775 bootstrap/cache storage
 
           if [ ! -f ".env" ]; then
-            echo "ERROR: .env file is missing on Hostinger."
-            echo "Create the production .env file manually on Hostinger before deploying."
+            echo "ERROR: .env file is missing in Laravel app folder:"
+            echo "$APP_PATH/.env"
+            echo "Copy/create production .env there before deploying."
             exit 1
           fi
 
@@ -156,9 +172,7 @@ jobs:
             PHP_BIN="/usr/local/php8.4/bin/php"
           else
             echo "ERROR: PHP 8.4 binary was not found on Hostinger SSH."
-            echo "Current default PHP version:"
             php -v || true
-            echo "Available PHP binaries:"
             ls /usr/bin/php* 2>/dev/null || true
             ls /usr/local/bin/php* 2>/dev/null || true
             ls /opt/alt/php*/usr/bin/php 2>/dev/null || true
@@ -167,9 +181,6 @@ jobs:
 
           echo "Using PHP binary: $PHP_BIN"
           "$PHP_BIN" -v
-
-          DETECTED_PHP_VERSION="$("$PHP_BIN" -r 'echo PHP_VERSION;')"
-          echo "Detected PHP version: $DETECTED_PHP_VERSION"
 
           if command -v composer >/dev/null 2>&1; then
             COMPOSER_BIN="$(command -v composer)"
@@ -186,14 +197,36 @@ jobs:
             "$PHP_BIN" "$COMPOSER_BIN" install --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
           fi
 
+          cat > "$PUBLIC_PATH/index.php" <<PHP
+          <?php
+
+          use Illuminate\Foundation\Application;
+          use Illuminate\Http\Request;
+
+          define('LARAVEL_START', microtime(true));
+
+          if (file_exists(\$maintenance = '$APP_PATH/storage/framework/maintenance.php')) {
+              require \$maintenance;
+          }
+
+          require '$APP_PATH/vendor/autoload.php';
+
+          /** @var Application \$app */
+          \$app = require_once '$APP_PATH/bootstrap/app.php';
+
+          \$app->handleRequest(Request::capture());
+          PHP
+
+          rm -rf "$PUBLIC_PATH/storage"
+          ln -s "$APP_PATH/storage/app/public" "$PUBLIC_PATH/storage"
+
           "$PHP_BIN" artisan migrate --force
-          "$PHP_BIN" artisan storage:link || true
 
           "$PHP_BIN" artisan optimize:clear
           "$PHP_BIN" artisan config:cache
           "$PHP_BIN" artisan view:cache
 
-          chmod -R 775 storage bootstrap/cache
+          chmod -R 775 "$APP_PATH/storage" "$APP_PATH/bootstrap/cache"
 
           echo "Deployment completed successfully."
           REMOTE_SCRIPT
@@ -216,7 +249,7 @@ jobs:
           ssh -i ~/.ssh/hostinger_key -p "${{ secrets.HOSTINGER_PORT }}" \
             -o StrictHostKeyChecking=accept-new \
             ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }} \
-            "HOSTINGER_PATH='${{ secrets.HOSTINGER_PATH }}' bash /tmp/hostinger_laravel_deploy_${{ github.run_id }}.sh"
+            "HOSTINGER_APP_PATH='${{ secrets.HOSTINGER_APP_PATH }}' HOSTINGER_PUBLIC_PATH='${{ secrets.HOSTINGER_PUBLIC_PATH }}' bash /tmp/hostinger_laravel_deploy_${{ github.run_id }}.sh"
 
       - name: Remove remote deployment script
         if: always()
