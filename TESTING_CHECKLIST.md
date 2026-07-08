@@ -970,3 +970,33 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Admin panel has Back to Home or View Website button.
 - Back to Home/View Website button redirects to the public home page.
 - Filament navigation remains usable on desktop and mobile.
+
+# Phase 41F Instructor Assignment Builder QA
+
+- Instructor can create an assignment from the course builder with title, instructions, lesson, score, due days, status, and late-submission setting.
+- Instructor assignment builder accepts an assignment document upload.
+- Instructor can add a short answer, long answer, single-choice, multiple-choice, or true/false assignment question.
+- Objective assignment questions can store options and correct-answer markers.
+- Student assignment page renders text, textarea, radio, checkbox, and true/false question inputs correctly.
+- Student submissions store selected assignment option IDs and readable answer labels.
+- Student cannot submit an option that belongs to another assignment question.
+- Student video lessons show Mark Video as Completed and Video Completed.
+- Student reading lessons show Mark Reading as Completed and Reading Completed.
+- Published Final Test is included in the learning completion checklist.
+- Course completion does not mark the course certificate-ready until the published Final Test is passed.
+- Courses without Final Tests continue working normally.
+
+# Phase 41F Completion Audit QA
+
+- Video lessons show Mark Video as Completed before completion and Video Completed after completion.
+- Reading lessons show Mark Reading as Completed before completion and Reading Completed after completion.
+- Lesson completion remains manual and uses authorized student course access only.
+- Lesson completion uses update-or-create behavior and does not duplicate progress records.
+- Instructor-created lessons generate automatic unique slugs when the slug field is blank.
+- Instructor-created video and reading lessons use the same automatic unique slug behavior.
+- Instructor-provided lesson slugs are preserved when unique.
+- Instructor course builder completion summary shows Videos, Reading, Quizzes, Assignments, and Final Test.
+- Instructor completion summary shows Final Test present/not present and published/draft state.
+- Course completion requires published video/reading lessons to be completed and includes published Final Test pass status when present.
+- Courses without Final Test continue using existing completion rules.
+- Assignment documents use the existing public storage disk and are only shown through authorized student assignment/course views.

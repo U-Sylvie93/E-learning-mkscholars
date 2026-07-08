@@ -6,6 +6,7 @@ use App\Models\Academy;
 use App\Models\Assignment;
 use App\Models\AssignmentQuestion;
 use App\Models\AssignmentQuestionAnswer;
+use App\Models\AssignmentOption;
 use App\Models\AssignmentSubmission;
 use App\Models\Course;
 use App\Models\Enrollment;
@@ -415,7 +416,95 @@ class AssignmentBuilderTest extends TestCase
                 $question->question_text,
             ]);
     }
-    private function createAssignmentScenario(array $assignmentOverrides = [], bool $createQuestion = true, bool $enroll = true): array
+
+    public function test_student_can_answer_objective_assignment_questions(): void
+    {
+        [$student, , , $assignment, $question] = $this->createAssignmentScenario([
+            'submission_type' => Assignment::TYPE_MIXED,
+        ]);
+        $question->update([
+            'question_type' => AssignmentQuestion::TYPE_MULTIPLE_CHOICE,
+            'question_text' => 'Choose the correct project steps.',
+        ]);
+        $firstOption = AssignmentOption::create([
+            'assignment_question_id' => $question->id,
+            'option_text' => 'Plan the scope',
+            'is_correct' => true,
+            'sort_order' => 1,
+        ]);
+        $secondOption = AssignmentOption::create([
+            'assignment_question_id' => $question->id,
+            'option_text' => 'Publish without review',
+            'is_correct' => false,
+            'sort_order' => 2,
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('student.assignments.show', $assignment))
+            ->assertOk()
+            ->assertSee('Choose the correct project steps.')
+            ->assertSee('Plan the scope')
+            ->assertSee('Publish without review');
+
+        $this->actingAs($student)
+            ->post(route('student.assignments.submit', $assignment), [
+                'question_answers' => [
+                    $question->id => [$firstOption->id, $secondOption->id],
+                ],
+            ])
+            ->assertRedirect(route('student.assignments.show', $assignment));
+
+        $submission = AssignmentSubmission::query()->where('assignment_id', $assignment->id)->where('user_id', $student->id)->first();
+
+        $this->assertNotNull($submission);
+        $this->assertDatabaseHas('assignment_question_answers', [
+            'assignment_submission_id' => $submission->id,
+            'assignment_question_id' => $question->id,
+            'answer' => 'Plan the scope, Publish without review',
+        ]);
+        $this->assertSame(
+            [$firstOption->id, $secondOption->id],
+            AssignmentQuestionAnswer::query()->where('assignment_submission_id', $submission->id)->first()?->selected_option_ids,
+        );
+    }
+
+    public function test_assignment_objective_answer_must_belong_to_question(): void
+    {
+        [$student, , , $assignment, $question] = $this->createAssignmentScenario([
+            'submission_type' => Assignment::TYPE_MIXED,
+        ]);
+        $question->update(['question_type' => AssignmentQuestion::TYPE_SINGLE_CHOICE]);
+        AssignmentOption::create([
+            'assignment_question_id' => $question->id,
+            'option_text' => 'Allowed option',
+            'is_correct' => true,
+            'sort_order' => 1,
+        ]);
+        [, , , , $otherQuestion] = $this->createAssignmentScenario([
+            'submission_type' => Assignment::TYPE_MIXED,
+        ]);
+        $otherOption = AssignmentOption::create([
+            'assignment_question_id' => $otherQuestion->id,
+            'option_text' => 'Other assignment option',
+            'is_correct' => true,
+            'sort_order' => 1,
+        ]);
+
+        $this->actingAs($student)
+            ->from(route('student.assignments.show', $assignment))
+            ->post(route('student.assignments.submit', $assignment), [
+                'question_answers' => [
+                    $question->id => $otherOption->id,
+                ],
+            ])
+            ->assertRedirect(route('student.assignments.show', $assignment))
+            ->assertSessionHasErrors('question_answers.'.$question->id);
+
+        $this->assertDatabaseMissing('assignment_question_answers', [
+            'assignment_question_id' => $question->id,
+            'selected_option_ids' => json_encode([$otherOption->id]),
+        ]);
+    }    private function createAssignmentScenario(array $assignmentOverrides = [], bool $createQuestion = true, bool $enroll = true): array
     {
         $student = User::create([
             'name' => 'Assignment Student',
@@ -484,6 +573,8 @@ class AssignmentBuilderTest extends TestCase
         return [$student, $course, $lesson, $assignment, $question];
     }
 }
+
+
 
 
 

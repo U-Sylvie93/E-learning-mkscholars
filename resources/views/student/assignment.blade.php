@@ -111,23 +111,53 @@
                                     <div class="mt-6 space-y-5">
                                         <h2 class="text-xl font-extrabold text-mk-navy">Assignment questions</h2>
                                         @foreach ($assignment->questions as $question)
-                                            @php($currentAnswer = old('question_answers.'.$question->id, $answerByQuestionId->get($question->id)?->answer))
-                                            <label class="block rounded-lg border border-slate-100 bg-slate-50 p-4">
-                                                <span class="block text-sm font-bold text-mk-navy">
+                                            @php
+                                                $savedAnswer = $answerByQuestionId->get($question->id);
+                                                $savedOptionIds = collect($savedAnswer?->selected_option_ids ?? [])->map(fn ($optionId) => (string) $optionId)->all();
+                                                $oldAnswer = old('question_answers.'.$question->id);
+                                                $selectedOptionIds = is_array($oldAnswer)
+                                                    ? collect($oldAnswer)->map(fn ($optionId) => (string) $optionId)->all()
+                                                    : ($oldAnswer !== null ? [(string) $oldAnswer] : $savedOptionIds);
+                                                $currentAnswer = old('question_answers.'.$question->id, $savedAnswer?->answer);
+                                                $isObjectiveQuestion = in_array($question->question_type, [
+                                                    \App\Models\AssignmentQuestion::TYPE_SINGLE_CHOICE,
+                                                    \App\Models\AssignmentQuestion::TYPE_MULTIPLE_CHOICE,
+                                                    \App\Models\AssignmentQuestion::TYPE_TRUE_FALSE,
+                                                ], true);
+                                            @endphp
+                                            <div class="block rounded-lg border border-slate-100 bg-slate-50 p-4">
+                                                <p class="block text-sm font-bold text-mk-navy">
                                                     {{ $question->question_text }}
                                                     @if ($question->is_required)
                                                         <span class="text-red-600">*</span>
                                                     @endif
-                                                </span>
+                                                </p>
                                                 @if ($question->points !== null)
                                                     <span class="mt-1 block text-xs font-semibold text-slate-500">{{ $question->points }} pts</span>
                                                 @endif
+
                                                 @if ($question->question_type === \App\Models\AssignmentQuestion::TYPE_TEXT)
                                                     <input name="question_answers[{{ $question->id }}]" value="{{ $currentAnswer }}" @required($question->is_required) class="mt-3 w-full rounded-md border border-slate-200 px-4 py-3 text-sm focus:border-mk-gold focus:ring-mk-gold">
-                                                @else
+                                                @elseif ($question->question_type === \App\Models\AssignmentQuestion::TYPE_TEXTAREA)
                                                     <textarea name="question_answers[{{ $question->id }}]" rows="5" @required($question->is_required) class="mt-3 w-full rounded-md border border-slate-200 px-4 py-3 text-sm focus:border-mk-gold focus:ring-mk-gold">{{ $currentAnswer }}</textarea>
+                                                @elseif ($isObjectiveQuestion)
+                                                    <div class="mt-3 space-y-2">
+                                                        @foreach ($question->options as $option)
+                                                            <label class="flex items-start gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
+                                                                <input
+                                                                    type="{{ $question->question_type === \App\Models\AssignmentQuestion::TYPE_MULTIPLE_CHOICE ? 'checkbox' : 'radio' }}"
+                                                                    name="question_answers[{{ $question->id }}]{{ $question->question_type === \App\Models\AssignmentQuestion::TYPE_MULTIPLE_CHOICE ? '[]' : '' }}"
+                                                                    value="{{ $option->id }}"
+                                                                    @checked(in_array((string) $option->id, $selectedOptionIds, true))
+                                                                    @required($question->is_required && $question->question_type !== \App\Models\AssignmentQuestion::TYPE_MULTIPLE_CHOICE)
+                                                                    class="mt-1 rounded border-slate-300 text-mk-gold focus:ring-mk-gold"
+                                                                >
+                                                                <span>{{ $option->option_text }}</span>
+                                                            </label>
+                                                        @endforeach
+                                                    </div>
                                                 @endif
-                                            </label>
+                                            </div>
                                         @endforeach
                                     </div>
                                 @endif
@@ -203,5 +233,6 @@
         </div>
     </section>
 </x-dashboard-layout>
+
 
 

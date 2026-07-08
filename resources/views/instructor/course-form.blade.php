@@ -2,6 +2,9 @@
     @php
         $coverImageUrl = $course->exists && $course->featured_image_path ? $course->coverImageUrl() : null;
         $outcomesValue = old('learning_outcomes', collect($course->learning_outcomes ?? [])->implode("\n"));
+        $videoLessonsCount = $lessons->where('lesson_type', 'video')->count();
+        $readingLessonsCount = $lessons->where('lesson_type', 'text')->count();
+        $finalTestStatus = $finalTest ? str($finalTest->status)->headline() : 'Not present';
     @endphp
 
     <div class="space-y-6">
@@ -68,6 +71,40 @@
             </div>
         @endif
 
+        @if ($course->exists)
+            <x-card highlighted>
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <x-badge tone="blue">Completion requirements</x-badge>
+                        <h2 class="mt-3 text-xl font-extrabold text-mk-navy">Course completion summary</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Students must complete published lessons and required assessments before certificate eligibility is calculated.</p>
+                    </div>
+                    <div class="grid w-full gap-3 sm:grid-cols-2 lg:max-w-3xl lg:grid-cols-3">
+                        <div class="rounded-lg border border-slate-100 bg-slate-50 p-4">
+                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Videos</p>
+                            <p class="mt-2 text-2xl font-black text-mk-navy">{{ $videoLessonsCount }}</p>
+                        </div>
+                        <div class="rounded-lg border border-slate-100 bg-slate-50 p-4">
+                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Reading</p>
+                            <p class="mt-2 text-2xl font-black text-mk-navy">{{ $readingLessonsCount }}</p>
+                        </div>
+                        <div class="rounded-lg border border-slate-100 bg-slate-50 p-4">
+                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Quizzes</p>
+                            <p class="mt-2 text-2xl font-black text-mk-navy">{{ $quizzes->count() }}</p>
+                        </div>
+                        <div class="rounded-lg border border-slate-100 bg-slate-50 p-4">
+                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Assignments</p>
+                            <p class="mt-2 text-2xl font-black text-mk-navy">{{ $assignments->count() }}</p>
+                        </div>
+                        <div class="rounded-lg border border-mk-gold/30 bg-mk-goldSoft p-4 sm:col-span-2">
+                            <p class="text-xs font-bold uppercase tracking-wide text-mk-navy">Final Test</p>
+                            <p class="mt-2 text-lg font-black text-mk-navy">{{ $finalTest ? $finalTest->title : 'Not present' }}</p>
+                            <p class="mt-1 text-sm font-semibold text-slate-600">{{ $finalTestStatus }}</p>
+                        </div>
+                    </div>
+                </div>
+            </x-card>
+        @endif
         <x-card highlighted>
             <form method="POST" action="{{ $course->exists ? route('instructor.courses.update', $course) : route('instructor.courses.store') }}" enctype="multipart/form-data" class="space-y-8">
                 @csrf
@@ -542,23 +579,31 @@
                 <x-card>
                     <x-badge tone="blue">Assignment</x-badge>
                     <h2 class="mt-4 text-xl font-extrabold text-mk-navy">Add assignment</h2>
-                    <form method="POST" action="{{ route('instructor.assignments.store', $course) }}" class="mt-5 space-y-4">
+                    <form method="POST" action="{{ route('instructor.assignments.store', $course) }}" enctype="multipart/form-data" class="mt-5 space-y-4">
                         @csrf
-                        <select name="lesson_id" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" required>
-                            <option value="">Select lesson</option>
-                            @foreach ($lessons as $lesson)
-                                <option value="{{ $lesson->id }}">{{ $lesson->title }}</option>
-                            @endforeach
-                        </select>
-                        <input name="title" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Assignment title" required>
-                        <textarea name="instructions" rows="4" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Instructions" required></textarea>
-                        <div class="grid gap-3 sm:grid-cols-3">
+                        <div class="grid gap-3 md:grid-cols-2">
+                            <select name="lesson_id" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" required>
+                                <option value="">Attach to lesson</option>
+                                @foreach ($lessons as $lesson)
+                                    <option value="{{ $lesson->id }}">{{ $lesson->module?->title }} - {{ $lesson->title }}</option>
+                                @endforeach
+                            </select>
+                            <input name="title" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Assignment title" required>
+                        </div>
+                        <textarea name="instructions" rows="3" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Instructions" required></textarea>
+                        <label class="block">
+                            <span class="text-xs font-bold uppercase tracking-wide text-slate-500">Assignment document</span>
+                            <input name="instruction_file" type="file" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+                            <span class="mt-1 block text-xs font-semibold text-slate-500">Allowed: pdf, doc, docx, ppt, pptx, txt, zip, png, jpg, jpeg. Max 10MB.</span>
+                        </label>
+                        <div class="grid gap-3 md:grid-cols-4">
                             <select name="submission_type" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
-                                @foreach (['text', 'file', 'link', 'mixed'] as $type)
+                                @foreach ([\App\Models\Assignment::TYPE_TEXT, \App\Models\Assignment::TYPE_FILE, \App\Models\Assignment::TYPE_LINK, \App\Models\Assignment::TYPE_MIXED] as $type)
                                     <option value="{{ $type }}">{{ str($type)->headline() }}</option>
                                 @endforeach
                             </select>
                             <input name="max_score" type="number" min="1" value="100" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Max score">
+                            <input name="due_days_after_enrollment" type="number" min="0" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Due days">
                             <select name="status" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
                                 @foreach ([\App\Models\Assignment::STATUS_DRAFT, \App\Models\Assignment::STATUS_PUBLISHED, \App\Models\Assignment::STATUS_ARCHIVED] as $status)
                                     <option value="{{ $status }}">{{ str($status)->headline() }}</option>
@@ -569,12 +614,34 @@
                             <input type="checkbox" name="allow_late_submission" value="1" checked> Allow late submission
                         </label>
                         <div class="rounded-lg border border-slate-100 bg-slate-50 p-4">
-                            <p class="text-sm font-bold text-mk-navy">Optional first question</p>
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <p class="text-sm font-bold text-mk-navy">Add Question</p>
+                                <label class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                                    <input type="checkbox" name="question_required" value="1" checked> Required
+                                </label>
+                            </div>
                             <textarea name="question_text" rows="2" class="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Question prompt"></textarea>
-                            <select name="question_type" class="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
-                                <option value="textarea">Long answer</option>
-                                <option value="text">Short answer</option>
-                            </select>
+                            <div class="mt-3 grid gap-3 md:grid-cols-2">
+                                <select name="question_type" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                                    <option value="textarea">Long answer</option>
+                                    <option value="text">Short answer</option>
+                                    <option value="single_choice">Single choice</option>
+                                    <option value="multiple_choice">Multiple choice</option>
+                                    <option value="true_false">True/False</option>
+                                </select>
+                                <input name="question_points" type="number" min="0" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Question points">
+                            </div>
+                            <div class="mt-4 grid gap-3 md:grid-cols-2">
+                                @for ($optionIndex = 0; $optionIndex < 4; $optionIndex++)
+                                    <div class="rounded-lg border border-slate-200 bg-white p-3">
+                                        <input name="options[{{ $optionIndex }}][option_text]" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Option {{ $optionIndex + 1 }}">
+                                        <div class="mt-2 flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-600">
+                                            <label class="flex items-center gap-2"><input type="radio" name="correct_option_index" value="{{ $optionIndex }}"> Single/True-False correct</label>
+                                            <label class="flex items-center gap-2"><input type="checkbox" name="correct_option_indexes[]" value="{{ $optionIndex }}"> Multiple correct</label>
+                                        </div>
+                                    </div>
+                                @endfor
+                            </div>
                         </div>
                         <x-button type="submit" size="sm">Add Assignment</x-button>
                     </form>
@@ -583,3 +650,5 @@
         @endif
     </div>
 </x-dashboard-layout>
+
+

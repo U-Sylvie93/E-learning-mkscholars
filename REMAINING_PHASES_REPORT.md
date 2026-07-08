@@ -418,3 +418,36 @@ Mentor:     mentor@mkscholars.test / password
 ```
 
 These are for local/demo testing only.
+
+### Phase 41F: Instructor Assignment Builder and Final Test Completion Gate
+
+Implemented code-only changes for the instructor assignment builder and student completion flow.
+
+- Added assignment objective-question support through `AssignmentOption` and stored selected option IDs on assignment question answers.
+- Expanded instructor course builder assignment form with document upload, due days, richer question type selection, option inputs, and correct-answer controls.
+- Updated student assignment display/submission to support short answer, long answer, single-choice, multiple-choice, and true/false questions.
+- Updated lesson completion labels so video lessons use video-specific wording and reading lessons use reading-specific wording.
+- Added published Final Test status to the student completion checklist and course-completion eligibility calculation.
+- Added focused feature coverage for objective assignment answers and invalid option ownership.
+
+Migration added:
+
+- `2026_07_08_410500_add_assignment_options_and_selected_answers.php`
+
+Manual verification is still required because this phase was code-only: run migrations, run tests, build assets, and check instructor assignment creation plus student assignment/final-test completion flows in a browser.
+
+### Phase 41F Completion Audit/Fix
+
+Verified and tightened the Phase 41F completion gaps with code-only changes.
+
+- Video/reading manual completion was already present through the student lesson completion route and remains protected by course access plus student role middleware.
+- Instructor lesson creation now uses automatic unique slug generation from the title when slug is blank; unique manual slugs are preserved.
+- Quiz/final-test and assignment tables do not currently have slug columns, so no slug behavior was added for those records.
+- Instructor course builder now has a Course completion summary card showing Videos, Reading, Quizzes, Assignments, and Final Test title/status.
+- Course completion already counts all published lessons, which includes video and reading lessons, and now retains the published Final Test pass gate from Phase 41F.
+- Assignment document upload uses the public storage disk, allowed document/image/archive mimes, and student document links remain behind enrolled course access.
+- Added focused tests for unique instructor lesson slugs, instructor completion summary Final Test display, final-test completion gating, legacy courses without final tests, and non-duplicated completion records.
+
+No new migration was added in this audit/fix pass.
+
+Manual verification is still required because this phase was code-only: run migrations, run tests, build assets, and check instructor course builder plus student learning/assignment flows in a browser.

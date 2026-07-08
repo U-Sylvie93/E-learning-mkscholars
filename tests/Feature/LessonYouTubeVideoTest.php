@@ -252,7 +252,7 @@ class LessonYouTubeVideoTest extends TestCase
             ->assertSee('Completion')
             ->assertSee('<iframe', false)
             ->assertSee('src="https://www.youtube.com/embed/dQw4w9WgXcQ"', false)
-            ->assertSee('Mark Lesson Complete')
+            ->assertSee('Mark Video as Completed')
             ->assertDontSee('Quick links');
     }
 
@@ -298,7 +298,7 @@ class LessonYouTubeVideoTest extends TestCase
             ->assertSee($longTitle)
             ->assertSee('Long written lesson content stays readable')
             ->assertSee('Next:')
-            ->assertSee('Lesson Completed')
+            ->assertSee('Video Completed')
             ->assertDontSee('Mark Complete Again')
             ->assertSee('No quiz is attached to this lesson.')
             ->assertSee('No assignments are attached to this lesson yet.')
@@ -310,9 +310,61 @@ class LessonYouTubeVideoTest extends TestCase
             ->get(route('student.courses.learn', ['course' => $course, 'lesson' => $nextLesson->id]))
             ->assertOk()
             ->assertSee('Previous:')
-            ->assertSee('Mark Lesson Complete')
-            ->assertDontSee('Lesson Completed');
+            ->assertSee('Mark Reading as Completed')
+            ->assertDontSee('Reading Completed');
     }
+
+    public function test_manual_video_and_reading_completion_labels_and_route_access(): void
+    {
+        [$student, $course, $videoLesson] = $this->createLearningScenario('https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'manual-completion');
+        $readingLesson = Lesson::create([
+            'module_id' => $videoLesson->module_id,
+            'title' => 'Manual Reading Lesson',
+            'slug' => 'manual-reading-lesson',
+            'summary' => 'Reading lesson summary.',
+            'lesson_type' => 'text',
+            'content' => 'Reading lesson content.',
+            'sort_order' => 2,
+            'status' => Course::STATUS_PUBLISHED,
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('student.courses.learn', ['course' => $course, 'lesson' => $videoLesson->id]))
+            ->assertOk()
+            ->assertSee('Mark Video as Completed')
+            ->assertDontSee('Video Completed');
+
+        $this->actingAs($student)
+            ->get(route('student.courses.learn', ['course' => $course, 'lesson' => $readingLesson->id]))
+            ->assertOk()
+            ->assertSee('Mark Reading as Completed')
+            ->assertDontSee('Reading Completed');
+
+        $this->post(route('student.lessons.complete', ['course' => $course, 'lesson' => $videoLesson]))
+            ->assertRedirect(route('login'));
+
+        $this->actingAs($student)
+            ->post(route('student.lessons.complete', ['course' => $course, 'lesson' => $videoLesson]))
+            ->assertRedirect();
+
+        $this->actingAs($student)
+            ->post(route('student.lessons.complete', ['course' => $course, 'lesson' => $videoLesson]))
+            ->assertRedirect();
+
+        $this->assertSame(1, LessonProgress::query()
+            ->where('user_id', $student->id)
+            ->where('course_id', $course->id)
+            ->where('lesson_id', $videoLesson->id)
+            ->where('status', LessonProgress::STATUS_COMPLETED)
+            ->count());
+
+        $this->actingAs($student)
+            ->get(route('student.courses.learn', ['course' => $course, 'lesson' => $videoLesson->id]))
+            ->assertOk()
+            ->assertSee('Video Completed')
+            ->assertDontSee('Mark Video as Completed');
+    }
+
     private function createLearningScenario(?string $videoUrl, string $slugSuffix, ?string $content = null, bool $enroll = true): array
     {
         $student = User::create([
@@ -371,6 +423,9 @@ class LessonYouTubeVideoTest extends TestCase
         return [$student, $course, $lesson];
     }
 }
+
+
+
 
 
 

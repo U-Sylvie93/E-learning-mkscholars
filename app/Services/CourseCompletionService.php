@@ -27,6 +27,8 @@ class CourseCompletionService
         $quizIds = $this->publishedQuizIds($course);
         $assignmentIds = $this->publishedAssignmentIds($course);
         $liveClassIds = $this->completedLiveClassIds($course);
+        $finalTest = $this->publishedFinalTest($course);
+        $finalTestPassed = ! $finalTest || $this->quizPassed($user, $finalTest);
 
         $lessonPercentage = $this->lessonPercentage($user, $course, $lessonIds);
         $quizPercentage = $this->quizPercentage($user, $quizIds);
@@ -46,6 +48,7 @@ class CourseCompletionService
             quizCount: $quizIds->count(),
             assignmentCount: $assignmentIds->count(),
             liveClassCount: $liveClassIds->count(),
+            finalTestPassed: $finalTestPassed,
         );
 
         $completion = CourseCompletion::query()->firstOrNew([
@@ -81,6 +84,9 @@ class CourseCompletionService
         $submittedAssignmentCount = $this->submittedAssignmentCount($user, $assignmentIds);
         $attendedLiveClassCount = $this->attendedLiveClassCount($user, $liveClassIds);
         $finalQuizPassed = ! $rule?->require_final_quiz_passed || $this->finalQuizPassed($user, $rule);
+        $finalTest = $this->publishedFinalTest($course);
+        $finalTestPassed = ! $finalTest || $this->quizPassed($user, $finalTest);
+        $finalTestAttempted = $finalTest ? $this->quizAttempted($user, $finalTest) : false;
 
         return [
             'rule' => $rule,
@@ -120,6 +126,13 @@ class CourseCompletionService
                 'title' => $rule?->finalQuiz?->title,
                 'passed' => $finalQuizPassed,
             ],
+            'final_test' => [
+                'required' => (bool) $finalTest,
+                'title' => $finalTest?->title,
+                'status' => $finalTest?->status,
+                'attempted' => $finalTestAttempted,
+                'passed' => $finalTestPassed,
+            ],
             'live_classes' => [
                 'attended_count' => $attendedLiveClassCount,
                 'total' => $liveClassIds->count(),
@@ -142,6 +155,7 @@ class CourseCompletionService
         int $quizCount,
         int $assignmentCount,
         int $liveClassCount,
+        bool $finalTestPassed,
     ): bool {
         $requiredLessonPercentage = $rule?->require_all_lessons ? 100 : ($rule?->required_lesson_percentage ?? 80);
         $lessonsOk = $lessonCount > 0 && $lessonPercentage >= $requiredLessonPercentage;
@@ -156,7 +170,7 @@ class CourseCompletionService
             || $liveClassCount === 0
             || $liveAttendancePercentage >= $rule->required_live_class_attendance_percentage;
 
-        return $lessonsOk && $quizzesOk && $assignmentsOk && $finalQuizOk && $liveOk;
+        return $lessonsOk && $quizzesOk && $assignmentsOk && $finalQuizOk && $finalTestPassed && $liveOk;
     }
 
     private function lessonPercentage(User $user, Course $course, $lessonIds): int
@@ -216,10 +230,21 @@ class CourseCompletionService
     {
         return Quiz::query()
             ->where('status', Quiz::STATUS_PUBLISHED)
+            ->where('quiz_type', Quiz::TYPE_LESSON_QUIZ)
             ->whereHas('lesson.module', fn ($query) => $query
                 ->where('course_id', $course->id)
                 ->where('status', Course::STATUS_PUBLISHED))
             ->pluck('id');
+    }
+
+    private function publishedFinalTest(Course $course): ?Quiz
+    {
+        return Quiz::query()
+            ->where('course_id', $course->id)
+            ->where('quiz_type', Quiz::TYPE_FINAL_TEST)
+            ->where('status', Quiz::STATUS_PUBLISHED)
+            ->latest()
+            ->first();
     }
 
     private function publishedAssignmentIds(Course $course)
@@ -296,6 +321,23 @@ class CourseCompletionService
             ->where('user_id', $user->id)
             ->where('quiz_id', $rule->final_quiz_id)
             ->where('status', QuizAttempt::STATUS_PASSED)
+            ->exists();
+    }
+
+    private function quizPassed(User $user, Quiz $quiz): bool
+    {
+        return QuizAttempt::query()
+            ->where('user_id', $user->id)
+            ->where('quiz_id', $quiz->id)
+            ->where('status', QuizAttempt::STATUS_PASSED)
+            ->exists();
+    }
+
+    private function quizAttempted(User $user, Quiz $quiz): bool
+    {
+        return QuizAttempt::query()
+            ->where('user_id', $user->id)
+            ->where('quiz_id', $quiz->id)
             ->exists();
     }
 

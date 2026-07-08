@@ -55,12 +55,12 @@
                     @if ($isCompleted)
                         <span class="inline-flex shrink-0 items-center gap-2 rounded-mk-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-800">
                             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            Lesson Completed
+                            {{ $currentLesson->lesson_type === 'video' ? 'Video Completed' : ($currentLesson->lesson_type === 'text' ? 'Reading Completed' : 'Completed') }}
                         </span>
                     @else
                         <form method="POST" action="{{ route('student.lessons.complete', ['course' => $course, 'lesson' => $currentLesson]) }}" class="shrink-0">
                             @csrf
-                            <x-button type="submit" size="sm">Mark Lesson Complete</x-button>
+                            <x-button type="submit" size="sm">{{ $currentLesson->lesson_type === 'video' ? 'Mark Video as Completed' : ($currentLesson->lesson_type === 'text' ? 'Mark Reading as Completed' : 'Mark Lesson Complete') }}</x-button>
                         </form>
                     @endif
                 </div>
@@ -247,6 +247,9 @@
                         <div class="flex justify-between gap-3"><span class="text-slate-500">Lessons</span><span class="font-bold text-mk-navy">{{ $completionChecklist['lessons']['percentage'] }}%</span></div>
                         <div class="flex justify-between gap-3"><span class="text-slate-500">Quizzes</span><span class="font-bold text-mk-navy">{{ $completionChecklist['quizzes']['percentage'] }}%</span></div>
                         <div class="flex justify-between gap-3"><span class="text-slate-500">Assignments</span><span class="font-bold text-mk-navy">{{ $completionChecklist['assignments']['percentage'] }}%</span></div>
+                        @if ($completionChecklist['final_test']['required'] ?? false)
+                            <div class="flex justify-between gap-3"><span class="text-slate-500">Final Test</span><span class="font-bold text-mk-navy">{{ $completionChecklist['final_test']['passed'] ? 'Passed' : 'Required' }}</span></div>
+                        @endif
                     </div>
                 </section>
 
@@ -313,3 +316,4 @@
         @endif
     </div>
 </x-course-player-layout>
+

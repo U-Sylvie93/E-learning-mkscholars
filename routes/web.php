@@ -5,6 +5,7 @@ use App\Models\Academy;
 use App\Models\AppNotification;
 use App\Models\Assignment;
 use App\Models\AssignmentQuestionAnswer;
+use App\Models\AssignmentOption;
 use App\Models\AssignmentSubmission;
 use App\Models\AssignmentQuestion;
 use App\Models\Certificate;
@@ -1578,7 +1579,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
     Route::get('/student/assignments/{assignment}', function (Assignment $assignment) use ($hasCourseAccess) {
         $user = Auth::user();
 
-        $assignment->load(['lesson.module.course', 'questions']);
+        $assignment->load(['lesson.module.course', 'questions.options']);
         $course = $assignment->lesson?->module?->course;
 
         abort_unless($assignment->status === Assignment::STATUS_PUBLISHED, 404);
@@ -1586,7 +1587,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         abort_unless($hasCourseAccess($user, $course), 403);
 
         $submission = AssignmentSubmission::query()
-            ->with(['questionAnswers.question'])
+            ->with(['questionAnswers.question.options'])
             ->where('assignment_id', $assignment->id)
             ->where('user_id', $user->id)
             ->latest()
@@ -1603,7 +1604,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
     Route::post('/student/assignments/{assignment}', function (Request $request, Assignment $assignment) use ($hasCourseAccess) {
         $user = Auth::user();
 
-        $assignment->load(['lesson.module.course', 'questions']);
+        $assignment->load(['lesson.module.course', 'questions.options']);
         $course = $assignment->lesson?->module?->course;
 
         abort_unless($assignment->status === Assignment::STATUS_PUBLISHED, 404);
@@ -1611,7 +1612,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         abort_unless($hasCourseAccess($user, $course), 403);
 
         $submission = AssignmentSubmission::query()
-            ->with(['questionAnswers.question'])
+            ->with(['questionAnswers.question.options'])
             ->where('assignment_id', $assignment->id)
             ->where('user_id', $user->id)
             ->latest()
@@ -1642,11 +1643,24 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         }
 
         foreach ($assignment->questions as $question) {
-            $rules['question_answers.'.$question->id] = [
-                $question->is_required ? 'required' : 'nullable',
-                'string',
-                'max:20000',
-            ];
+            if ($question->question_type === AssignmentQuestion::TYPE_MULTIPLE_CHOICE) {
+                $rules['question_answers.'.$question->id] = [
+                    $question->is_required ? 'required' : 'nullable',
+                    'array',
+                ];
+                $rules['question_answers.'.$question->id.'.*'] = ['integer'];
+            } elseif (in_array($question->question_type, [AssignmentQuestion::TYPE_SINGLE_CHOICE, AssignmentQuestion::TYPE_TRUE_FALSE], true)) {
+                $rules['question_answers.'.$question->id] = [
+                    $question->is_required ? 'required' : 'nullable',
+                    'integer',
+                ];
+            } else {
+                $rules['question_answers.'.$question->id] = [
+                    $question->is_required ? 'required' : 'nullable',
+                    'string',
+                    'max:20000',
+                ];
+            }
         }
 
         $submittedQuestionIds = collect(array_keys($request->input('question_answers', [])))->map(fn ($id): string => (string) $id);
@@ -1664,8 +1678,33 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
         $validated = $request->validate($rules, [], $attributes);
         $questionAnswers = collect($validated['question_answers'] ?? []);
+
+        foreach ($assignment->questions as $question) {
+            if (! in_array($question->question_type, [AssignmentQuestion::TYPE_SINGLE_CHOICE, AssignmentQuestion::TYPE_MULTIPLE_CHOICE, AssignmentQuestion::TYPE_TRUE_FALSE], true)) {
+                continue;
+            }
+
+            $rawAnswer = $questionAnswers->get((string) $question->id, $questionAnswers->get($question->id));
+            $submittedOptionIds = collect(is_array($rawAnswer) ? $rawAnswer : (filled($rawAnswer) ? [$rawAnswer] : []))
+                ->map(fn ($optionId): int => (int) $optionId)
+                ->filter()
+                ->values();
+
+            if ($submittedOptionIds->diff($question->options->pluck('id'))->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'question_answers.'.$question->id => 'Choose an option that belongs to this assignment question.',
+                ]);
+            }
+        }
+
         $hasQuestionAnswer = $assignment->questions
-            ->contains(fn ($question): bool => filled($questionAnswers->get((string) $question->id, $questionAnswers->get($question->id))));
+            ->contains(function ($question) use ($questionAnswers): bool {
+                $answer = $questionAnswers->get((string) $question->id, $questionAnswers->get($question->id));
+
+                return is_array($answer)
+                    ? collect($answer)->filter(fn ($value): bool => filled($value))->isNotEmpty()
+                    : filled($answer);
+            });
 
         if ($assignment->submission_type === Assignment::TYPE_MIXED
             && blank($validated['text_answer'] ?? null)
@@ -1705,12 +1744,25 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
             foreach ($assignment->questions as $question) {
                 $answer = $questionAnswers->get((string) $question->id, $questionAnswers->get($question->id));
+                $isObjectiveQuestion = in_array($question->question_type, [AssignmentQuestion::TYPE_SINGLE_CHOICE, AssignmentQuestion::TYPE_MULTIPLE_CHOICE, AssignmentQuestion::TYPE_TRUE_FALSE], true);
+                $selectedOptionIds = collect($isObjectiveQuestion ? (is_array($answer) ? $answer : (filled($answer) ? [$answer] : [])) : [])
+                    ->map(fn ($optionId): int => (int) $optionId)
+                    ->filter()
+                    ->values();
+                $hasAnswer = $isObjectiveQuestion
+                    ? $selectedOptionIds->isNotEmpty()
+                    : filled($answer);
 
-                if ($question->is_required || filled($answer)) {
+                if ($question->is_required || $hasAnswer) {
+                    $selectedOptions = $isObjectiveQuestion
+                        ? $question->options->whereIn('id', $selectedOptionIds)
+                        : collect();
+
                     AssignmentQuestionAnswer::create([
                         'assignment_submission_id' => $submission->id,
                         'assignment_question_id' => $question->id,
-                        'answer' => $answer,
+                        'answer' => $isObjectiveQuestion ? $selectedOptions->pluck('option_text')->implode(', ') : $answer,
+                        'selected_option_ids' => $isObjectiveQuestion ? $selectedOptionIds->all() : null,
                     ]);
                 }
             }
@@ -1869,6 +1921,22 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         abort_unless($course->ownedBy($instructor), 403);
     };
 
+
+    $uniqueSlug = function (string $table, string $title, ?string $requestedSlug = null, ?int $ignoreId = null): string {
+        $base = Str::slug(filled($requestedSlug) ? $requestedSlug : $title) ?: 'item';
+        $slug = $base;
+        $counter = 2;
+
+        while (DB::table($table)
+            ->where('slug', $slug)
+            ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
+            ->exists()) {
+            $slug = $base.'-'.$counter;
+            $counter++;
+        }
+
+        return $slug;
+    };
     $lessonBelongsToInstructorCourse = function (Course $course, int $lessonId): Lesson {
         $lesson = Lesson::query()
             ->whereKey($lessonId)
@@ -2085,7 +2153,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         ]);
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.courses.create');
 
-    Route::post('/instructor/courses', function (Request $request) {
+    Route::post('/instructor/courses', function (Request $request) use ($uniqueSlug) {
         $validated = $request->validate([
             'academy_id' => ['required', 'exists:academies,id'],
             'title' => ['required', 'string', 'max:255'],
@@ -2108,7 +2176,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
         unset($validated['featured_image']);
 
-        $validated['slug'] = filled($validated['slug'] ?? null) ? Str::slug($validated['slug']) : Str::slug($validated['title']);
+        $validated['slug'] = $uniqueSlug('courses', $validated['title'], $validated['slug'] ?? null);
         $validated['instructor_id'] = Auth::id();
         $validated['is_free'] = $validated['access_type'] === Course::ACCESS_FREE;
         $validated['currency'] = $validated['currency'] ?: 'RWF';
@@ -2126,7 +2194,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
     Route::get('/instructor/courses/{course}/edit', function (Course $course) use ($abortUnlessInstructorOwnsCourse) {
         $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
 
-        $course->load(['academy', 'modules.lessons.quizzes.questions.options', 'modules.lessons.assignments.questions']);
+        $course->load(['academy', 'modules.lessons.quizzes.questions.options', 'modules.lessons.assignments.questions.options']);
 
         return view('instructor.course-form', [
             'course' => $course,
@@ -2145,7 +2213,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
                 ->where('quiz_type', Quiz::TYPE_FINAL_TEST)
                 ->latest()
                 ->first(),
-            'assignments' => Assignment::query()->with('lesson.module')->whereHas('lesson.module', fn ($query) => $query->where('course_id', $course->id))->latest()->get(),
+            'assignments' => Assignment::query()->with(['lesson.module', 'questions.options'])->whereHas('lesson.module', fn ($query) => $query->where('course_id', $course->id))->latest()->get(),
             'mode' => 'edit',
         ]);
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.courses.edit');
@@ -2193,7 +2261,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return back()->with('status', 'Course details updated.');
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.courses.update');
 
-    Route::post('/instructor/courses/{course}/modules', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse) {
+    Route::post('/instructor/courses/{course}/modules', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse, $uniqueSlug) {
         $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
 
         $validated = $request->validate([
@@ -2206,7 +2274,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
         $course->modules()->create([
             'title' => $validated['title'],
-            'slug' => filled($validated['slug'] ?? null) ? Str::slug($validated['slug']) : Str::slug($validated['title']).'-'.$course->id.'-'.now()->timestamp,
+            'slug' => $uniqueSlug('modules', $validated['title'], $validated['slug'] ?? null),
             'summary' => $validated['summary'] ?? null,
             'sort_order' => $validated['sort_order'] ?? 0,
             'status' => $validated['status'],
@@ -2215,7 +2283,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return back()->with('status', 'Module added.');
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.modules.store');
 
-    Route::post('/instructor/courses/{course}/lessons', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse) {
+    Route::post('/instructor/courses/{course}/lessons', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse, $uniqueSlug) {
         $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
 
         $validated = $request->validate([
@@ -2237,7 +2305,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
         $module->lessons()->create([
             'title' => $validated['title'],
-            'slug' => filled($validated['slug'] ?? null) ? Str::slug($validated['slug']) : Str::slug($validated['title']).'-'.$module->id.'-'.now()->timestamp,
+            'slug' => $uniqueSlug('lessons', $validated['title'], $validated['slug'] ?? null),
             'summary' => $validated['summary'] ?? null,
             'lesson_type' => $validated['lesson_type'],
             'video_url' => $validated['video_url'] ?? null,
@@ -2367,6 +2435,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'lesson_id' => ['required', 'exists:lessons,id'],
             'title' => ['required', 'string', 'max:255'],
             'instructions' => ['required', 'string'],
+            'instruction_file' => ['nullable', 'file', 'max:10240', 'mimes:pdf,doc,docx,ppt,pptx,txt,zip,png,jpg,jpeg'],
             'submission_type' => ['required', Rule::in([Assignment::TYPE_TEXT, Assignment::TYPE_FILE, Assignment::TYPE_LINK, Assignment::TYPE_MIXED])],
             'max_score' => ['required', 'integer', 'min:1'],
             'due_days_after_enrollment' => ['nullable', 'integer', 'min:0'],
@@ -2374,13 +2443,24 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'status' => ['required', Rule::in([Assignment::STATUS_DRAFT, Assignment::STATUS_PUBLISHED, Assignment::STATUS_ARCHIVED])],
             'question_text' => ['nullable', 'string', 'max:1200'],
             'question_type' => ['nullable', Rule::in(AssignmentQuestion::TYPES)],
+            'question_points' => ['nullable', 'integer', 'min:0'],
+            'question_required' => ['nullable', 'boolean'],
+            'options' => ['nullable', 'array'],
+            'options.*.option_text' => ['nullable', 'string', 'max:500'],
+            'correct_option_index' => ['nullable', 'integer', 'min:0'],
+            'correct_option_indexes' => ['nullable', 'array'],
+            'correct_option_indexes.*' => ['integer', 'min:0'],
         ]);
 
         $lesson = $lessonBelongsToInstructorCourse($course, (int) $validated['lesson_id']);
+        $instructionFilePath = $request->hasFile('instruction_file')
+            ? $request->file('instruction_file')->store('assignment-instructions', 'public')
+            : null;
 
         $assignment = $lesson->assignments()->create([
             'title' => $validated['title'],
             'instructions' => $validated['instructions'],
+            'instruction_file_path' => $instructionFilePath,
             'submission_type' => $validated['submission_type'],
             'max_score' => $validated['max_score'],
             'due_days_after_enrollment' => $validated['due_days_after_enrollment'] ?? null,
@@ -2389,17 +2469,63 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         ]);
 
         if (filled($validated['question_text'] ?? null)) {
-            $assignment->questions()->create([
+            $questionType = $validated['question_type'] ?? AssignmentQuestion::TYPE_TEXTAREA;
+            $question = $assignment->questions()->create([
                 'question_text' => $validated['question_text'],
-                'question_type' => $validated['question_type'] ?? AssignmentQuestion::TYPE_TEXTAREA,
-                'points' => $validated['max_score'],
+                'question_type' => $questionType,
+                'points' => $validated['question_points'] ?? $validated['max_score'],
                 'sort_order' => 1,
-                'is_required' => true,
+                'is_required' => (bool) ($validated['question_required'] ?? true),
             ]);
+
+            $rawOptions = collect($validated['options'] ?? [])
+                ->map(fn ($option, int|string $index): array => [
+                    'index' => (int) $index,
+                    'text' => trim((string) ($option['option_text'] ?? '')),
+                ])
+                ->filter(fn (array $option): bool => filled($option['text']))
+                ->values();
+
+            if ($questionType === AssignmentQuestion::TYPE_TRUE_FALSE && $rawOptions->isEmpty()) {
+                $rawOptions = collect([
+                    ['index' => 0, 'text' => 'True'],
+                    ['index' => 1, 'text' => 'False'],
+                ]);
+            }
+
+            if (in_array($questionType, [AssignmentQuestion::TYPE_SINGLE_CHOICE, AssignmentQuestion::TYPE_MULTIPLE_CHOICE, AssignmentQuestion::TYPE_TRUE_FALSE], true)) {
+                if ($rawOptions->count() < 2) {
+                    throw ValidationException::withMessages(['options' => 'Add at least two options for objective assignment questions.']);
+                }
+
+                $correctIndexes = $questionType === AssignmentQuestion::TYPE_MULTIPLE_CHOICE
+                    ? collect($validated['correct_option_indexes'] ?? [])->map(fn ($index): int => (int) $index)->unique()->values()
+                    : collect([(int) ($validated['correct_option_index'] ?? -1)]);
+                $availableIndexes = $rawOptions->pluck('index');
+                $validCorrectIndexes = $correctIndexes->intersect($availableIndexes)->values();
+
+                if ($validCorrectIndexes->isEmpty()) {
+                    throw ValidationException::withMessages(['correct_option_index' => 'Choose the correct option for this assignment question.']);
+                }
+
+                if ($questionType !== AssignmentQuestion::TYPE_MULTIPLE_CHOICE && $validCorrectIndexes->count() !== 1) {
+                    throw ValidationException::withMessages(['correct_option_index' => 'Choose exactly one correct option.']);
+                }
+
+                foreach ($rawOptions as $position => $option) {
+                    AssignmentOption::create([
+                        'assignment_question_id' => $question->id,
+                        'option_text' => $option['text'],
+                        'is_correct' => $validCorrectIndexes->contains($option['index']),
+                        'sort_order' => $position + 1,
+                    ]);
+                }
+            }
         }
 
         return back()->with('status', 'Assignment added.');
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.assignments.store');
+
     Route::get('/instructor/courses/{course}', function (Course $course) use ($abortUnlessInstructorCourse, $instructorLiveClassesForCourse) {
         $user = Auth::user();
 
@@ -2623,3 +2749,6 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return redirect()->route('mentor.check-ins');
     })->middleware('role:'.User::ROLE_MENTOR)->name('mentor.check-ins.complete');
 });
+
+
+

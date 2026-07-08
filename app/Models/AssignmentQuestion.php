@@ -13,10 +13,16 @@ class AssignmentQuestion extends Model
 
     public const TYPE_TEXT = 'text';
     public const TYPE_TEXTAREA = 'textarea';
+    public const TYPE_SINGLE_CHOICE = 'single_choice';
+    public const TYPE_MULTIPLE_CHOICE = 'multiple_choice';
+    public const TYPE_TRUE_FALSE = 'true_false';
 
     public const TYPES = [
         self::TYPE_TEXT,
         self::TYPE_TEXTAREA,
+        self::TYPE_SINGLE_CHOICE,
+        self::TYPE_MULTIPLE_CHOICE,
+        self::TYPE_TRUE_FALSE,
     ];
 
     protected $fillable = [
@@ -55,5 +61,9 @@ class AssignmentQuestion extends Model
     {
         return $this->hasMany(AssignmentQuestionAnswer::class);
     }
-}
 
+    public function options(): HasMany
+    {
+        return $this->hasMany(AssignmentOption::class)->orderBy('sort_order')->orderBy('id');
+    }
+}

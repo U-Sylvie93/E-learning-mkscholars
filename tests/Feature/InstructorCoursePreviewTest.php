@@ -334,7 +334,91 @@ class InstructorCoursePreviewTest extends TestCase
         $this->assertDatabaseHas('assignment_questions', ['assignment_id' => $assignment->id, 'question_text' => 'Describe one event loop phase.']);
     }
 
-    public function test_instructor_cannot_build_content_for_unowned_course(): void
+
+    public function test_instructor_created_lessons_get_automatic_unique_slugs(): void
+    {
+        $instructor = $this->user(User::ROLE_INSTRUCTOR, 'lesson-slugs@mkscholars.test');
+        $course = $this->course('Slug Builder Course', 'slug-builder-course');
+        $course->update(['instructor_id' => $instructor->id]);
+        $module = $course->modules()->first();
+
+        $this->actingAs($instructor)
+            ->post(route('instructor.lessons.store', $course), [
+                'module_id' => $module->id,
+                'title' => 'Reusable Lesson Title',
+                'lesson_type' => 'text',
+                'content' => 'Reading lesson content.',
+                'status' => Course::STATUS_PUBLISHED,
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($instructor)
+            ->post(route('instructor.lessons.store', $course), [
+                'module_id' => $module->id,
+                'title' => 'Reusable Lesson Title',
+                'lesson_type' => 'video',
+                'video_url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                'status' => Course::STATUS_PUBLISHED,
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($instructor)
+            ->post(route('instructor.lessons.store', $course), [
+                'module_id' => $module->id,
+                'title' => 'Manual Slug Lesson',
+                'slug' => 'custom-instructor-lesson',
+                'lesson_type' => 'text',
+                'content' => 'Manual slug lesson content.',
+                'status' => Course::STATUS_PUBLISHED,
+            ])
+            ->assertRedirect();
+
+        $createdLessons = Lesson::query()
+            ->where('module_id', $module->id)
+            ->whereIn('title', ['Reusable Lesson Title', 'Manual Slug Lesson'])
+            ->orderBy('id')
+            ->get();
+
+        $this->assertSame('reusable-lesson-title', $createdLessons->get(0)?->slug);
+        $this->assertSame('reusable-lesson-title-2', $createdLessons->get(1)?->slug);
+        $this->assertSame('custom-instructor-lesson', $createdLessons->get(2)?->slug);
+    }
+
+    public function test_instructor_course_builder_completion_summary_shows_final_test_status(): void
+    {
+        $instructor = $this->user(User::ROLE_INSTRUCTOR, 'completion-summary@mkscholars.test');
+        $course = $this->course('Completion Summary Course', 'completion-summary-course');
+        $course->update(['instructor_id' => $instructor->id]);
+        $module = $course->modules()->first();
+        Lesson::create([
+            'module_id' => $module->id,
+            'title' => 'Summary Video Lesson',
+            'slug' => 'summary-video-lesson',
+            'lesson_type' => 'video',
+            'video_url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+            'status' => Course::STATUS_PUBLISHED,
+        ]);
+        Quiz::create([
+            'course_id' => $course->id,
+            'lesson_id' => null,
+            'quiz_type' => Quiz::TYPE_FINAL_TEST,
+            'title' => 'Published Final Test',
+            'passing_score' => 70,
+            'status' => Quiz::STATUS_PUBLISHED,
+        ]);
+
+        $this->actingAs($instructor)
+            ->get(route('instructor.courses.edit', $course))
+            ->assertOk()
+            ->assertSee('Course completion summary')
+            ->assertSee('Videos')
+            ->assertSee('Reading')
+            ->assertSee('Quizzes')
+            ->assertSee('Assignments')
+            ->assertSee('Final Test')
+            ->assertSee('Published Final Test')
+            ->assertSee('Published');
+    }    public function test_instructor_cannot_build_content_for_unowned_course(): void
     {
         $instructor = $this->user(User::ROLE_INSTRUCTOR, 'builder-blocked@mkscholars.test');
         $course = $this->course('Blocked Builder Course', 'blocked-builder-course');
@@ -431,4 +515,5 @@ class InstructorCoursePreviewTest extends TestCase
         ]);
     }
 }
+
 
