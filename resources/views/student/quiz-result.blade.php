@@ -14,7 +14,7 @@
                         <h1 class="mt-4 text-3xl font-black tracking-normal text-mk-navy">Quiz result</h1>
                         <p class="mt-2 text-sm leading-6 text-slate-600">Your saved answers were graded using the published correct options for this quiz.</p>
                     </div>
-                    <x-button :href="route('student.courses.learn', ['course' => $course, 'lesson' => $quiz->lesson_id])" variant="secondary">Back to learning</x-button>
+                    <x-button :href="$quiz->lesson_id ? route('student.courses.learn', ['course' => $course, 'lesson' => $quiz->lesson_id]) : route('student.courses.learn', $course)" variant="secondary">Back to learning</x-button>
                 </div>
 
                 <div class="mt-7 grid gap-4 sm:grid-cols-4">
@@ -47,14 +47,20 @@
                     <div class="mt-8 space-y-4">
                         <h2 class="text-xl font-black text-mk-navy">Answer review</h2>
                         @foreach ($attempt->answers as $answer)
-                            @php($correctOption = $answer->question?->options?->firstWhere('is_correct', true))
+                            @php
+                                $selectedOptionIds = collect($answer->selected_option_ids ?? ($answer->quiz_option_id ? [$answer->quiz_option_id] : []))
+                                    ->map(fn ($optionId) => (int) $optionId)
+                                    ->all();
+                                $selectedOptions = $answer->question?->options?->whereIn('id', $selectedOptionIds)->pluck('option_text')->values() ?? collect();
+                                $correctOptions = $answer->question?->options?->where('is_correct', true)->pluck('option_text')->values() ?? collect();
+                            @endphp
                             <article class="rounded-mk-md border border-slate-200 bg-white p-4">
                                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                     <div class="min-w-0">
                                         <p class="break-words text-sm font-black text-mk-navy">{{ $loop->iteration }}. {{ $answer->question?->question_text ?? 'Quiz question' }}</p>
-                                        <p class="mt-2 break-words text-sm leading-6 text-slate-600">Your answer: <span class="font-bold text-mk-navy">{{ $answer->option?->option_text ?? 'No answer selected' }}</span></p>
-                                        @if (! $answer->is_correct && $correctOption)
-                                            <p class="mt-1 break-words text-sm leading-6 text-slate-600">Correct answer: <span class="font-bold text-emerald-700">{{ $correctOption->option_text }}</span></p>
+                                        <p class="mt-2 break-words text-sm leading-6 text-slate-600">Your answer: <span class="font-bold text-mk-navy">{{ $selectedOptions->isNotEmpty() ? $selectedOptions->join(', ') : 'No answer selected' }}</span></p>
+                                        @if (! $answer->is_correct && $correctOptions->isNotEmpty())
+                                            <p class="mt-1 break-words text-sm leading-6 text-slate-600">Correct answer: <span class="font-bold text-emerald-700">{{ $correctOptions->join(', ') }}</span></p>
                                         @endif
                                     </div>
                                     <div class="shrink-0">

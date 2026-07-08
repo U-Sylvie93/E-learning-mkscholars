@@ -7,6 +7,7 @@
         $logoPath = public_path('images/mk-scholars-logo.webp');
         $logoData = file_exists($logoPath) ? 'data:image/webp;base64,'.base64_encode(file_get_contents($logoPath)) : null;
         $signatureData = $certificate->signatureImageDataUri();
+        $certificateScore = $certificate->displayScore();
     @endphp
     <style>
         * {
@@ -222,8 +223,8 @@
                         <div class="value">{{ $certificate->issued_at?->format('M j, Y') ?? 'N/A' }}</div>
                     </td>
                     <td>
-                        <div class="label">Score</div>
-                        <div class="value">{{ $certificate->score !== null ? $certificate->score.'%' : 'N/A' }}</div>
+                        <div class="label">Final Test Score</div>
+                        <div class="value">{{ $certificateScore !== null ? $certificateScore.'%' : 'Not available' }}</div>
                     </td>
                 </tr>
             </table>

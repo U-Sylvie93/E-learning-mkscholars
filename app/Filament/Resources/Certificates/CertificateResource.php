@@ -75,9 +75,11 @@ class CertificateResource extends Resource
                     ->maxLength(255)
                     ->placeholder('Filled from course automatically if blank'),
                 TextInput::make('score')
+                    ->label('Final Test Score')
                     ->numeric()
                     ->minValue(0)
-                    ->maxValue(100),
+                    ->maxValue(100)
+                    ->helperText('Leave blank to use the best submitted published Final Test score when available.'),
                 TextInput::make('signer_name')
                     ->label('Signer name')
                     ->maxLength(255)
@@ -124,6 +126,7 @@ class CertificateResource extends Resource
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('score')
+                    ->label('Final Test Score')
                     ->suffix('%')
                     ->placeholder('No score')
                     ->sortable(),
@@ -205,6 +208,9 @@ class CertificateResource extends Resource
 
         $data['student_name'] = filled($data['student_name'] ?? null) ? $data['student_name'] : ($student?->name ?? 'Student');
         $data['course_title'] = filled($data['course_title'] ?? null) ? $data['course_title'] : ($course?->title ?? 'Course');
+        $data['score'] = filled($data['score'] ?? null)
+            ? (int) $data['score']
+            : Certificate::finalTestScoreFor($data['user_id'] ?? null, $data['course_id'] ?? null);
         $data['issued_at'] ??= now();
 
         if (($data['status'] ?? null) === Certificate::STATUS_REVOKED) {

@@ -8,4 +8,11 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateLessonActivity extends CreateRecord
 {
     protected static string $resource = LessonActivityResource::class;
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        LessonActivityResource::authorizeContentEditorCreateData($data);
+
+        return $data;
+    }
 }

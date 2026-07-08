@@ -11,9 +11,17 @@ class Quiz extends Model
 {
     use HasFactory;
 
+    public const TYPE_LESSON_QUIZ = 'lesson_quiz';
+    public const TYPE_FINAL_TEST = 'final_test';
+
     public const STATUS_DRAFT = 'draft';
     public const STATUS_PUBLISHED = 'published';
     public const STATUS_ARCHIVED = 'archived';
+
+    public const TYPES = [
+        self::TYPE_LESSON_QUIZ,
+        self::TYPE_FINAL_TEST,
+    ];
 
     public const STATUSES = [
         self::STATUS_DRAFT,
@@ -23,6 +31,8 @@ class Quiz extends Model
 
     protected $fillable = [
         'lesson_id',
+        'course_id',
+        'quiz_type',
         'title',
         'description',
         'passing_score',
@@ -45,6 +55,21 @@ class Quiz extends Model
         return $this->belongsTo(Lesson::class);
     }
 
+    public function course(): BelongsTo
+    {
+        return $this->belongsTo(Course::class);
+    }
+
+    public function isFinalTest(): bool
+    {
+        return $this->quiz_type === self::TYPE_FINAL_TEST;
+    }
+
+    public function courseContext(): ?Course
+    {
+        return $this->course ?? $this->lesson?->module?->course;
+    }
+
     public function questions(): HasMany
     {
         return $this->hasMany(QuizQuestion::class)->orderBy('sort_order')->orderBy('id');
@@ -55,5 +80,4 @@ class Quiz extends Model
         return $this->hasMany(QuizAttempt::class);
     }
 }
-
 

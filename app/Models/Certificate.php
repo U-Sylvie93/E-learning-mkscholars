@@ -36,6 +36,7 @@ class Certificate extends Model
     protected function casts(): array
     {
         return [
+            'score' => 'integer',
             'issued_at' => 'datetime',
             'revoked_at' => 'datetime',
         ];
@@ -48,6 +49,7 @@ class Certificate extends Model
             $certificate->verification_code ??= self::generateVerificationCode();
             $certificate->issued_at ??= now();
             $certificate->status ??= self::STATUS_ISSUED;
+            $certificate->score ??= self::finalTestScoreFor($certificate->user_id, $certificate->course_id);
         });
     }
 
@@ -67,6 +69,58 @@ class Certificate extends Model
         } while (self::where('verification_code', $code)->exists());
 
         return $code;
+    }
+
+    public static function finalTestScoreFor(User|int|null $user, Course|int|null $course): ?int
+    {
+        $userId = $user instanceof User ? $user->id : $user;
+        $courseId = $course instanceof Course ? $course->id : $course;
+
+        if (! $userId || ! $courseId) {
+            return null;
+        }
+
+        $finalTest = Quiz::query()
+            ->where('course_id', $courseId)
+            ->where('quiz_type', Quiz::TYPE_FINAL_TEST)
+            ->where('status', Quiz::STATUS_PUBLISHED)
+            ->first();
+
+        if (! $finalTest) {
+            return null;
+        }
+
+        return QuizAttempt::query()
+            ->where('quiz_id', $finalTest->id)
+            ->where('user_id', $userId)
+            ->whereNotNull('submitted_at')
+            ->whereIn('status', [
+                QuizAttempt::STATUS_SUBMITTED,
+                QuizAttempt::STATUS_PASSED,
+                QuizAttempt::STATUS_FAILED,
+            ])
+            ->get()
+            ->map(fn (QuizAttempt $attempt): ?int => self::percentageFromAttempt($attempt))
+            ->filter(fn (?int $percentage): bool => $percentage !== null)
+            ->max();
+    }
+
+    public function displayScore(): ?int
+    {
+        return $this->score ?? self::finalTestScoreFor($this->user_id, $this->course_id);
+    }
+
+    private static function percentageFromAttempt(QuizAttempt $attempt): ?int
+    {
+        if ($attempt->percentage !== null) {
+            return max(0, min(100, (int) $attempt->percentage));
+        }
+
+        if ($attempt->total_points > 0) {
+            return max(0, min(100, (int) round(($attempt->score / $attempt->total_points) * 100)));
+        }
+
+        return null;
     }
 
     public function user(): BelongsTo

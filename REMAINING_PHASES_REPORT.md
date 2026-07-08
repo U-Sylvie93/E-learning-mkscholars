@@ -59,6 +59,65 @@ Code changes added for owner verification:
 
 Manual verification is still required because this phase was code-only: run migrations if needed, run tests, build assets, and check the admin panel in a browser.
 
+### Phase 41A: Instructor Quiz Builder Upgrade
+
+Code changes added for owner verification:
+
+- Instructor course builder quiz creation now includes quiz instructions, passing score, time limit, attempt limit, draft/published status, and publish action.
+- Instructors can add questions to existing owned quizzes from the course builder.
+- Question creation supports single-choice, multiple-choice, and true/false question types.
+- Question options are no longer limited to two choices; the builder supports additional option rows and correct-answer controls.
+- Student guided quiz mode now supports checkbox-based multiple-choice submissions.
+- Multiple-choice scoring requires the selected option set to exactly match all correct options.
+- A migration adds `selected_option_ids` to quiz answers for exact-set scoring while preserving the existing single selected option field.
+- `TESTING_CHECKLIST.md` includes Phase 41A manual QA.
+
+Manual verification is still required because this phase was code-only: run migrations, run tests, build assets, and check the instructor quiz builder in a browser.
+
+### Phase 41B: Final Course Test
+
+Code changes added for owner verification:
+
+- Final Test is represented as a special quiz type with `quiz_type = final_test` and a direct `course_id`.
+- Existing lesson quizzes remain `quiz_type = lesson_quiz` and continue using `lesson_id`.
+- The instructor course builder now includes a Final Test section with Add Final Test, Publish Final Test, and Manage Questions flows.
+- Final Test questions reuse the Phase 41A question/option builder and support single-choice, multiple-choice, and true/false.
+- Student learning workspace shows the published Final Test near course completion with passing score, time limit, attempt limit, and latest attempt status.
+- Final Test uses the existing guided quiz instruction, one-question-at-a-time, timer, save-answer, and result pages.
+- Certificate templates were not changed in Phase 41B; Phase 41C adds Final Test mark display.
+- `TESTING_CHECKLIST.md` includes Phase 41B manual QA.
+
+Manual verification is still required because this phase was code-only: run migrations, run tests, build assets, and check the instructor and student Final Test flows in a browser.
+
+### Phase 41C: Certificate Final Test Marks
+
+Code changes added for owner verification:
+
+- Certificates reuse the existing nullable `score` field; no additional certificate score migration was added.
+- When a certificate is created without a manual score, the system uses the best submitted attempt percentage from the course's published Final Test.
+- If a submitted attempt has raw score and total points but no stored percentage, the percentage is calculated safely.
+- Existing certificate score behavior remains the fallback when no published Final Test or submitted Final Test attempt exists.
+- Student certificate list/detail, printable/PDF certificate view, public certificate verification, and the admin certificate resource now label the mark as Final Test Score when available.
+- Public verification only shows the Final Test Score for valid issued certificates and does not expose quiz answer review.
+- `TESTING_CHECKLIST.md` includes Phase 41C manual QA.
+
+Manual verification is still required because this phase was code-only: run migrations, run tests, build assets, and check certificate creation, student certificate pages, PDF/HTML fallback, and public verification in a browser.
+
+### Phase 41D: Admin Settings and Back Home
+
+Code changes added for owner verification:
+
+- Admin account settings were polished inside the Filament page shell with Profile Information, Account Details, Change Password, and Security Notes sections.
+- The settings page uses MK Scholars/Filament-friendly spacing, borders, dark-mode classes, helper text, and responsive layout without public navbar/footer chrome.
+- Admin profile updates still only update the authenticated admin's own name and email.
+- Role and approval status are displayed read-only and ignored by the profile update handler.
+- Password updates still require the current password, confirmed new password, and Laravel's hashed password cast.
+- Direct profile/password POST routes now require the admin account to be approved, matching Filament panel access.
+- The Filament user menu link is labeled Back to Home and points to the public home route.
+- `TESTING_CHECKLIST.md` includes Phase 41D manual QA.
+
+Manual verification is still required because this phase was code-only: run tests, build assets, and check the admin settings page plus Back to Home link in the Filament panel.
+
 ### Phase 14A: Subscriptions and Advanced Payment Plans
 
 Completed:

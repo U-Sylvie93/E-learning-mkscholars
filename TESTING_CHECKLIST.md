@@ -906,3 +906,67 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Admin panel has a Back to Home or View Website button.
 - Button redirects to the public home page.
 - Button is visible without breaking Filament navigation.
+
+# Phase 41A Instructor Quiz Builder QA
+
+- Instructor can create a quiz with title, instructions, passing score, time limit, attempt limit, and status.
+- Instructor can add questions to a quiz.
+- Instructor can add more than two options to a question.
+- Single-choice questions use radio-style correct answer selection.
+- Single-choice questions allow only one correct answer.
+- Multiple-choice questions use checkbox-style correct answer selection.
+- Multiple-choice questions allow more than one correct answer.
+- True/False questions support True and False options.
+- Student quiz page displays single-choice questions correctly.
+- Student quiz page displays multiple-choice questions correctly.
+- Multiple-choice scoring requires the correct selected option set.
+- Instructor cannot edit another instructor’s quiz.
+- Student, guest, and wrong roles cannot access instructor quiz builder.
+- Mobile quiz builder layout remains clean.
+
+# Phase 41B Final Test QA
+
+- Instructor can create a Final Test from the course builder.
+- Final Test supports title, instructions, passing score, time limit, attempt limit, and status.
+- Instructor can add questions and options to Final Test.
+- Final Test supports single-choice, multiple-choice, and true/false questions.
+- Final Test appears in the student learning workspace.
+- Student starts Final Test through the guided quiz instruction page.
+- Timer starts only after Start Quiz.
+- Student answers one question at a time.
+- Student final test result calculates correctly.
+- Multiple-choice final test questions require the exact correct option set.
+- Student cannot access another student’s final test result.
+- Instructor cannot edit another instructor’s final test.
+- Courses without Final Tests continue working normally.
+- Certificate mark display is covered by Phase 41C.
+
+# Phase 41C Certificate Final Test Marks QA
+
+- Course with Final Test can produce certificate mark from submitted Final Test attempt.
+- Certificate uses best or correct submitted Final Test score according to system rule.
+- Certificate still works for courses without Final Test.
+- Student certificate page shows Final Test mark when available.
+- Public certificate verification shows Final Test mark only for valid issued certificates.
+- Public verification does not expose quiz answers or answer review.
+- Another student cannot view someone else's certificate or mark.
+- Certificate records are not duplicated after repeated completion checks.
+- Revoked certificates remain invalid publicly.
+
+# Phase 41D Admin Settings and Back Home QA
+
+- Admin can open account settings from the Filament admin panel.
+- Admin settings page renders with clean Filament/MK Scholars styling.
+- Profile section has clear labels, spacing, and save action.
+- Admin can update own name.
+- Admin can update email only if allowed by existing rules.
+- Role/account status are read-only.
+- Password change requires current password.
+- Wrong current password shows validation error.
+- New password requires confirmation.
+- Password hashes are never exposed.
+- Admin cannot change role from personal settings.
+- Student, instructor, mentor, guest, and pending users cannot access admin settings.
+- Admin panel has Back to Home or View Website button.
+- Back to Home/View Website button redirects to the public home page.
+- Filament navigation remains usable on desktop and mobile.

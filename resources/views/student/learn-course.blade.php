@@ -16,6 +16,10 @@
         $latestQuizStatusLabel = $latestQuizAttempt
             ? str_replace('_', ' ', $latestQuizAttempt->status)
             : null;
+        $latestFinalTestAttempt = $finalTest?->attempts?->first();
+        $latestFinalTestStatusLabel = $latestFinalTestAttempt
+            ? str_replace('_', ' ', $latestFinalTestAttempt->status)
+            : null;
         $quizPassed = $latestQuizAttempt?->status === \App\Models\QuizAttempt::STATUS_PASSED;
         $firstAssignment = $currentAssignments->first();
         $firstAssignmentSubmission = $firstAssignment?->submissions?->first();
@@ -207,6 +211,29 @@
             </aside>
 
             {{-- Completion + review --}}
+            @if ($finalTest)
+                <section class="rounded-mk-lg border border-mk-gold/50 bg-white p-5 shadow-sm" data-testid="learning-final-test-card">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div class="min-w-0">
+                            <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Final Test</p>
+                            <h3 class="mt-1 break-words text-xl font-black text-mk-navy">{{ $finalTest->title }}</h3>
+                            @if ($finalTest->description)
+                                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{{ $finalTest->description }}</p>
+                            @endif
+                            <p class="mt-3 text-xs font-semibold text-slate-500">
+                                {{ $finalTest->questions_count ?? 0 }} questions
+                                - Passing score: {{ $finalTest->passing_score }}%
+                                - Time limit: {{ $finalTest->time_limit_minutes ? $finalTest->time_limit_minutes.' min' : 'None' }}
+                                - Attempts: {{ $finalTest->max_attempts ?: 'Unlimited' }}
+                                @if ($latestFinalTestAttempt) - Latest: {{ $latestFinalTestAttempt->percentage }}% {{ $latestFinalTestStatusLabel }}@endif
+                            </p>
+                        </div>
+                        @if ($latestFinalTestAttempt)<x-status-badge :status="$latestFinalTestAttempt->status" />@else<x-badge tone="blue">Ready</x-badge>@endif
+                    </div>
+                    <x-button :href="route('student.quizzes.show', $finalTest)" size="sm" class="mt-4">{{ $latestFinalTestAttempt ? 'Review or Retake Final Test' : 'Start Final Test' }}</x-button>
+                </section>
+            @endif
+
             <div class="grid gap-5 lg:grid-cols-2">
                 <section class="rounded-mk-lg border border-slate-200 bg-white p-5 shadow-sm">
                     <div class="flex items-start justify-between gap-3">

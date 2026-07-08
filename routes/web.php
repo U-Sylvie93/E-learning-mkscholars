@@ -398,18 +398,60 @@ Route::post('/payments/webhooks/{provider}', function (string $provider) {
     ], 501);
 })->name('payments.webhooks');
 
-Route::middleware(['auth', 'role:'.User::ROLE_ADMIN])
+Route::middleware('auth')
     ->prefix('admin/reports/exports')
     ->name('admin.reports.exports.')
     ->group(function (): void {
-        Route::get('/students', fn (Request $request) => app(AdminCsvExportService::class)->students($request->query()))->name('students');
-        Route::get('/enrollments', fn (Request $request) => app(AdminCsvExportService::class)->enrollments($request->query()))->name('enrollments');
-        Route::get('/payments', fn (Request $request) => app(AdminCsvExportService::class)->payments($request->query()))->name('payments');
-        Route::get('/subscriptions', fn (Request $request) => app(AdminCsvExportService::class)->subscriptions($request->query()))->name('subscriptions');
-        Route::get('/certificates', fn (Request $request) => app(AdminCsvExportService::class)->certificates($request->query()))->name('certificates');
-        Route::get('/quiz-attempts', fn (Request $request) => app(AdminCsvExportService::class)->quizAttempts($request->query()))->name('quiz-attempts');
-        Route::get('/assignment-submissions', fn (Request $request) => app(AdminCsvExportService::class)->assignmentSubmissions($request->query()))->name('assignment-submissions');
-        Route::get('/course-reviews', fn (Request $request) => app(AdminCsvExportService::class)->courseReviews($request->query()))->name('course-reviews');
+        $canViewReports = function (Request $request): void {
+            $user = $request->user();
+
+            abort_unless(
+                $user?->role === User::ROLE_ADMIN
+                    || ($user?->role === User::ROLE_VIEWER && $user->hasViewerPermission(User::VIEWER_PERMISSION_REPORTS)),
+                403
+            );
+        };
+
+        Route::get('/students', function (Request $request) use ($canViewReports) {
+            $canViewReports($request);
+
+            return app(AdminCsvExportService::class)->students($request->query());
+        })->name('students');
+        Route::get('/enrollments', function (Request $request) use ($canViewReports) {
+            $canViewReports($request);
+
+            return app(AdminCsvExportService::class)->enrollments($request->query());
+        })->name('enrollments');
+        Route::get('/payments', function (Request $request) use ($canViewReports) {
+            $canViewReports($request);
+
+            return app(AdminCsvExportService::class)->payments($request->query());
+        })->name('payments');
+        Route::get('/subscriptions', function (Request $request) use ($canViewReports) {
+            $canViewReports($request);
+
+            return app(AdminCsvExportService::class)->subscriptions($request->query());
+        })->name('subscriptions');
+        Route::get('/certificates', function (Request $request) use ($canViewReports) {
+            $canViewReports($request);
+
+            return app(AdminCsvExportService::class)->certificates($request->query());
+        })->name('certificates');
+        Route::get('/quiz-attempts', function (Request $request) use ($canViewReports) {
+            $canViewReports($request);
+
+            return app(AdminCsvExportService::class)->quizAttempts($request->query());
+        })->name('quiz-attempts');
+        Route::get('/assignment-submissions', function (Request $request) use ($canViewReports) {
+            $canViewReports($request);
+
+            return app(AdminCsvExportService::class)->assignmentSubmissions($request->query());
+        })->name('assignment-submissions');
+        Route::get('/course-reviews', function (Request $request) use ($canViewReports) {
+            $canViewReports($request);
+
+            return app(AdminCsvExportService::class)->courseReviews($request->query());
+        })->name('course-reviews');
     });
 
 Route::middleware(['auth', 'role:'.User::ROLE_ADMIN])
@@ -418,6 +460,8 @@ Route::middleware(['auth', 'role:'.User::ROLE_ADMIN])
     ->group(function (): void {
         Route::post('/profile', function (Request $request) {
             $user = $request->user();
+
+            abort_unless($user->isApproved(), 403);
 
             $validated = $request->validate([
                 'name' => ['required', 'string', 'max:120'],
@@ -430,6 +474,8 @@ Route::middleware(['auth', 'role:'.User::ROLE_ADMIN])
         })->name('profile');
 
         Route::post('/password', function (Request $request) {
+            abort_unless($request->user()->isApproved(), 403);
+
             $validated = $request->validate([
                 'current_password' => ['required', 'string'],
                 'password' => ['required', 'string', 'min:8', 'confirmed'],
@@ -1139,6 +1185,17 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $currentQuiz = $currentLesson
             ? $currentLesson->quizzes->first()
             : null;
+        $finalTest = Quiz::query()
+            ->where('course_id', $course->id)
+            ->where('quiz_type', Quiz::TYPE_FINAL_TEST)
+            ->where('status', Quiz::STATUS_PUBLISHED)
+            ->withCount(['questions' => fn ($questionQuery) => $questionQuery->where('status', QuizQuestion::STATUS_PUBLISHED)])
+            ->with(['attempts' => fn ($attemptQuery) => $attemptQuery
+                ->where('user_id', $user->id)
+                ->whereIn('status', [QuizAttempt::STATUS_PASSED, QuizAttempt::STATUS_FAILED, QuizAttempt::STATUS_SUBMITTED])
+                ->latest('submitted_at')])
+            ->latest()
+            ->first();
         $currentAssignments = $currentLesson
             ? $currentLesson->assignments
             : collect();
@@ -1173,6 +1230,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'course' => $course,
             'currentLesson' => $currentLesson,
             'currentQuiz' => $currentQuiz,
+            'finalTest' => $finalTest,
             'currentAssignments' => $currentAssignments,
             'currentLiveClasses' => $currentLiveClasses,
             'previousLesson' => $previousLesson,
@@ -1265,7 +1323,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
                 ->with(['options' => fn ($optionQuery) => $optionQuery->orderBy('sort_order')]),
         ]);
 
-        $course = $quiz->lesson?->module?->course;
+        $course = $quiz->courseContext();
 
         abort_unless($quiz->status === Quiz::STATUS_PUBLISHED, 404);
         abort_unless($course?->status === Course::STATUS_PUBLISHED, 404);
@@ -1312,7 +1370,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $user = Auth::user();
 
         $quiz->load('lesson.module.course');
-        $course = $quiz->lesson?->module?->course;
+        $course = $quiz->courseContext();
 
         abort_unless($quiz->status === Quiz::STATUS_PUBLISHED, 404);
         abort_unless($course?->status === Course::STATUS_PUBLISHED, 404);
@@ -1332,7 +1390,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $quizAttemptService = app(QuizAttemptService::class);
 
         $quiz->load('lesson.module.course');
-        $course = $quiz->lesson?->module?->course;
+        $course = $quiz->courseContext();
 
         abort_unless($quiz->status === Quiz::STATUS_PUBLISHED, 404);
         abort_unless($course?->status === Course::STATUS_PUBLISHED, 404);
@@ -1378,7 +1436,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $quizAttemptService = app(QuizAttemptService::class);
 
         $quiz->load('lesson.module.course');
-        $course = $quiz->lesson?->module?->course;
+        $course = $quiz->courseContext();
 
         abort_unless($quiz->status === Quiz::STATUS_PUBLISHED, 404);
         abort_unless($course?->status === Course::STATUS_PUBLISHED, 404);
@@ -1386,11 +1444,17 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         abort_unless($attempt->quiz_id === $quiz->id && $attempt->user_id === $user->id, 403);
 
         $validated = $request->validate([
-            'option_id' => ['required', 'integer'],
+            'option_id' => ['nullable', 'integer'],
+            'option_ids' => ['nullable', 'array'],
+            'option_ids.*' => ['integer'],
         ]);
 
         $questions = $quizAttemptService->publishedQuestions($quiz)->values();
-        $quizAttemptService->saveAnswer($attempt, $quiz, $questionIndex, (int) $validated['option_id']);
+        $question = $questions->get($questionIndex);
+        $selectedOptionIds = $question?->question_type === QuizQuestion::TYPE_MULTIPLE_CHOICE
+            ? ($validated['option_ids'] ?? (isset($validated['option_id']) ? [(int) $validated['option_id']] : []))
+            : (int) ($validated['option_id'] ?? 0);
+        $quizAttemptService->saveAnswer($attempt, $quiz, $questionIndex, $selectedOptionIds);
 
         if ($request->boolean('finish') || $questionIndex >= $questions->count() - 1) {
             $quizAttemptService->submit($attempt, $quiz);
@@ -1415,7 +1479,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $quizAttemptService = app(QuizAttemptService::class);
 
         $quiz->load('lesson.module.course');
-        $course = $quiz->lesson?->module?->course;
+        $course = $quiz->courseContext();
 
         abort_unless($quiz->status === Quiz::STATUS_PUBLISHED, 404);
         abort_unless($course?->status === Course::STATUS_PUBLISHED, 404);
@@ -1435,7 +1499,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $quizAttemptService = app(QuizAttemptService::class);
 
         $quiz->load('lesson.module.course');
-        $course = $quiz->lesson?->module?->course;
+        $course = $quiz->courseContext();
 
         abort_unless($quiz->status === Quiz::STATUS_PUBLISHED, 404);
         abort_unless($course?->status === Course::STATUS_PUBLISHED, 404);
@@ -1461,9 +1525,9 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             }
 
             try {
-                $quizAttemptService->saveAnswer($attempt, $quiz, $index, (int) $answers[$question->id]);
+                $quizAttemptService->saveAnswer($attempt, $quiz, $index, $answers[$question->id]);
             } catch (ValidationException $exception) {
-                if (array_key_exists('option_id', $exception->errors())) {
+                if (array_key_exists('option_id', $exception->errors()) || array_key_exists('option_ids', $exception->errors())) {
                     throw ValidationException::withMessages([
                         'answers.'.$question->id => 'The selected answer does not belong to this question.',
                     ]);
@@ -1816,6 +1880,92 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return $lesson;
     };
 
+    $quizBelongsToInstructorCourse = function (User $instructor, Quiz $quiz) use ($abortUnlessInstructorOwnsCourse): Quiz {
+        $quiz->loadMissing(['course', 'lesson.module.course']);
+        $course = $quiz->courseContext();
+
+        abort_unless($course instanceof Course, 404);
+        $abortUnlessInstructorOwnsCourse($instructor, $course);
+
+        return $quiz;
+    };
+
+    $storeInstructorQuizQuestion = function (Quiz $quiz, array $data, bool $questionRequired = true): ?QuizQuestion {
+        if (! filled($data['question_text'] ?? null)) {
+            if ($questionRequired) {
+                throw ValidationException::withMessages([
+                    'question_text' => 'Add a question before saving.',
+                ]);
+            }
+
+            return null;
+        }
+
+        $questionType = $data['question_type'] ?? QuizQuestion::TYPE_SINGLE_CHOICE;
+        $rawOptions = collect($data['options'] ?? [])
+            ->map(fn ($option, int|string $index): array => [
+                'index' => (int) $index,
+                'text' => trim((string) ($option['option_text'] ?? '')),
+            ])
+            ->filter(fn (array $option): bool => filled($option['text']))
+            ->values();
+
+        if ($questionType === QuizQuestion::TYPE_TRUE_FALSE && $rawOptions->isEmpty()) {
+            $rawOptions = collect([
+                ['index' => 0, 'text' => 'True'],
+                ['index' => 1, 'text' => 'False'],
+            ]);
+        }
+
+        if ($rawOptions->count() < 2) {
+            throw ValidationException::withMessages([
+                'options' => 'Add at least two options for this question.',
+            ]);
+        }
+
+        $correctIndexes = $questionType === QuizQuestion::TYPE_MULTIPLE_CHOICE
+            ? collect($data['correct_option_indexes'] ?? [])->map(fn ($index): int => (int) $index)->unique()->values()
+            : collect([(int) ($data['correct_option_index'] ?? -1)]);
+        $availableIndexes = $rawOptions->pluck('index');
+        $validCorrectIndexes = $correctIndexes->intersect($availableIndexes)->values();
+
+        if ($questionType === QuizQuestion::TYPE_MULTIPLE_CHOICE && $validCorrectIndexes->isEmpty()) {
+            throw ValidationException::withMessages([
+                'correct_option_indexes' => 'Choose at least one correct answer.',
+            ]);
+        }
+
+        if ($questionType !== QuizQuestion::TYPE_MULTIPLE_CHOICE && $validCorrectIndexes->count() !== 1) {
+            throw ValidationException::withMessages([
+                'correct_option_index' => 'Choose exactly one correct answer.',
+            ]);
+        }
+
+        if ($questionType === QuizQuestion::TYPE_SINGLE_CHOICE && $validCorrectIndexes->count() !== 1) {
+            throw ValidationException::withMessages([
+                'correct_option_index' => 'Single-choice questions need exactly one correct answer.',
+            ]);
+        }
+
+        $question = $quiz->questions()->create([
+            'question_text' => $data['question_text'],
+            'question_type' => $questionType,
+            'points' => $data['points'] ?? 1,
+            'sort_order' => $data['sort_order'] ?? (($quiz->questions()->max('sort_order') ?? 0) + 1),
+            'status' => $data['question_status'] ?? QuizQuestion::STATUS_PUBLISHED,
+        ]);
+
+        foreach ($rawOptions as $position => $option) {
+            $question->options()->create([
+                'option_text' => $option['text'],
+                'is_correct' => $validCorrectIndexes->contains($option['index']),
+                'sort_order' => $position + 1,
+            ]);
+        }
+
+        return $question;
+    };
+
     $instructorLiveClassesForCourse = function (User $instructor, Course $course) {
         return LiveClass::query()
             ->with(['course', 'module.course', 'lesson.module.course', 'attendances'])
@@ -1929,6 +2079,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'modules' => collect(),
             'lessons' => collect(),
             'quizzes' => collect(),
+            'finalTest' => null,
             'assignments' => collect(),
             'mode' => 'create',
         ]);
@@ -1982,7 +2133,18 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'academies' => Academy::query()->orderBy('name')->get(),
             'modules' => $course->modules()->with('lessons')->orderBy('sort_order')->orderBy('title')->get(),
             'lessons' => Lesson::query()->whereHas('module', fn ($query) => $query->where('course_id', $course->id))->orderBy('sort_order')->orderBy('title')->get(),
-            'quizzes' => Quiz::query()->with('lesson.module')->whereHas('lesson.module', fn ($query) => $query->where('course_id', $course->id))->latest()->get(),
+            'quizzes' => Quiz::query()
+                ->with(['lesson.module', 'questions.options'])
+                ->where('quiz_type', Quiz::TYPE_LESSON_QUIZ)
+                ->whereHas('lesson.module', fn ($query) => $query->where('course_id', $course->id))
+                ->latest()
+                ->get(),
+            'finalTest' => Quiz::query()
+                ->with(['questions.options', 'attempts'])
+                ->where('course_id', $course->id)
+                ->where('quiz_type', Quiz::TYPE_FINAL_TEST)
+                ->latest()
+                ->first(),
             'assignments' => Assignment::query()->with('lesson.module')->whereHas('lesson.module', fn ($query) => $query->where('course_id', $course->id))->latest()->get(),
             'mode' => 'edit',
         ]);
@@ -2089,7 +2251,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return back()->with('status', 'Lesson added.');
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.lessons.store');
 
-    Route::post('/instructor/courses/{course}/quizzes', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse, $lessonBelongsToInstructorCourse) {
+    Route::post('/instructor/courses/{course}/quizzes', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse, $lessonBelongsToInstructorCourse, $storeInstructorQuizQuestion) {
         $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
 
         $validated = $request->validate([
@@ -2100,49 +2262,103 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'max_attempts' => ['nullable', 'integer', 'min:1'],
             'time_limit_minutes' => ['nullable', 'integer', 'min:1'],
             'status' => ['required', Rule::in(Quiz::STATUSES)],
+            'publish_quiz' => ['nullable', 'boolean'],
             'question_text' => ['nullable', 'string', 'max:1200'],
             'question_type' => ['nullable', Rule::in(QuizQuestion::TYPES)],
-            'option_a' => ['nullable', 'string', 'max:500'],
-            'option_b' => ['nullable', 'string', 'max:500'],
-            'correct_option' => ['nullable', Rule::in(['a', 'b'])],
+            'points' => ['nullable', 'integer', 'min:1'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'question_status' => ['nullable', Rule::in([QuizQuestion::STATUS_DRAFT, QuizQuestion::STATUS_PUBLISHED])],
+            'options' => ['nullable', 'array'],
+            'options.*.option_text' => ['nullable', 'string', 'max:500'],
+            'correct_option_index' => ['nullable', 'integer', 'min:0'],
+            'correct_option_indexes' => ['nullable', 'array'],
+            'correct_option_indexes.*' => ['integer', 'min:0'],
         ]);
 
         $lesson = $lessonBelongsToInstructorCourse($course, (int) $validated['lesson_id']);
 
         $quiz = $lesson->quizzes()->create([
+            'course_id' => $course->id,
+            'quiz_type' => Quiz::TYPE_LESSON_QUIZ,
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
             'passing_score' => $validated['passing_score'],
             'max_attempts' => $validated['max_attempts'] ?? null,
             'time_limit_minutes' => $validated['time_limit_minutes'] ?? null,
-            'status' => $validated['status'],
+            'status' => $request->boolean('publish_quiz') ? Quiz::STATUS_PUBLISHED : $validated['status'],
         ]);
 
-        if (filled($validated['question_text'] ?? null)) {
-            $question = $quiz->questions()->create([
-                'question_text' => $validated['question_text'],
-                'question_type' => $validated['question_type'] ?? QuizQuestion::TYPE_MULTIPLE_CHOICE,
-                'points' => 1,
-                'sort_order' => 1,
-                'status' => QuizQuestion::STATUS_PUBLISHED,
-            ]);
-
-            $optionA = $validated['option_a'] ?? ($question->question_type === QuizQuestion::TYPE_TRUE_FALSE ? 'True' : null);
-            $optionB = $validated['option_b'] ?? ($question->question_type === QuizQuestion::TYPE_TRUE_FALSE ? 'False' : null);
-
-            foreach ([['a', $optionA], ['b', $optionB]] as [$key, $label]) {
-                if (filled($label)) {
-                    $question->options()->create([
-                        'option_text' => $label,
-                        'is_correct' => ($validated['correct_option'] ?? 'a') === $key,
-                        'sort_order' => $key === 'a' ? 1 : 2,
-                    ]);
-                }
-            }
-        }
+        $storeInstructorQuizQuestion($quiz, $validated, false);
 
         return back()->with('status', 'Quiz added.');
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.quizzes.store');
+
+    Route::post('/instructor/courses/{course}/final-test', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse, $storeInstructorQuizQuestion) {
+        $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'passing_score' => ['required', 'integer', 'min:0', 'max:100'],
+            'max_attempts' => ['nullable', 'integer', 'min:1'],
+            'time_limit_minutes' => ['nullable', 'integer', 'min:1'],
+            'status' => ['required', Rule::in(Quiz::STATUSES)],
+            'publish_quiz' => ['nullable', 'boolean'],
+            'question_text' => ['nullable', 'string', 'max:1200'],
+            'question_type' => ['nullable', Rule::in(QuizQuestion::TYPES)],
+            'points' => ['nullable', 'integer', 'min:1'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'question_status' => ['nullable', Rule::in([QuizQuestion::STATUS_DRAFT, QuizQuestion::STATUS_PUBLISHED])],
+            'options' => ['nullable', 'array'],
+            'options.*.option_text' => ['nullable', 'string', 'max:500'],
+            'correct_option_index' => ['nullable', 'integer', 'min:0'],
+            'correct_option_indexes' => ['nullable', 'array'],
+            'correct_option_indexes.*' => ['integer', 'min:0'],
+        ]);
+
+        $finalTest = Quiz::query()
+            ->where('course_id', $course->id)
+            ->where('quiz_type', Quiz::TYPE_FINAL_TEST)
+            ->first();
+
+        abort_if($finalTest, 422, 'This course already has a final test.');
+
+        $finalTest = $course->finalTest()->create([
+            'lesson_id' => null,
+            'quiz_type' => Quiz::TYPE_FINAL_TEST,
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'passing_score' => $validated['passing_score'],
+            'max_attempts' => $validated['max_attempts'] ?? null,
+            'time_limit_minutes' => $validated['time_limit_minutes'] ?? null,
+            'status' => $request->boolean('publish_quiz') ? Quiz::STATUS_PUBLISHED : $validated['status'],
+        ]);
+
+        $storeInstructorQuizQuestion($finalTest, $validated, false);
+
+        return back()->with('status', 'Final Test added.');
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.final-tests.store');
+
+    Route::post('/instructor/quizzes/{quiz}/questions', function (Request $request, Quiz $quiz) use ($quizBelongsToInstructorCourse, $storeInstructorQuizQuestion) {
+        $quizBelongsToInstructorCourse(Auth::user(), $quiz);
+
+        $validated = $request->validate([
+            'question_text' => ['required', 'string', 'max:1200'],
+            'question_type' => ['required', Rule::in(QuizQuestion::TYPES)],
+            'points' => ['required', 'integer', 'min:1'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'question_status' => ['required', Rule::in([QuizQuestion::STATUS_DRAFT, QuizQuestion::STATUS_PUBLISHED])],
+            'options' => ['nullable', 'array'],
+            'options.*.option_text' => ['nullable', 'string', 'max:500'],
+            'correct_option_index' => ['nullable', 'integer', 'min:0'],
+            'correct_option_indexes' => ['nullable', 'array'],
+            'correct_option_indexes.*' => ['integer', 'min:0'],
+        ]);
+
+        $storeInstructorQuizQuestion($quiz, $validated);
+
+        return back()->with('status', 'Question saved.');
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.quizzes.questions.store');
 
     Route::post('/instructor/courses/{course}/assignments', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse, $lessonBelongsToInstructorCourse) {
         $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
@@ -2407,15 +2623,3 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return redirect()->route('mentor.check-ins');
     })->middleware('role:'.User::ROLE_MENTOR)->name('mentor.check-ins.complete');
 });
-
-
-
-
-
-
-
-
-
-
-
-

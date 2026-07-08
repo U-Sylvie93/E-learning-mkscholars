@@ -14,6 +14,7 @@ class QuizAnswer extends Model
         'quiz_attempt_id',
         'quiz_question_id',
         'quiz_option_id',
+        'selected_option_ids',
         'is_correct',
         'points_awarded',
     ];
@@ -21,6 +22,7 @@ class QuizAnswer extends Model
     protected function casts(): array
     {
         return [
+            'selected_option_ids' => 'array',
             'is_correct' => 'boolean',
             'points_awarded' => 'integer',
         ];
@@ -41,4 +43,3 @@ class QuizAnswer extends Model
         return $this->belongsTo(QuizOption::class, 'quiz_option_id');
     }
 }
-

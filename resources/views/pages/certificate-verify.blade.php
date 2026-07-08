@@ -4,6 +4,7 @@
             @if ($isValid)
                 @php
                     $signatureUrl = $certificate->signatureImageUrl();
+                    $certificateScore = $certificate->displayScore();
                 @endphp
                 <div class="mx-auto max-w-4xl">
                     <div class="rounded-[2rem] border border-mk-gold/60 bg-white p-4 shadow-soft">
@@ -31,6 +32,12 @@
                                 <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Status</p>
                                 <p class="mt-2 font-bold text-mk-navy">{{ $certificate->status }}</p>
                             </div>
+                            @if ($certificateScore !== null)
+                                <div class="rounded-lg bg-white p-4">
+                                    <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Final Test Score</p>
+                                    <p class="mt-2 font-bold text-mk-navy">{{ $certificateScore }}%</p>
+                                </div>
+                            @endif
                         </div>
 
                         @if ($certificate->signer_name || $signatureUrl)

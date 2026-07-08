@@ -21,6 +21,9 @@
             @else
                 <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
                     @foreach ($certificates as $certificate)
+                        @php
+                            $certificateScore = $certificate->displayScore();
+                        @endphp
                         <x-card class="flex h-full flex-col">
                             <div class="flex flex-wrap items-center gap-2">
                                 <x-badge :tone="$certificate->status === 'issued' ? 'green' : 'gray'">{{ $certificate->status }}</x-badge>
@@ -29,8 +32,8 @@
                             <h2 class="mt-5 text-xl font-bold text-mk-navy">{{ $certificate->course_title }}</h2>
                             <p class="mt-2 text-sm font-semibold text-mk-gold">{{ $certificate->student_name }}</p>
                             <p class="mt-4 text-sm leading-6 text-slate-600">Issued {{ $certificate->issued_at->format('M j, Y') }}</p>
-                            @if ($certificate->score !== null)
-                                <p class="mt-2 text-sm font-bold text-mk-navy">Score: {{ $certificate->score }}%</p>
+                            @if ($certificateScore !== null)
+                                <p class="mt-2 text-sm font-bold text-mk-navy">Final Test Score: {{ $certificateScore }}%</p>
                             @endif
                             <div class="mt-6 grid gap-3">
                                 <x-button :href="route('student.certificates.show', $certificate)" class="w-full">Open Certificate</x-button>
@@ -47,4 +50,3 @@
         </div>
     </section>
 </x-dashboard-layout>
-

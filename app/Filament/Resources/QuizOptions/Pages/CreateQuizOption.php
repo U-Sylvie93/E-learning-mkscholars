@@ -8,4 +8,11 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateQuizOption extends CreateRecord
 {
     protected static string $resource = QuizOptionResource::class;
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        QuizOptionResource::authorizeContentEditorCreateData($data);
+
+        return $data;
+    }
 }

@@ -7,6 +7,7 @@ use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Models\AppNotification;
+use App\Models\Course;
 use App\Models\User;
 use App\Services\AppNotificationService;
 use BackedEnum;
@@ -57,6 +58,26 @@ class UserResource extends Resource
                 ->required(fn (string $operation): bool => $operation === 'create')
                 ->dehydrated(fn (?string $state): bool => filled($state))
                 ->helperText('Set a temporary password for new admin/viewer accounts. Leave blank on edit to keep the current password.'),
+            Select::make('viewer_permissions')
+                ->label('Viewer allowed sections')
+                ->multiple()
+                ->options(User::viewerPermissionOptions())
+                ->helperText('Viewer accounts remain read-only. Leave empty for minimal admin access with no resource sections.')
+                ->visible(fn ($get): bool => $get('role') === User::ROLE_VIEWER),
+            Select::make('content_permissions')
+                ->label('Content editor permissions')
+                ->multiple()
+                ->options(User::contentPermissionOptions())
+                ->helperText('Content editors can only use selected content tools and cannot manage users, payments, subscriptions, certificates, reports, or settings.')
+                ->visible(fn ($get): bool => $get('role') === User::ROLE_CONTENT_EDITOR),
+            Select::make('content_course_ids')
+                ->label('Assigned courses')
+                ->multiple()
+                ->options(fn (): array => Course::query()->orderBy('title')->pluck('title', 'id')->all())
+                ->searchable()
+                ->preload()
+                ->helperText('Content editors can edit only these courses and related modules, lessons, quizzes, final tests, and assignments.')
+                ->visible(fn ($get): bool => $get('role') === User::ROLE_CONTENT_EDITOR),
             DateTimePicker::make('approved_at')->disabled()->dehydrated(false),
             Placeholder::make('approved_by_name')
                 ->label('Approved by')
@@ -72,6 +93,14 @@ class UserResource extends Resource
                 TextColumn::make('email')->searchable()->sortable(),
                 TextColumn::make('role')->badge()->sortable(),
                 TextColumn::make('approval_status')->label('Status')->badge()->sortable(),
+                TextColumn::make('viewer_permissions')
+                    ->label('Viewer sections')
+                    ->formatStateUsing(fn ($state): string => is_array($state) && $state !== [] ? (string) count($state) : 'None')
+                    ->toggleable(),
+                TextColumn::make('content_permissions')
+                    ->label('Content permissions')
+                    ->formatStateUsing(fn ($state): string => is_array($state) && $state !== [] ? (string) count($state) : 'None')
+                    ->toggleable(),
                 TextColumn::make('approved_at')->dateTime()->placeholder('Not approved')->sortable(),
                 TextColumn::make('created_at')->dateTime()->sortable(),
             ])

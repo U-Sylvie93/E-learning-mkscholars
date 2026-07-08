@@ -280,20 +280,29 @@
             <div class="grid gap-6 lg:grid-cols-2">
                 <x-card>
                     <x-badge tone="green">Quiz</x-badge>
-                    <h2 class="mt-4 text-xl font-extrabold text-mk-navy">Add quiz</h2>
+                    <h2 class="mt-4 text-xl font-extrabold text-mk-navy">Add Quiz</h2>
                     <form method="POST" action="{{ route('instructor.quizzes.store', $course) }}" class="mt-5 space-y-4">
                         @csrf
-                        <select name="lesson_id" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" required>
-                            <option value="">Select lesson</option>
-                            @foreach ($lessons as $lesson)
-                                <option value="{{ $lesson->id }}">{{ $lesson->title }}</option>
-                            @endforeach
-                        </select>
-                        <input name="title" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Quiz title" required>
-                        <textarea name="description" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Description"></textarea>
-                        <div class="grid gap-3 sm:grid-cols-3">
-                            <input name="passing_score" type="number" min="0" max="100" value="50" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Pass %">
-                            <input name="max_attempts" type="number" min="1" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Attempts">
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <label class="text-sm font-bold text-mk-navy">Related lesson
+                                <select name="lesson_id" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" required>
+                                    <option value="">Select lesson</option>
+                                    @foreach ($lessons as $lesson)
+                                        <option value="{{ $lesson->id }}">{{ $lesson->title }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                            <label class="text-sm font-bold text-mk-navy">Quiz title
+                                <input name="title" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Quiz title" required>
+                            </label>
+                        </div>
+                        <label class="block text-sm font-bold text-mk-navy">Quiz instructions
+                            <textarea name="description" rows="3" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Instructions students read before starting"></textarea>
+                        </label>
+                        <div class="grid gap-3 sm:grid-cols-4">
+                            <input name="passing_score" type="number" min="0" max="100" value="50" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Passing score">
+                            <input name="time_limit_minutes" type="number" min="1" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Time limit">
+                            <input name="max_attempts" type="number" min="1" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Attempt limit">
                             <select name="status" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
                                 @foreach (\App\Models\Quiz::STATUSES as $status)
                                     <option value="{{ $status }}">{{ str($status)->headline() }}</option>
@@ -301,19 +310,233 @@
                             </select>
                         </div>
                         <div class="rounded-lg border border-slate-100 bg-slate-50 p-4">
-                            <p class="text-sm font-bold text-mk-navy">Optional first question</p>
-                            <textarea name="question_text" rows="2" class="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Question text"></textarea>
-                            <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                                <input name="option_a" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Option A">
-                                <input name="option_b" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Option B">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-bold text-mk-navy">Add Question</p>
+                                    <p class="mt-1 text-xs font-semibold text-slate-500">Optional first question for this quiz.</p>
+                                </div>
+                                <button type="button" class="rounded-lg border border-mk-gold px-3 py-2 text-xs font-black text-mk-navy">Add Option</button>
                             </div>
-                            <select name="correct_option" class="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
-                                <option value="a">Option A is correct</option>
-                                <option value="b">Option B is correct</option>
-                            </select>
+                            <textarea name="question_text" rows="2" class="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Question text"></textarea>
+                            <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                                <select name="question_type" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                                    <option value="{{ \App\Models\QuizQuestion::TYPE_SINGLE_CHOICE }}">Single choice</option>
+                                    <option value="{{ \App\Models\QuizQuestion::TYPE_MULTIPLE_CHOICE }}">Multiple choice</option>
+                                    <option value="{{ \App\Models\QuizQuestion::TYPE_TRUE_FALSE }}">True / False</option>
+                                </select>
+                                <input name="points" type="number" min="1" value="1" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Points">
+                                <select name="question_status" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                                    <option value="{{ \App\Models\QuizQuestion::STATUS_PUBLISHED }}">Published</option>
+                                    <option value="{{ \App\Models\QuizQuestion::STATUS_DRAFT }}">Draft</option>
+                                </select>
+                            </div>
+                            <div class="mt-3 space-y-2">
+                                <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Options</p>
+                                <p class="text-xs font-semibold text-slate-500">No options yet? Add at least two option rows before saving a question.</p>
+                                @foreach (['Option A', 'Option B', 'Option C', 'Option D', 'Option E'] as $index => $label)
+                                    <div class="grid gap-2 rounded-lg bg-white p-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+                                        <input name="options[{{ $index }}][option_text]" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="{{ $label }}">
+                                        <label class="inline-flex items-center gap-2 text-xs font-bold text-slate-600">
+                                            <input type="radio" name="correct_option_index" value="{{ $index }}" @checked($index === 0) class="text-mk-gold focus:ring-mk-gold">
+                                            Single correct
+                                        </label>
+                                        <label class="inline-flex items-center gap-2 text-xs font-bold text-slate-600">
+                                            <input type="checkbox" name="correct_option_indexes[]" value="{{ $index }}" @checked($index === 0) class="rounded text-mk-gold focus:ring-mk-gold">
+                                            Multiple correct
+                                        </label>
+                                    </div>
+                                @endforeach
+                            </div>
                         </div>
-                        <x-button type="submit" size="sm">Add Quiz</x-button>
+                        <div class="flex flex-wrap gap-2">
+                            <x-button type="submit" size="sm">Save Quiz</x-button>
+                            <x-button type="submit" name="publish_quiz" value="1" size="sm" variant="secondary">Publish Quiz</x-button>
+                        </div>
                     </form>
+
+                    <div class="mt-6 space-y-4">
+                        @forelse ($quizzes as $quizItem)
+                            <div class="rounded-lg border border-slate-200 bg-white p-4">
+                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <p class="text-sm font-black text-mk-navy">{{ $quizItem->title }}</p>
+                                        <p class="mt-1 text-xs font-semibold text-slate-500">{{ $quizItem->lesson?->title ?? 'Lesson' }} - {{ str($quizItem->status)->headline() }}</p>
+                                    </div>
+                                    <x-badge tone="blue">{{ $quizItem->questions->count() }} questions</x-badge>
+                                </div>
+
+                                <div class="mt-4 space-y-3">
+                                    @forelse ($quizItem->questions as $question)
+                                        <div class="rounded-lg bg-slate-50 p-3">
+                                            <p class="text-sm font-bold text-mk-navy">{{ $question->question_text }}</p>
+                                            <div class="mt-2 flex flex-wrap gap-2">
+                                                @forelse ($question->options as $option)
+                                                    <x-badge :tone="$option->is_correct ? 'green' : 'gray'">{{ $option->option_text }}</x-badge>
+                                                @empty
+                                                    <span class="text-xs font-semibold text-slate-500">No options yet</span>
+                                                @endforelse
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <div class="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4">
+                                            <p class="text-sm font-black text-mk-navy">No questions yet</p>
+                                            <p class="mt-1 text-xs font-semibold text-slate-500">Add your first question</p>
+                                        </div>
+                                    @endforelse
+                                </div>
+
+                                <form method="POST" action="{{ route('instructor.quizzes.questions.store', $quizItem) }}" class="mt-4 space-y-3 rounded-lg border border-mk-gold/30 bg-mk-goldSoft/40 p-4">
+                                    @csrf
+                                    <div class="flex flex-wrap items-center justify-between gap-3">
+                                        <p class="text-sm font-black text-mk-navy">Add Question</p>
+                                        <button type="button" class="rounded-lg border border-mk-gold px-3 py-2 text-xs font-black text-mk-navy">Add Option</button>
+                                    </div>
+                                    <textarea name="question_text" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Question text" required></textarea>
+                                    <div class="grid gap-3 sm:grid-cols-3">
+                                        <select name="question_type" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                                            <option value="{{ \App\Models\QuizQuestion::TYPE_SINGLE_CHOICE }}">Single choice</option>
+                                            <option value="{{ \App\Models\QuizQuestion::TYPE_MULTIPLE_CHOICE }}">Multiple choice</option>
+                                            <option value="{{ \App\Models\QuizQuestion::TYPE_TRUE_FALSE }}">True / False</option>
+                                        </select>
+                                        <input name="points" type="number" min="1" value="1" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Points" required>
+                                        <select name="question_status" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                                            <option value="{{ \App\Models\QuizQuestion::STATUS_PUBLISHED }}">Published</option>
+                                            <option value="{{ \App\Models\QuizQuestion::STATUS_DRAFT }}">Draft</option>
+                                        </select>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Options</p>
+                                        <p class="text-xs font-semibold text-slate-500">No options yet? Fill at least two rows.</p>
+                                        @foreach (['Option A', 'Option B', 'Option C', 'Option D', 'Option E'] as $index => $label)
+                                            <div class="grid gap-2 rounded-lg bg-white p-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+                                                <input name="options[{{ $index }}][option_text]" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="{{ $label }}">
+                                                <label class="inline-flex items-center gap-2 text-xs font-bold text-slate-600">
+                                                    <input type="radio" name="correct_option_index" value="{{ $index }}" @checked($index === 0) class="text-mk-gold focus:ring-mk-gold">
+                                                    Single correct
+                                                </label>
+                                                <label class="inline-flex items-center gap-2 text-xs font-bold text-slate-600">
+                                                    <input type="checkbox" name="correct_option_indexes[]" value="{{ $index }}" @checked($index === 0) class="rounded text-mk-gold focus:ring-mk-gold">
+                                                    Multiple correct
+                                                </label>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    <x-button type="submit" size="sm">Save Question</x-button>
+                                </form>
+                            </div>
+                        @empty
+                            <div class="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4">
+                                <p class="text-sm font-black text-mk-navy">No questions yet</p>
+                                <p class="mt-1 text-xs font-semibold text-slate-500">Add your first question by saving a quiz above.</p>
+                            </div>
+                        @endforelse
+                    </div>
+                </x-card>
+
+                <x-card>
+                    <x-badge tone="gold">Final Test</x-badge>
+                    <h2 class="mt-4 text-xl font-extrabold text-mk-navy">Final Test</h2>
+
+                    @if ($finalTest)
+                        <div class="mt-4 rounded-lg border border-mk-gold/40 bg-mk-goldSoft/40 p-4">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-black text-mk-navy">{{ $finalTest->title }}</p>
+                                    <p class="mt-1 text-xs font-semibold text-slate-500">{{ str($finalTest->status)->headline() }} - Passing score {{ $finalTest->passing_score }}%</p>
+                                </div>
+                                <x-badge tone="blue">{{ $finalTest->questions->count() }} questions</x-badge>
+                            </div>
+                            <p class="mt-3 text-sm leading-6 text-slate-600">{{ $finalTest->description ?: 'No instructions added yet.' }}</p>
+                            <div class="mt-3 flex flex-wrap gap-2 text-xs font-bold text-slate-600">
+                                <span>Time: {{ $finalTest->time_limit_minutes ? $finalTest->time_limit_minutes.' min' : 'None' }}</span>
+                                <span>Attempts: {{ $finalTest->max_attempts ?: 'Unlimited' }}</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 space-y-3">
+                            @forelse ($finalTest->questions as $question)
+                                <div class="rounded-lg bg-slate-50 p-3">
+                                    <p class="text-sm font-bold text-mk-navy">{{ $question->question_text }}</p>
+                                    <div class="mt-2 flex flex-wrap gap-2">
+                                        @forelse ($question->options as $option)
+                                            <x-badge :tone="$option->is_correct ? 'green' : 'gray'">{{ $option->option_text }}</x-badge>
+                                        @empty
+                                            <span class="text-xs font-semibold text-slate-500">No options yet</span>
+                                        @endforelse
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4">
+                                    <p class="text-sm font-black text-mk-navy">No questions yet</p>
+                                    <p class="mt-1 text-xs font-semibold text-slate-500">Add your first question</p>
+                                </div>
+                            @endforelse
+                        </div>
+
+                        <form method="POST" action="{{ route('instructor.quizzes.questions.store', $finalTest) }}" class="mt-4 space-y-3 rounded-lg border border-mk-gold/30 bg-white p-4">
+                            @csrf
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <p class="text-sm font-black text-mk-navy">Manage Questions</p>
+                                <button type="button" class="rounded-lg border border-mk-gold px-3 py-2 text-xs font-black text-mk-navy">Add Option</button>
+                            </div>
+                            <textarea name="question_text" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Question text" required></textarea>
+                            <div class="grid gap-3 sm:grid-cols-3">
+                                <select name="question_type" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                                    <option value="{{ \App\Models\QuizQuestion::TYPE_SINGLE_CHOICE }}">Single choice</option>
+                                    <option value="{{ \App\Models\QuizQuestion::TYPE_MULTIPLE_CHOICE }}">Multiple choice</option>
+                                    <option value="{{ \App\Models\QuizQuestion::TYPE_TRUE_FALSE }}">True / False</option>
+                                </select>
+                                <input name="points" type="number" min="1" value="1" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Points" required>
+                                <select name="question_status" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                                    <option value="{{ \App\Models\QuizQuestion::STATUS_PUBLISHED }}">Published</option>
+                                    <option value="{{ \App\Models\QuizQuestion::STATUS_DRAFT }}">Draft</option>
+                                </select>
+                            </div>
+                            <div class="space-y-2">
+                                <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Options</p>
+                                <p class="text-xs font-semibold text-slate-500">No options yet? Fill at least two rows.</p>
+                                @foreach (['Option A', 'Option B', 'Option C', 'Option D', 'Option E'] as $index => $label)
+                                    <div class="grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+                                        <input name="options[{{ $index }}][option_text]" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="{{ $label }}">
+                                        <label class="inline-flex items-center gap-2 text-xs font-bold text-slate-600">
+                                            <input type="radio" name="correct_option_index" value="{{ $index }}" @checked($index === 0) class="text-mk-gold focus:ring-mk-gold">
+                                            Single correct
+                                        </label>
+                                        <label class="inline-flex items-center gap-2 text-xs font-bold text-slate-600">
+                                            <input type="checkbox" name="correct_option_indexes[]" value="{{ $index }}" @checked($index === 0) class="rounded text-mk-gold focus:ring-mk-gold">
+                                            Multiple correct
+                                        </label>
+                                    </div>
+                                @endforeach
+                            </div>
+                            <x-button type="submit" size="sm">Save Question</x-button>
+                        </form>
+                    @else
+                        <div class="mt-4 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4">
+                            <p class="text-sm font-black text-mk-navy">No final test yet</p>
+                            <p class="mt-1 text-sm leading-6 text-slate-600">Add a final test to assess students at the end of the course.</p>
+                        </div>
+
+                        <form method="POST" action="{{ route('instructor.final-tests.store', $course) }}" class="mt-5 space-y-4">
+                            @csrf
+                            <input name="title" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Final Test title" required>
+                            <textarea name="description" rows="3" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Final Test instructions"></textarea>
+                            <div class="grid gap-3 sm:grid-cols-4">
+                                <input name="passing_score" type="number" min="0" max="100" value="50" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Passing score">
+                                <input name="time_limit_minutes" type="number" min="1" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Time limit">
+                                <input name="max_attempts" type="number" min="1" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Attempt limit">
+                                <select name="status" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                                    @foreach (\App\Models\Quiz::STATUSES as $status)
+                                        <option value="{{ $status }}">{{ str($status)->headline() }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <x-button type="submit" size="sm">Add Final Test</x-button>
+                                <x-button type="submit" name="publish_quiz" value="1" size="sm" variant="secondary">Publish Final Test</x-button>
+                            </div>
+                        </form>
+                    @endif
                 </x-card>
 
                 <x-card>

@@ -8,4 +8,11 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateModule extends CreateRecord
 {
     protected static string $resource = ModuleResource::class;
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        ModuleResource::authorizeContentEditorCreateData($data);
+
+        return $data;
+    }
 }

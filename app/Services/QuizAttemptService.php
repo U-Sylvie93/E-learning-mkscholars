@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Quiz;
 use App\Models\QuizAnswer;
 use App\Models\QuizAttempt;
-use App\Models\QuizOption;
 use App\Models\QuizQuestion;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -98,7 +97,7 @@ class QuizAttemptService
         ]);
     }
 
-    public function saveAnswer(QuizAttempt $attempt, Quiz $quiz, int $questionIndex, int $optionId): QuizAnswer
+    public function saveAnswer(QuizAttempt $attempt, Quiz $quiz, int $questionIndex, int|array $optionIds): QuizAnswer
     {
         if ($attempt->status !== QuizAttempt::STATUS_IN_PROGRESS || $attempt->submitted_at) {
             throw ValidationException::withMessages([
@@ -123,13 +122,52 @@ class QuizAttemptService
             ]);
         }
 
-        $selectedOption = $question->options->firstWhere('id', $optionId);
+        $selectedOptionIds = collect(is_array($optionIds) ? $optionIds : [$optionIds])
+            ->map(fn ($optionId): int => (int) $optionId)
+            ->filter(fn (int $optionId): bool => $optionId > 0)
+            ->unique()
+            ->values();
 
-        if (! $selectedOption instanceof QuizOption) {
+        if ($selectedOptionIds->isEmpty()) {
+            $key = $question->question_type === QuizQuestion::TYPE_MULTIPLE_CHOICE ? 'option_ids' : 'option_id';
+            $messages = [$key => 'Please select an answer.'];
+
+            if ($key === 'option_ids') {
+                $messages['option_id'] = 'Please select an answer.';
+            }
+
+            throw ValidationException::withMessages($messages);
+        }
+
+        if ($question->question_type !== QuizQuestion::TYPE_MULTIPLE_CHOICE && $selectedOptionIds->count() !== 1) {
             throw ValidationException::withMessages([
-                'option_id' => 'The selected answer does not belong to this question.',
+                'option_id' => 'Please select one answer.',
             ]);
         }
+
+        $availableOptionIds = $question->options->pluck('id')->map(fn ($id): int => (int) $id);
+
+        if ($selectedOptionIds->diff($availableOptionIds)->isNotEmpty()) {
+            $key = $question->question_type === QuizQuestion::TYPE_MULTIPLE_CHOICE ? 'option_ids' : 'option_id';
+            $messages = [$key => 'The selected answer does not belong to this question.'];
+
+            if ($key === 'option_ids') {
+                $messages['option_id'] = 'The selected answer does not belong to this question.';
+            }
+
+            throw ValidationException::withMessages($messages);
+        }
+
+        $correctOptionIds = $question->options
+            ->where('is_correct', true)
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->sort()
+            ->values();
+        $sortedSelectedOptionIds = $selectedOptionIds->sort()->values();
+        $isCorrect = $question->question_type === QuizQuestion::TYPE_MULTIPLE_CHOICE
+            ? $sortedSelectedOptionIds->all() === $correctOptionIds->all()
+            : (bool) $question->options->firstWhere('id', $selectedOptionIds->first())?->is_correct;
 
         $answer = QuizAnswer::updateOrCreate(
             [
@@ -137,9 +175,10 @@ class QuizAttemptService
                 'quiz_question_id' => $question->id,
             ],
             [
-                'quiz_option_id' => $selectedOption->id,
-                'is_correct' => (bool) $selectedOption->is_correct,
-                'points_awarded' => $selectedOption->is_correct ? (int) $question->points : 0,
+                'quiz_option_id' => $selectedOptionIds->first(),
+                'selected_option_ids' => $sortedSelectedOptionIds->all(),
+                'is_correct' => $isCorrect,
+                'points_awarded' => $isCorrect ? (int) $question->points : 0,
             ],
         );
 

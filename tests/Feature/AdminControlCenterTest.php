@@ -24,13 +24,19 @@ class AdminControlCenterTest extends TestCase
             ->get('/admin/account-settings')
             ->assertOk()
             ->assertSee('Account Settings')
+            ->assertSee('Profile Information')
+            ->assertSee('Account Details')
             ->assertSee('Change Password')
+            ->assertSee('Security Notes')
+            ->assertSee('Back to Home')
             ->assertDontSee('name="role"', false);
 
         $this->actingAs($admin)
             ->post(route('admin.account-settings.profile'), [
                 'name' => 'Updated Admin',
                 'email' => 'updated-admin@example.test',
+                'role' => User::ROLE_STUDENT,
+                'approval_status' => User::APPROVAL_SUSPENDED,
             ])
             ->assertRedirect();
 
@@ -38,6 +44,7 @@ class AdminControlCenterTest extends TestCase
         $this->assertSame('Updated Admin', $admin->name);
         $this->assertSame('updated-admin@example.test', $admin->email);
         $this->assertSame(User::ROLE_ADMIN, $admin->role);
+        $this->assertSame(User::APPROVAL_APPROVED, $admin->approval_status);
 
         $this->actingAs($admin)
             ->post(route('admin.account-settings.password'), [
@@ -65,6 +72,38 @@ class AdminControlCenterTest extends TestCase
             ->assertSessionHasErrors('current_password');
 
         $this->assertTrue(Hash::check('password', $admin->refresh()->password));
+    }
+
+    public function test_non_admin_and_unapproved_users_cannot_access_admin_settings(): void
+    {
+        $student = $this->user(User::ROLE_STUDENT, 'admin-settings-student@example.test');
+        $instructor = $this->user(User::ROLE_INSTRUCTOR, 'admin-settings-instructor@example.test');
+        $mentor = $this->user(User::ROLE_MENTOR, 'admin-settings-mentor@example.test');
+
+        foreach ([$student, $instructor, $mentor] as $user) {
+            $this->actingAs($user)
+                ->get('/admin/account-settings')
+                ->assertForbidden();
+
+            $this->actingAs($user)
+                ->post(route('admin.account-settings.profile'), [
+                    'name' => 'Blocked Update',
+                    'email' => 'blocked-'.$user->id.'@example.test',
+                ])
+                ->assertForbidden();
+        }
+
+        $pendingAdmin = $this->user(User::ROLE_ADMIN, 'pending-admin-settings@example.test', User::APPROVAL_PENDING);
+
+        $this->actingAs($pendingAdmin)
+            ->post(route('admin.account-settings.profile'), [
+                'name' => 'Blocked Pending Admin',
+                'email' => 'blocked-pending-admin@example.test',
+            ])
+            ->assertRedirect(route('login'));
+
+        $this->get('/admin/account-settings')
+            ->assertRedirect('/admin/login');
     }
 
     public function test_viewer_can_access_admin_but_cannot_mutate_key_resources(): void
@@ -136,25 +175,26 @@ class AdminControlCenterTest extends TestCase
             ->assertSee('approved');
     }
 
-    public function test_admin_panel_exposes_view_website_link(): void
+    public function test_admin_panel_exposes_back_to_home_link(): void
     {
         $admin = $this->user(User::ROLE_ADMIN, 'home-link-admin@example.test');
 
         $this->actingAs($admin)
             ->get('/admin')
             ->assertOk()
-            ->assertSee('View Website');
+            ->assertSee('Back to Home')
+            ->assertSee(route('home'), false);
     }
 
-    private function user(string $role, string $email): User
+    private function user(string $role, string $email, string $approvalStatus = User::APPROVAL_APPROVED): User
     {
         return User::create([
             'name' => str($role)->headline()->toString(),
             'email' => $email,
             'password' => 'password',
             'role' => $role,
-            'approval_status' => User::APPROVAL_APPROVED,
-            'approved_at' => now(),
+            'approval_status' => $approvalStatus,
+            'approved_at' => $approvalStatus === User::APPROVAL_APPROVED ? now() : null,
         ]);
     }
 }

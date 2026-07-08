@@ -15,6 +15,7 @@
 
             @php
                 $signatureUrl = $certificate->signatureImageUrl();
+                $certificateScore = $certificate->displayScore();
             @endphp
 
             <div class="mx-auto max-w-5xl rounded-[2rem] border border-mk-gold/60 bg-white p-4 shadow-soft print:border print:shadow-none sm:p-6">
@@ -40,8 +41,8 @@
                         <p class="mt-2 font-bold text-mk-navy">{{ $certificate->issued_at->format('M j, Y') }}</p>
                     </div>
                     <div class="rounded-lg bg-slate-50 p-4 text-center">
-                        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Score</p>
-                        <p class="mt-2 font-bold text-mk-navy">{{ $certificate->score !== null ? $certificate->score.'%' : 'N/A' }}</p>
+                        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Final Test Score</p>
+                        <p class="mt-2 font-bold text-mk-navy">{{ $certificateScore !== null ? $certificateScore.'%' : 'Not available' }}</p>
                     </div>
                 </div>
 

@@ -28,7 +28,7 @@
                         @endif
                         <p class="mt-4 max-w-3xl text-sm font-semibold leading-7 text-slate-700">Timer starts only after you press Start Quiz.</p>
                     </div>
-                    <x-button :href="route('student.courses.learn', ['course' => $course, 'lesson' => $quiz->lesson_id])" variant="secondary">Back to Lesson</x-button>
+                    <x-button :href="$quiz->lesson_id ? route('student.courses.learn', ['course' => $course, 'lesson' => $quiz->lesson_id]) : route('student.courses.learn', $course)" variant="secondary">Back to learning</x-button>
                 </div>
 
                 <dl class="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -71,7 +71,7 @@
                         @endif
                     </p>
                     @if ($attemptLimitReached && ! $activeAttempt)
-                        <x-button :href="route('student.courses.learn', ['course' => $course, 'lesson' => $quiz->lesson_id])" variant="secondary">Return to Lesson</x-button>
+                        <x-button :href="$quiz->lesson_id ? route('student.courses.learn', ['course' => $course, 'lesson' => $quiz->lesson_id]) : route('student.courses.learn', $course)" variant="secondary">Return to learning</x-button>
                     @else
                         <form method="POST" action="{{ route('student.quizzes.start', $quiz) }}">
                             @csrf

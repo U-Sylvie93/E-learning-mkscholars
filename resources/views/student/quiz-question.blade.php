@@ -2,6 +2,13 @@
     @php
         $isFinalQuestion = $questionIndex >= $questions->count() - 1;
         $previousIndex = max(0, $questionIndex - 1);
+        $savedOptionIds = collect($savedAnswer?->selected_option_ids ?? ($savedAnswer?->quiz_option_id ? [$savedAnswer->quiz_option_id] : []))
+            ->map(fn ($optionId) => (int) $optionId)
+            ->all();
+        $isMultipleChoice = $question->question_type === \App\Models\QuizQuestion::TYPE_MULTIPLE_CHOICE;
+        $selectedOptionIds = $isMultipleChoice
+            ? collect(old('option_ids', $savedOptionIds))->map(fn ($optionId) => (int) $optionId)->all()
+            : [(int) old('option_id', $savedAnswer?->quiz_option_id ?? 0)];
     @endphp
 
     <div class="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-4xl items-center">
@@ -45,15 +52,15 @@
                 </div>
 
                 <fieldset class="mt-7 space-y-3">
-                    <legend class="sr-only">Choose one answer</legend>
+                    <legend class="sr-only">{{ $isMultipleChoice ? 'Choose all correct answers' : 'Choose one answer' }}</legend>
                     @foreach ($question->options as $option)
                         <label class="flex cursor-pointer items-start gap-3 rounded-mk-md border border-slate-200 bg-white p-4 transition hover:border-mk-gold hover:bg-mk-goldSoft/40">
                             <input
-                                type="radio"
-                                name="option_id"
+                                type="{{ $isMultipleChoice ? 'checkbox' : 'radio' }}"
+                                name="{{ $isMultipleChoice ? 'option_ids[]' : 'option_id' }}"
                                 value="{{ $option->id }}"
-                                @checked((int) old('option_id', $savedAnswer?->quiz_option_id) === $option->id)
-                                required
+                                @checked(in_array($option->id, $selectedOptionIds, true))
+                                @if (! $isMultipleChoice) required @endif
                                 class="mt-1 text-mk-gold focus:ring-mk-gold"
                             >
                             <span class="break-words text-sm font-semibold leading-6 text-slate-700">{{ $option->option_text }}</span>

@@ -11,6 +11,7 @@ class QuizQuestion extends Model
 {
     use HasFactory;
 
+    public const TYPE_SINGLE_CHOICE = 'single_choice';
     public const TYPE_MULTIPLE_CHOICE = 'multiple_choice';
     public const TYPE_TRUE_FALSE = 'true_false';
 
@@ -18,6 +19,7 @@ class QuizQuestion extends Model
     public const STATUS_PUBLISHED = 'published';
 
     public const TYPES = [
+        self::TYPE_SINGLE_CHOICE,
         self::TYPE_MULTIPLE_CHOICE,
         self::TYPE_TRUE_FALSE,
     ];
@@ -63,5 +65,4 @@ class QuizQuestion extends Model
         return $this->hasMany(QuizAnswer::class);
     }
 }
-
 

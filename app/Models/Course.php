@@ -73,6 +73,11 @@ class Course extends Model
         return $this->hasMany(Module::class);
     }
 
+    public function finalTest(): HasOne
+    {
+        return $this->hasOne(Quiz::class)->where('quiz_type', Quiz::TYPE_FINAL_TEST);
+    }
+
     public function enrollments(): HasMany
     {
         return $this->hasMany(Enrollment::class);
@@ -193,7 +198,6 @@ class Course extends Model
         return null;
     }
 }
-
 
 
 
