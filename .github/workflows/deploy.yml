@@ -109,7 +109,6 @@ jobs:
             --exclude=".env" \
             --exclude="node_modules" \
             --exclude="tests" \
-            --exclude="public/build" \
             --exclude="storage/app/*" \
             --exclude="storage/logs/*" \
             --exclude="storage/framework/cache/*" \
