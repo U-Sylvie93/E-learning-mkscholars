@@ -451,3 +451,16 @@ Verified and tightened the Phase 41F completion gaps with code-only changes.
 No new migration was added in this audit/fix pass.
 
 Manual verification is still required because this phase was code-only: run migrations, run tests, build assets, and check instructor course builder plus student learning/assignment flows in a browser.
+
+## Phase 41G Hotfix QA
+
+- Admin account settings page renders with polished Filament/MK Scholars design.
+- Profile Information, Account Details, Change Password, and Security Notes sections display clearly.
+- Admin can update own profile/password safely.
+- Role/status remain read-only.
+- Subscription form does not submit to insecure HTTP URL.
+- Production APP_URL should be `https://e-learning.mkscholars.com`.
+- Production SESSION_SECURE_COOKIE should be true.
+- Admin reports use the correct navbar/main MK Scholars logo.
+- Final Test button says `Start Test`.
+- Normal quiz button still says `Start Quiz`.

@@ -101,9 +101,36 @@ class FinalCourseTestTest extends TestCase
         $this->actingAs($student)
             ->get(route('student.quizzes.show', $finalTest))
             ->assertOk()
+            ->assertSee('Timer starts only after you press Start Test')
+            ->assertSee('Start Test')
+            ->assertDontSee('Start Quiz')
+            ->assertDontSee('Correct answer:');
+    }
+
+    public function test_normal_lesson_quiz_still_uses_quiz_wording(): void
+    {
+        [, $course] = $this->courseScenario();
+        $student = $this->enrolledStudent($course);
+        $lesson = $course->modules()->firstOrFail()->lessons()->firstOrFail();
+        $quiz = Quiz::create([
+            'course_id' => $course->id,
+            'lesson_id' => $lesson->id,
+            'quiz_type' => Quiz::TYPE_LESSON_QUIZ,
+            'title' => 'Lesson Quiz',
+            'description' => 'Lesson check.',
+            'passing_score' => 50,
+            'max_attempts' => 2,
+            'time_limit_minutes' => 10,
+            'status' => Quiz::STATUS_PUBLISHED,
+        ]);
+        $this->singleChoiceQuestion($quiz);
+
+        $this->actingAs($student)
+            ->get(route('student.quizzes.show', $quiz))
+            ->assertOk()
             ->assertSee('Timer starts only after you press Start Quiz')
             ->assertSee('Start Quiz')
-            ->assertDontSee('Correct answer:');
+            ->assertDontSee('Start Test');
     }
 
     public function test_student_cannot_take_unpublished_or_inaccessible_final_test(): void
@@ -145,6 +172,13 @@ class FinalCourseTestTest extends TestCase
 
         $attempt->refresh();
         $this->assertSame(1, $attempt->score);
+
+        $this->actingAs($student)
+            ->get(route('student.quizzes.show', ['quiz' => $finalTest, 'attempt' => $attempt->id]))
+            ->assertOk()
+            ->assertSee('Final Test result')
+            ->assertSee('Retake Test');
+
         $this->assertStringContainsString('Final Test Score', file_get_contents(resource_path('views/certificates/pdf.blade.php')));
     }
 

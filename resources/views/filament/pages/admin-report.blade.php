@@ -29,7 +29,7 @@
         .mk-report-header-inner,.mk-report-section-inner,.mk-report-filter-card,.mk-report-export-center { padding:1.5rem; }
         .mk-report-row { display:flex; gap:1rem; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; }
         .mk-report-brand-line,.mk-report-pill-row,.mk-report-actions,.mk-report-filter-actions { display:flex; align-items:center; flex-wrap:wrap; gap:.7rem; }
-        .mk-report-logo { display:inline-flex; width:2.65rem; height:2.65rem; align-items:center; justify-content:center; border-radius:999px; background:var(--mk-navy); color:var(--mk-gold); font-size:.78rem; font-weight:900; letter-spacing:.04em; box-shadow:inset 0 0 0 1px rgba(255,196,12,.55); }
+        .mk-report-logo { display:block; width:2.65rem; height:2.65rem; border-radius:999px; object-fit:contain; background:#fff; padding:.18rem; box-shadow:0 0 0 1px rgba(255,196,12,.55), 0 8px 18px rgba(7,54,83,.16); }
         .mk-report-kicker,.mk-report-badge { display:inline-flex; width:fit-content; align-items:center; border-radius:999px; padding:.35rem .7rem; font-size:.72rem; font-weight:800; letter-spacing:.05em; text-transform:uppercase; }
         .mk-report-kicker { border:1px solid #fde68a; background:#fffbeb; color:#92400e; }
         .mk-report-title { margin:1rem 0 0; font-size:clamp(1.75rem,3vw,2.45rem); line-height:1.08; font-weight:900; letter-spacing:-.02em; color:#0f172a; }
@@ -100,7 +100,7 @@
                 <div class="mk-report-row">
                     <div>
                         <div class="mk-report-brand-line">
-                            <span class="mk-report-logo">MK</span>
+                            <img src="{{ asset('images/mk-scholars-logo.webp') }}" alt="MK Scholars logo" class="mk-report-logo">
                             <span class="mk-report-kicker">MK Scholars analytics</span>
                         </div>
                         <h1 class="mk-report-title">Reports &amp; Analytics</h1>
@@ -296,3 +296,4 @@
         </section>
     </div>
 </x-filament-panels::page>
+

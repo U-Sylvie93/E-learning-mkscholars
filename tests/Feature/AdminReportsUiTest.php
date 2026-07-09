@@ -25,6 +25,8 @@ class AdminReportsUiTest extends TestCase
             ->assertSee('mk-report-card', false)
             ->assertSee('mk-report-kpi-card', false)
             ->assertSee('mk-report-table', false)
+            ->assertSee('images/mk-scholars-logo.webp', false)
+            ->assertSee('alt="MK Scholars logo"', false)
             ->assertSee('Reports &amp; Analytics', false)
             ->assertSee('Download CSV Reports')
             ->assertSee(route('admin.reports.exports.students'), false)

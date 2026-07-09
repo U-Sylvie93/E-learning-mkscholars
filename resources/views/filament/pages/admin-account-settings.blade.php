@@ -1,114 +1,150 @@
 <x-filament-panels::page>
-    <div class="mx-auto max-w-6xl space-y-6">
+    <style>
+        .mk-admin-settings-shell { --mk-navy:#073653; --mk-gold:#ffc40c; --mk-border:#d8e1ea; max-width:1180px; margin:0 auto; display:grid; gap:1rem; color:#0f172a; }
+        .mk-settings-card { border:1px solid var(--mk-border); border-radius:18px; background:#fff; box-shadow:0 16px 38px rgba(15,23,42,.08); overflow:hidden; }
+        .mk-settings-hero { background:linear-gradient(135deg,#fff 0%,#f8fafc 52%,#fff7d6 100%); padding:1.35rem; }
+        .mk-settings-row { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+        .mk-settings-kicker,.mk-settings-badge { display:inline-flex; width:fit-content; border-radius:999px; padding:.32rem .68rem; font-size:.7rem; font-weight:900; letter-spacing:.05em; text-transform:uppercase; }
+        .mk-settings-kicker { border:1px solid #fde68a; background:#fffbeb; color:#92400e; }
+        .mk-settings-badge { background:var(--mk-navy); color:#fff; }
+        .mk-settings-title { margin:.75rem 0 0; font-size:clamp(1.75rem,3vw,2.35rem); line-height:1.08; font-weight:950; color:#0f172a; }
+        .mk-settings-copy { max-width:46rem; margin:.55rem 0 0; color:#475569; font-size:.93rem; line-height:1.65; }
+        .mk-settings-link,.mk-settings-button { display:inline-flex; min-height:2.55rem; align-items:center; justify-content:center; border-radius:12px; padding:.68rem 1rem; font-size:.88rem; font-weight:900; text-decoration:none; }
+        .mk-settings-link { border:1px solid var(--mk-border); background:#fff; color:#334155; }
+        .mk-settings-button { border:1px solid var(--mk-navy); background:var(--mk-navy); color:#fff; box-shadow:0 10px 24px rgba(7,54,83,.18); }
+        .mk-settings-button-gold { border-color:#f59e0b; background:var(--mk-gold); color:#111827; }
+        .mk-settings-grid { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr); gap:1rem; align-items:start; }
+        .mk-settings-stack,.mk-settings-form,.mk-settings-list { display:grid; gap:1rem; }
+        .mk-settings-head { border-bottom:1px solid #e2e8f0; background:#f8fafc; padding:1.1rem 1.25rem; }
+        .mk-settings-body { padding:1.25rem; }
+        .mk-settings-head h3 { margin:.45rem 0 0; font-size:1.12rem; font-weight:950; color:#0f172a; }
+        .mk-settings-head p { margin:.35rem 0 0; color:#64748b; font-size:.88rem; line-height:1.55; }
+        .mk-settings-field label { display:block; color:#111827; font-size:.88rem; font-weight:900; }
+        .mk-settings-field input { margin-top:.45rem; width:100%; min-height:2.65rem; border:1px solid #cbd5e1; border-radius:12px; background:#fff; color:#0f172a; padding:.58rem .75rem; font-size:.92rem; font-weight:650; }
+        .mk-settings-field input:focus { border-color:#f59e0b; outline:2px solid rgba(255,196,12,.32); }
+        .mk-settings-help,.mk-settings-note { color:#64748b; font-size:.8rem; line-height:1.5; }
+        .mk-settings-error { display:block; margin-top:.38rem; color:#dc2626; font-size:.78rem; font-weight:800; }
+        .mk-settings-summary { display:grid; gap:.75rem; }
+        .mk-settings-summary div,.mk-settings-note { border:1px solid #e2e8f0; border-radius:14px; background:#f8fafc; padding:.9rem; }
+        .mk-settings-summary dt { color:#64748b; font-size:.75rem; font-weight:900; letter-spacing:.04em; text-transform:uppercase; }
+        .mk-settings-summary dd { margin:.35rem 0 0; color:#0f172a; font-size:.95rem; font-weight:900; overflow-wrap:anywhere; }
+        .mk-settings-alert { border:1px solid #a7f3d0; border-radius:14px; background:#ecfdf5; color:#047857; padding:.95rem 1rem; font-size:.88rem; font-weight:850; }
+        @media (max-width:960px) { .mk-settings-grid { grid-template-columns:1fr; } }
+        @media (max-width:640px) { .mk-settings-hero,.mk-settings-head,.mk-settings-body { padding:1rem; } .mk-settings-link,.mk-settings-button { width:100%; } }
+        .dark .mk-admin-settings-shell,.fi.dark .mk-admin-settings-shell { --mk-border:#334155; color:#e5e7eb; }
+        .dark .mk-settings-card,.fi.dark .mk-settings-card { background:#111827; border-color:#334155; }
+        .dark .mk-settings-hero,.fi.dark .mk-settings-hero { background:linear-gradient(135deg,#111827 0%,#0f172a 58%,rgba(255,196,12,.12) 100%); }
+        .dark .mk-settings-title,.dark .mk-settings-head h3,.dark .mk-settings-field label,.dark .mk-settings-summary dd,.fi.dark .mk-settings-title,.fi.dark .mk-settings-head h3,.fi.dark .mk-settings-field label,.fi.dark .mk-settings-summary dd { color:#f8fafc; }
+        .dark .mk-settings-copy,.dark .mk-settings-head p,.dark .mk-settings-help,.dark .mk-settings-note,.fi.dark .mk-settings-copy,.fi.dark .mk-settings-head p,.fi.dark .mk-settings-help,.fi.dark .mk-settings-note { color:#cbd5e1; }
+        .dark .mk-settings-head,.dark .mk-settings-summary div,.dark .mk-settings-note,.fi.dark .mk-settings-head,.fi.dark .mk-settings-summary div,.fi.dark .mk-settings-note { background:#0f172a; border-color:#334155; }
+        .dark .mk-settings-field input,.fi.dark .mk-settings-field input { background:#0f172a; border-color:#475569; color:#f8fafc; }
+    </style>
+
+    <div class="mk-admin-settings-shell" data-testid="admin-account-settings-shell">
         @if (session('profile_status'))
-            <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-sm dark:border-emerald-800/70 dark:bg-emerald-950/40 dark:text-emerald-200">{{ session('profile_status') }}</div>
+            <div class="mk-settings-alert">{{ session('profile_status') }}</div>
         @endif
-
         @if (session('password_status'))
-            <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-sm dark:border-emerald-800/70 dark:bg-emerald-950/40 dark:text-emerald-200">{{ session('password_status') }}</div>
+            <div class="mk-settings-alert">{{ session('password_status') }}</div>
         @endif
 
-        <div class="overflow-hidden rounded-lg border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-slate-50 p-6 shadow-sm dark:border-amber-900/50 dark:from-amber-950/20 dark:via-gray-900 dark:to-slate-950">
-            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <section class="mk-settings-card mk-settings-hero" data-testid="admin-settings-hero">
+            <div class="mk-settings-row">
                 <div>
-                    <p class="text-xs font-black uppercase tracking-wide text-amber-600 dark:text-amber-300">MK Scholars Admin</p>
-                    <h2 class="mt-2 text-2xl font-black text-gray-950 dark:text-white">Account Settings</h2>
-                    <p class="mt-2 max-w-3xl text-sm leading-6 text-gray-600 dark:text-gray-300">Manage your own administrator profile and password. Role and account status are read-only on this page.</p>
+                    <span class="mk-settings-kicker">MK Scholars Admin</span>
+                    <h2 class="mk-settings-title">Account Settings</h2>
+                    <p class="mk-settings-copy">Manage your own administrator identity and password from a protected Filament workspace. Role and account status are shown for context only.</p>
                 </div>
-                <a href="{{ route('home') }}" class="inline-flex items-center justify-center rounded-lg bg-gray-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-gray-800 dark:bg-amber-400 dark:text-gray-950 dark:hover:bg-amber-300">
-                    Back to Home
-                </a>
+                <a href="{{ route('home') }}" class="mk-settings-link">Back to Home</a>
             </div>
-        </div>
+        </section>
 
-        <div class="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-            <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-                <div class="flex items-start justify-between gap-4">
-                    <div>
-                        <p class="text-xs font-black uppercase tracking-wide text-amber-500">Profile Information</p>
-                        <h3 class="mt-2 text-xl font-black text-gray-950 dark:text-white">Personal details</h3>
-                        <p class="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">Update the name and email used for your administrator account.</p>
-                    </div>
-                    <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 dark:bg-amber-400/10 dark:text-amber-200">Editable</span>
+        <div class="mk-settings-grid">
+            <section class="mk-settings-card" data-testid="admin-settings-profile-section">
+                <div class="mk-settings-head">
+                    <span class="mk-settings-badge">Editable</span>
+                    <h3>Profile Information</h3>
+                    <p>Update the name and email used for your administrator account.</p>
                 </div>
-
-                <form method="POST" action="{{ $profileRoute }}" class="mt-6 space-y-5">
-                    @csrf
-                    <label class="block text-sm font-bold text-gray-950 dark:text-white">
-                        Admin name
-                        <input name="name" value="{{ old('name', $user->name) }}" required autocomplete="name" class="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-950 shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300 dark:border-gray-700 dark:bg-gray-950 dark:text-white">
-                        <span class="mt-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Shown in the admin panel and account emails.</span>
-                        @error('name')<span class="mt-1 block text-xs font-semibold text-red-600 dark:text-red-400">{{ $message }}</span>@enderror
-                    </label>
-                    <label class="block text-sm font-bold text-gray-950 dark:text-white">
-                        Admin email
-                        <input name="email" type="email" value="{{ old('email', $user->email) }}" required autocomplete="email" class="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-950 shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300 dark:border-gray-700 dark:bg-gray-950 dark:text-white">
-                        <span class="mt-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Must be unique and valid. This page updates only your own account.</span>
-                        @error('email')<span class="mt-1 block text-xs font-semibold text-red-600 dark:text-red-400">{{ $message }}</span>@enderror
-                    </label>
-                    <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-amber-400 px-4 py-2 text-sm font-bold text-gray-950 shadow-sm transition hover:bg-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 dark:focus:ring-offset-gray-900">Save Profile</button>
-                </form>
+                <div class="mk-settings-body">
+                    <form method="POST" action="{{ $profileRoute }}" class="mk-settings-form">
+                        @csrf
+                        <div class="mk-settings-field">
+                            <label for="admin-settings-name">Admin name</label>
+                            <input id="admin-settings-name" name="name" value="{{ old('name', $user->name) }}" required autocomplete="name">
+                            <span class="mk-settings-help">Shown in the admin panel and account emails.</span>
+                            @error('name')<span class="mk-settings-error">{{ $message }}</span>@enderror
+                        </div>
+                        <div class="mk-settings-field">
+                            <label for="admin-settings-email">Admin email</label>
+                            <input id="admin-settings-email" name="email" type="email" value="{{ old('email', $user->email) }}" required autocomplete="email">
+                            <span class="mk-settings-help">This page updates only your own administrator account.</span>
+                            @error('email')<span class="mk-settings-error">{{ $message }}</span>@enderror
+                        </div>
+                        <div><button type="submit" class="mk-settings-button mk-settings-button-gold">Save Profile</button></div>
+                    </form>
+                </div>
             </section>
 
-            <div class="space-y-6">
-                <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-                    <p class="text-xs font-black uppercase tracking-wide text-amber-500">Account Details</p>
-                    <h3 class="mt-2 text-xl font-black text-gray-950 dark:text-white">Read-only access summary</h3>
-                    <dl class="mt-5 grid gap-3 text-sm">
-                        <div class="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-                            <dt class="font-semibold text-gray-500 dark:text-gray-400">Role / account type</dt>
-                            <dd class="mt-1 font-bold text-gray-950 dark:text-white">{{ str($user->role)->headline() }}</dd>
-                        </div>
-                        <div class="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-                            <dt class="font-semibold text-gray-500 dark:text-gray-400">Account status</dt>
-                            <dd class="mt-1 font-bold text-gray-950 dark:text-white">{{ str($user->approval_status ?? 'approved')->headline() }}</dd>
-                        </div>
-                        <div class="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-                            <dt class="font-semibold text-gray-500 dark:text-gray-400">Last updated</dt>
-                            <dd class="mt-1 font-bold text-gray-950 dark:text-white">{{ $user->updated_at?->format('M j, Y g:i A') ?? 'Not available' }}</dd>
-                        </div>
-                    </dl>
+            <div class="mk-settings-stack">
+                <section class="mk-settings-card" data-testid="admin-settings-account-section">
+                    <div class="mk-settings-head">
+                        <span class="mk-settings-badge">Read only</span>
+                        <h3>Account Details</h3>
+                        <p>Access level and approval status are displayed but cannot be changed here.</p>
+                    </div>
+                    <div class="mk-settings-body">
+                        <dl class="mk-settings-summary">
+                            <div><dt>Role / account type</dt><dd>{{ str($user->role)->headline() }}</dd></div>
+                            <div><dt>Account status</dt><dd>{{ str($user->approval_status ?? 'approved')->headline() }}</dd></div>
+                            <div><dt>Last updated</dt><dd>{{ $user->updated_at?->format('M j, Y g:i A') ?? 'Not available' }}</dd></div>
+                        </dl>
+                    </div>
                 </section>
 
-                <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-                    <p class="text-xs font-black uppercase tracking-wide text-amber-500">Security Notes</p>
-                    <h3 class="mt-2 text-xl font-black text-gray-950 dark:text-white">Protected changes</h3>
-                    <ul class="mt-4 space-y-3 text-sm font-medium leading-6 text-gray-600 dark:text-gray-300">
-                        <li class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">Password changes require your current password.</li>
-                        <li class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">Role and approval status cannot be changed from personal settings.</li>
-                        <li class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">Password hashes are never displayed on this page.</li>
-                    </ul>
+                <section class="mk-settings-card" data-testid="admin-settings-security-section">
+                    <div class="mk-settings-head">
+                        <span class="mk-settings-badge">Protected</span>
+                        <h3>Security Notes</h3>
+                        <p>Personal settings stay separate from role and approval management.</p>
+                    </div>
+                    <div class="mk-settings-body mk-settings-list">
+                        <div class="mk-settings-note">Password changes require your current password.</div>
+                        <div class="mk-settings-note">Role and approval status cannot be changed from personal settings.</div>
+                        <div class="mk-settings-note">Password hashes are never displayed on this page.</div>
+                    </div>
                 </section>
             </div>
         </div>
 
-        <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-            <div class="max-w-3xl">
-                <p class="text-xs font-black uppercase tracking-wide text-amber-500">Change Password</p>
-                <h3 class="mt-2 text-xl font-black text-gray-950 dark:text-white">Update your sign-in password</h3>
-                <p class="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">Enter your current password before setting a new confirmed password.</p>
+        <section class="mk-settings-card" data-testid="admin-settings-password-section">
+            <div class="mk-settings-head">
+                <span class="mk-settings-badge">Secure update</span>
+                <h3>Change Password</h3>
+                <p>Enter your current password before setting a new confirmed password.</p>
             </div>
-
-            <form method="POST" action="{{ $passwordRoute }}" class="mt-6 grid gap-5 lg:grid-cols-3">
-                @csrf
-                <label class="block text-sm font-bold text-gray-950 dark:text-white">
-                    Current password
-                    <input name="current_password" type="password" required autocomplete="current-password" class="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-950 shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300 dark:border-gray-700 dark:bg-gray-950 dark:text-white">
-                    @error('current_password')<span class="mt-1 block text-xs font-semibold text-red-600 dark:text-red-400">{{ $message }}</span>@enderror
-                </label>
-                <label class="block text-sm font-bold text-gray-950 dark:text-white">
-                    New password
-                    <input name="password" type="password" required autocomplete="new-password" class="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-950 shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300 dark:border-gray-700 dark:bg-gray-950 dark:text-white">
-                    @error('password')<span class="mt-1 block text-xs font-semibold text-red-600 dark:text-red-400">{{ $message }}</span>@enderror
-                </label>
-                <label class="block text-sm font-bold text-gray-950 dark:text-white">
-                    Confirm new password
-                    <input name="password_confirmation" type="password" required autocomplete="new-password" class="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-950 shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300 dark:border-gray-700 dark:bg-gray-950 dark:text-white">
-                </label>
-                <div class="lg:col-span-3">
-                    <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-gray-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-amber-400 dark:text-gray-950 dark:hover:bg-amber-300 dark:focus:ring-amber-300 dark:focus:ring-offset-gray-900">Update Password</button>
-                </div>
-            </form>
+            <div class="mk-settings-body">
+                <form method="POST" action="{{ $passwordRoute }}" class="mk-settings-form">
+                    @csrf
+                    <div class="mk-settings-grid">
+                        <div class="mk-settings-field">
+                            <label for="admin-settings-current-password">Current password</label>
+                            <input id="admin-settings-current-password" name="current_password" type="password" required autocomplete="current-password">
+                            @error('current_password')<span class="mk-settings-error">{{ $message }}</span>@enderror
+                        </div>
+                        <div class="mk-settings-field">
+                            <label for="admin-settings-password">New password</label>
+                            <input id="admin-settings-password" name="password" type="password" required autocomplete="new-password">
+                            @error('password')<span class="mk-settings-error">{{ $message }}</span>@enderror
+                        </div>
+                        <div class="mk-settings-field">
+                            <label for="admin-settings-password-confirmation">Confirm new password</label>
+                            <input id="admin-settings-password-confirmation" name="password_confirmation" type="password" required autocomplete="new-password">
+                        </div>
+                    </div>
+                    <div><button type="submit" class="mk-settings-button">Update Password</button></div>
+                </form>
+            </div>
         </section>
     </div>
 </x-filament-panels::page>

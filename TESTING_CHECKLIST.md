@@ -1000,3 +1000,16 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Course completion requires published video/reading lessons to be completed and includes published Final Test pass status when present.
 - Courses without Final Test continue using existing completion rules.
 - Assignment documents use the existing public storage disk and are only shown through authorized student assignment/course views.
+
+## Phase 41G Hotfix QA
+
+- Admin account settings page renders with polished Filament/MK Scholars design.
+- Profile Information, Account Details, Change Password, and Security Notes sections display clearly.
+- Admin can update own profile/password safely.
+- Role/status remain read-only.
+- Subscription form does not submit to insecure HTTP URL.
+- Production APP_URL should be `https://e-learning.mkscholars.com`.
+- Production SESSION_SECURE_COOKIE should be true.
+- Admin reports use the correct navbar/main MK Scholars logo.
+- Final Test button says `Start Test`.
+- Normal quiz button still says `Start Quiz`.

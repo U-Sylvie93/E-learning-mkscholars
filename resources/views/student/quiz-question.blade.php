@@ -1,4 +1,9 @@
-<x-quiz-focus-shell :title="$quiz->title" description="MK Scholars active quiz mode.">
+@php
+    $isFinalTest = $quiz->isFinalTest();
+    $assessmentNoun = $isFinalTest ? 'test' : 'quiz';
+@endphp
+
+<x-quiz-focus-shell :title="$quiz->title" :description="'MK Scholars active '.$assessmentNoun.' mode.'">
     @php
         $isFinalQuestion = $questionIndex >= $questions->count() - 1;
         $previousIndex = max(0, $questionIndex - 1);
@@ -75,7 +80,7 @@
                         @endif
                     </div>
                     <x-button type="submit" size="lg" name="finish" value="{{ $isFinalQuestion ? '1' : '0' }}">
-                        {{ $isFinalQuestion ? 'Finish Quiz' : 'Save and Next' }}
+                        {{ $isFinalQuestion ? ($isFinalTest ? 'Finish Test' : 'Finish Quiz') : 'Save and Next' }}
                     </x-button>
                 </div>
             </form>
@@ -118,3 +123,4 @@
         })();
     </script>
 </x-quiz-focus-shell>
+

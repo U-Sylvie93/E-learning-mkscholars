@@ -1,4 +1,12 @@
-<x-dashboard-layout role="student" :title="$quiz->title" description="MK Scholars guided quiz instructions.">
+@php
+    $isFinalTest = $quiz->isFinalTest();
+    $assessmentName = $isFinalTest ? 'Final Test' : 'Quiz';
+    $assessmentNoun = $isFinalTest ? 'test' : 'quiz';
+    $startButtonLabel = $isFinalTest ? 'Start Test' : 'Start Quiz';
+    $resumeButtonLabel = $isFinalTest ? 'Resume Test' : 'Resume Quiz';
+@endphp
+
+<x-dashboard-layout role="student" :title="$quiz->title" :description="'MK Scholars guided '.$assessmentNoun.' instructions.'">
     <section class="bg-slate-50 py-10">
         <div class="mk-container max-w-5xl">
             @if (session('status'))
@@ -14,6 +22,7 @@
                     <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
                             <x-badge tone="blue">{{ $course->title }}</x-badge>
+                            <x-badge :tone="$isFinalTest ? 'green' : 'gray'">{{ $assessmentName }}</x-badge>
                             @if ($quiz->lesson?->module)
                                 <x-badge tone="gray">{{ $quiz->lesson->module->title }}</x-badge>
                             @endif
@@ -26,7 +35,7 @@
                         @else
                             <p class="mt-4 max-w-3xl text-sm leading-7 text-slate-600">Read the rules, then start when you are ready.</p>
                         @endif
-                        <p class="mt-4 max-w-3xl text-sm font-semibold leading-7 text-slate-700">Timer starts only after you press Start Quiz.</p>
+                        <p class="mt-4 max-w-3xl text-sm font-semibold leading-7 text-slate-700">Timer starts only after you press {{ $startButtonLabel }}.</p>
                     </div>
                     <x-button :href="$quiz->lesson_id ? route('student.courses.learn', ['course' => $course, 'lesson' => $quiz->lesson_id]) : route('student.courses.learn', $course)" variant="secondary">Back to learning</x-button>
                 </div>
@@ -53,10 +62,10 @@
                 <div class="mt-8 rounded-mk-md border border-mk-gold/40 bg-mk-goldSoft/50 p-5">
                     <h2 class="text-lg font-black text-mk-navy">Important rules</h2>
                     <ul class="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-                        <li>Timer starts only after you press Start Quiz.</li>
+                        <li>Timer starts only after you press {{ $startButtonLabel }}.</li>
                         <li>Each answer is saved when you click Save and Next.</li>
                         <li>Refreshes do not reset the timer.</li>
-                        <li>You can review your answers after finishing the quiz.</li>
+                        <li>You can review your answers after finishing the {{ $assessmentNoun }}.</li>
                     </ul>
                 </div>
 
@@ -65,7 +74,7 @@
                         @if ($activeAttempt)
                             You have an active attempt in progress.
                         @elseif ($attemptLimitReached)
-                            You have reached the attempt limit for this quiz.
+                            You have reached the attempt limit for this {{ $assessmentNoun }}.
                         @else
                             Start only when you are ready to focus.
                         @endif
@@ -75,7 +84,7 @@
                     @else
                         <form method="POST" action="{{ route('student.quizzes.start', $quiz) }}">
                             @csrf
-                            <x-button type="submit" size="lg">{{ $activeAttempt ? 'Resume Quiz' : 'Start Quiz' }}</x-button>
+                            <x-button type="submit" size="lg">{{ $activeAttempt ? $resumeButtonLabel : $startButtonLabel }}</x-button>
                         </form>
                     @endif
                 </div>

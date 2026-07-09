@@ -29,7 +29,13 @@ class AdminControlCenterTest extends TestCase
             ->assertSee('Change Password')
             ->assertSee('Security Notes')
             ->assertSee('Back to Home')
-            ->assertDontSee('name="role"', false);
+            ->assertSee('data-testid="admin-account-settings-shell"', false)
+            ->assertSee('data-testid="admin-settings-profile-section"', false)
+            ->assertSee('data-testid="admin-settings-account-section"', false)
+            ->assertSee('data-testid="admin-settings-password-section"', false)
+            ->assertSee('data-testid="admin-settings-security-section"', false)
+            ->assertDontSee('name="role"', false)
+            ->assertDontSee('name="approval_status"', false);
 
         $this->actingAs($admin)
             ->post(route('admin.account-settings.profile'), [
