@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Academy;
+use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\CourseCompletion;
 use App\Models\Lesson;
@@ -66,6 +67,8 @@ class CourseCompletionFinalTestGateTest extends TestCase
         $this->assertTrue($secondCompletion->is_eligible_for_certificate);
         $this->assertSame($firstCompletion->id, $secondCompletion->id);
         $this->assertSame(1, CourseCompletion::query()->where('user_id', $student->id)->where('course_id', $course->id)->count());
+        $this->assertSame(1, Certificate::query()->where('user_id', $student->id)->where('course_id', $course->id)->count());
+        $this->assertSame(Certificate::STATUS_PENDING, Certificate::query()->where('user_id', $student->id)->where('course_id', $course->id)->value('status'));
     }
 
     private function courseWithCompletedVideoAndReadingLessons(): array

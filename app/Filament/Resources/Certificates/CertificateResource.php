@@ -10,6 +10,7 @@ use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\CourseCompletion;
 use App\Models\User;
+use App\Services\CertificateService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -19,6 +20,7 @@ use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -101,13 +103,22 @@ class CertificateResource extends Resource
                 Select::make('status')
                     ->required()
                     ->options([
+                        Certificate::STATUS_PENDING => 'Pending',
                         Certificate::STATUS_ISSUED => 'Issued',
+                        Certificate::STATUS_REJECTED => 'Rejected',
                         Certificate::STATUS_REVOKED => 'Revoked',
                     ])
-                    ->default(Certificate::STATUS_ISSUED),
+                    ->default(Certificate::STATUS_PENDING)
+                    ->disabled()
+                    ->dehydrated(),
                 DateTimePicker::make('issued_at')
                     ->default(now())
-                    ->required(),
+                    ->disabled()
+                    ->dehydrated(),
+                Textarea::make('rejection_reason')
+                    ->disabled()
+                    ->dehydrated(false)
+                    ->visible(fn (?Certificate $record): bool => $record?->status === Certificate::STATUS_REJECTED),
                 DateTimePicker::make('revoked_at'),
             ]);
     }
@@ -119,12 +130,20 @@ class CertificateResource extends Resource
                 TextColumn::make('certificate_number')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('verification_code')
+                    ->label('Verification code')
+                    ->searchable()
+                    ->copyable(),
                 TextColumn::make('student_name')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('course_title')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('course.instructor.name')
+                    ->label('Instructor')
+                    ->placeholder('Not assigned')
+                    ->toggleable(),
                 TextColumn::make('score')
                     ->label('Final Test Score')
                     ->suffix('%')
@@ -140,6 +159,13 @@ class CertificateResource extends Resource
                     ->badge(),
                 TextColumn::make('status')
                     ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        Certificate::STATUS_PENDING => 'warning',
+                        Certificate::STATUS_ISSUED => 'success',
+                        Certificate::STATUS_REJECTED => 'danger',
+                        Certificate::STATUS_REVOKED => 'gray',
+                        default => 'gray',
+                    })
                     ->sortable(),
                 TextColumn::make('issued_at')
                     ->dateTime()
@@ -152,7 +178,9 @@ class CertificateResource extends Resource
             ->filters([
                 SelectFilter::make('status')
                     ->options([
+                        Certificate::STATUS_PENDING => 'Pending',
                         Certificate::STATUS_ISSUED => 'Issued',
+                        Certificate::STATUS_REJECTED => 'Rejected',
                         Certificate::STATUS_REVOKED => 'Revoked',
                     ]),
                 SelectFilter::make('course')
@@ -162,6 +190,28 @@ class CertificateResource extends Resource
             ])
             ->defaultSort('issued_at', 'desc')
             ->recordActions([
+                Action::make('issue')
+                    ->label('Approve & issue')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->visible(fn (Certificate $record): bool => self::canManageWorkflow() && in_array($record->status, [Certificate::STATUS_PENDING, Certificate::STATUS_REJECTED], true))
+                    ->action(fn (Certificate $record) => app(CertificateService::class)->issue($record, auth()->user())),
+                Action::make('reject')
+                    ->color('danger')
+                    ->form([
+                        Textarea::make('reason')->label('Rejection reason')->maxLength(1000),
+                    ])
+                    ->visible(fn (Certificate $record): bool => self::canManageWorkflow() && $record->status === Certificate::STATUS_PENDING)
+                    ->action(fn (Certificate $record, array $data) => app(CertificateService::class)->reject($record, auth()->user(), $data['reason'] ?? null)),
+                Action::make('revoke')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->visible(fn (Certificate $record): bool => self::canManageWorkflow() && $record->status === Certificate::STATUS_ISSUED)
+                    ->action(fn (Certificate $record) => app(CertificateService::class)->revoke($record, auth()->user())),
+                Action::make('verify')
+                    ->label('Public verification')
+                    ->url(fn (Certificate $record): string => route('certificates.verify', $record->verification_code))
+                    ->openUrlInNewTab(),
                 Action::make('downloadPdf')
                     ->label('Download PDF')
                     ->url(fn (Certificate $record): string => route('admin.certificates.download', $record))
@@ -178,19 +228,16 @@ class CertificateResource extends Resource
 
     public static function normalizeCertificateData(array $data, ?Certificate $record = null): array
     {
-        if (($data['status'] ?? Certificate::STATUS_ISSUED) === Certificate::STATUS_ISSUED) {
-            $duplicate = Certificate::query()
-                ->where('user_id', $data['user_id'])
-                ->where('course_id', $data['course_id'])
-                ->where('status', Certificate::STATUS_ISSUED)
-                ->when($record, fn ($query) => $query->whereKeyNot($record->getKey()))
-                ->exists();
+        $duplicate = Certificate::query()
+            ->where('user_id', $data['user_id'])
+            ->where('course_id', $data['course_id'])
+            ->when($record, fn ($query) => $query->whereKeyNot($record->getKey()))
+            ->exists();
 
-            if ($duplicate) {
-                throw ValidationException::withMessages([
-                    'user_id' => 'This student already has an issued certificate for this course.',
-                ]);
-            }
+        if ($duplicate) {
+            throw ValidationException::withMessages([
+                'user_id' => 'This student already has a certificate record for this course.',
+            ]);
         }
 
         $student = User::find($data['user_id']);
@@ -220,6 +267,11 @@ class CertificateResource extends Resource
         }
 
         return $data;
+    }
+
+    public static function canManageWorkflow(): bool
+    {
+        return auth()->user()?->role === User::ROLE_ADMIN;
     }
 
     public static function getPages(): array

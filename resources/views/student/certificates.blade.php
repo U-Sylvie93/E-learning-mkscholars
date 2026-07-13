@@ -31,7 +31,15 @@
                             </div>
                             <h2 class="mt-5 text-xl font-bold text-mk-navy">{{ $certificate->course_title }}</h2>
                             <p class="mt-2 text-sm font-semibold text-mk-gold">{{ $certificate->student_name }}</p>
-                            <p class="mt-4 text-sm leading-6 text-slate-600">Issued {{ $certificate->issued_at->format('M j, Y') }}</p>
+                            <p class="mt-4 text-sm leading-6 text-slate-600">
+                                @if ($certificate->status === \App\Models\Certificate::STATUS_ISSUED)
+                                    Issued {{ $certificate->issued_at->format('M j, Y') }}
+                                @elseif ($certificate->status === \App\Models\Certificate::STATUS_PENDING)
+                                    Awaiting admin approval
+                                @else
+                                    {{ str($certificate->status)->headline() }}
+                                @endif
+                            </p>
                             @if ($certificateScore !== null)
                                 <p class="mt-2 text-sm font-bold text-mk-navy">Final Test Score: {{ $certificateScore }}%</p>
                             @endif

@@ -51,7 +51,10 @@
                 <x-card>
                     <x-badge tone="gray">Live classes</x-badge>
                     <h2 class="mt-5 text-3xl font-extrabold text-mk-navy">{{ $liveClassesCount }}</h2>
-                    <x-button :href="route('instructor.live-classes.index')" size="sm" variant="secondary" class="mt-5">Open Schedule</x-button>
+                    <div class="mt-5 flex flex-wrap gap-2">
+                        <x-button :href="route('instructor.live-classes.create', ['course_id' => $course->id])" size="sm">Add Live Class</x-button>
+                        <x-button :href="route('instructor.live-classes.index')" size="sm" variant="secondary">Open Schedule</x-button>
+                    </div>
                 </x-card>
             </div>
 
@@ -71,8 +74,9 @@
                                 <p class="mt-1 text-sm text-slate-600">{{ $liveClass->starts_at?->format('M j, Y g:i A') ?? 'To be scheduled' }}</p>
                             </div>
                             <div class="flex flex-wrap gap-2">
-                                <x-badge :tone="$liveClass->status === 'live' ? 'green' : 'gray'">{{ $liveClass->status }}</x-badge>
+                                <x-badge :tone="$liveClass->displayStatusTone()">{{ $liveClass->displayStatus() }}</x-badge>
                                 <x-badge tone="blue">{{ $liveClass->attendances->count() }} attendance records</x-badge>
+                                <x-button :href="route('instructor.live-classes.edit', $liveClass)" size="sm" variant="secondary">Edit Live Class</x-button>
                             </div>
                         </div>
                     @empty

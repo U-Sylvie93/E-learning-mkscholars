@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,6 +21,20 @@ class LiveClass extends Model
     public const STATUS_LIVE = 'live';
     public const STATUS_COMPLETED = 'completed';
     public const STATUS_CANCELLED = 'cancelled';
+
+    public const PLATFORMS = [
+        self::PLATFORM_ZOOM,
+        self::PLATFORM_GOOGLE_MEET,
+        self::PLATFORM_TEAMS,
+        self::PLATFORM_OTHER,
+    ];
+
+    public const STATUSES = [
+        self::STATUS_SCHEDULED,
+        self::STATUS_LIVE,
+        self::STATUS_COMPLETED,
+        self::STATUS_CANCELLED,
+    ];
 
     protected $fillable = [
         'course_id',
@@ -72,5 +87,82 @@ class LiveClass extends Model
     public function associatedCourse(): ?Course
     {
         return $this->course ?? $this->module?->course ?? $this->lesson?->module?->course;
+    }
+
+    public function isUpcoming(?CarbonInterface $now = null): bool
+    {
+        if ($this->status === self::STATUS_CANCELLED || ! $this->starts_at) {
+            return false;
+        }
+
+        return ($now ?? now())->lt($this->starts_at);
+    }
+
+    public function isLiveNow(?CarbonInterface $now = null): bool
+    {
+        if ($this->status === self::STATUS_CANCELLED || ! $this->starts_at || ! $this->ends_at) {
+            return false;
+        }
+
+        $now ??= now();
+
+        return $now->betweenIncluded($this->starts_at, $this->ends_at);
+    }
+
+    public function isEnded(?CarbonInterface $now = null): bool
+    {
+        if ($this->status === self::STATUS_CANCELLED || ! $this->ends_at) {
+            return false;
+        }
+
+        return ($now ?? now())->gt($this->ends_at);
+    }
+
+    public function canJoin(?CarbonInterface $now = null): bool
+    {
+        return filled($this->meeting_url) && $this->isLiveNow($now);
+    }
+
+    public function canWatchRecording(?CarbonInterface $now = null): bool
+    {
+        return filled($this->recording_url) && $this->isEnded($now);
+    }
+
+    public function displayStatus(?CarbonInterface $now = null): string
+    {
+        if ($this->status === self::STATUS_CANCELLED) {
+            return 'Cancelled';
+        }
+
+        if ($this->isLiveNow($now)) {
+            return 'Live Now';
+        }
+
+        if ($this->isEnded($now)) {
+            return $this->canWatchRecording($now) ? 'Recording Available' : 'Ended';
+        }
+
+        if ($this->isUpcoming($now)) {
+            return 'Upcoming';
+        }
+
+        return str($this->status ?: self::STATUS_SCHEDULED)->replace('_', ' ')->title()->toString();
+    }
+
+    public function displayStatusTone(?CarbonInterface $now = null): string
+    {
+        if ($this->status === self::STATUS_CANCELLED) {
+            return 'danger';
+        }
+
+        if ($this->isLiveNow($now) || $this->canWatchRecording($now)) {
+            return 'green';
+        }
+
+        if ($this->isEnded($now)) {
+            return 'gray';
+        }
+
+        return 'blue';
     }
 }

@@ -66,6 +66,10 @@ class CourseCompletionService
             'last_checked_at' => now(),
         ])->save();
 
+        if ($eligible) {
+            app(CertificateService::class)->prepareForEligibleCompletion($user, $course);
+        }
+
         return $completion;
     }
 

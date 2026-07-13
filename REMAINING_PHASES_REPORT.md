@@ -464,3 +464,54 @@ Manual verification is still required because this phase was code-only: run migr
 - Admin reports use the correct navbar/main MK Scholars logo.
 - Final Test button says `Start Test`.
 - Normal quiz button still says `Start Quiz`.
+
+### Phase 42A: Certificate Stamp, Signatures, and QR Verification
+
+Implemented code-only certificate branding and verification improvements. Admins manage a singleton official certificate settings record in Filament, including the organization stamp, issuer signature/name/title, optional logo, and footer note. Instructor signatures are stored as nullable public-disk paths on instructor user records and are admin-managed through the existing Users resource. Student and PDF certificate layouts now include instructor/issuer signature areas, the official stamp, a locally generated QR code, and the existing public verification URL based only on the verification code. Public verification remains intentionally limited to safe certificate details and does not show official assets for invalid or revoked certificates.
+
+Migrations added:
+
+- `2026_07_10_420000_create_certificate_settings_table.php`
+- `2026_07_10_420100_add_signature_path_to_users_table.php`
+
+The already locked `chillerlan/php-qrcode` package is reused; no Composer dependency change was required. Manual migration, tests, asset build, and browser/PDF verification remain required.
+
+### Phase 42B: Certificate Approval Workflow
+
+Implemented a controlled certificate lifecycle using `pending`, `issued`, `rejected`, and `revoked`. Eligible course-completion calculation now prepares at most one pending certificate per student/course while preserving any existing certificate, verification code, and Final Test Score. Admin-only Filament actions approve/issue, reject with an optional reason, or revoke a certificate; viewer access remains read-only and content editors/instructors cannot perform workflow actions. Official stamp, issuer signature, instructor signature, QR verification, printing, and PDF download are presented only for issued certificates. Public verification validates only `issued` records and gives safe non-valid states for pending, rejected, revoked, or unknown codes.
+
+Migration added:
+
+- `2026_07_10_421000_add_certificate_approval_fields.php`
+
+The existing notification system informs students when a request is rejected or issued and informs the course instructor when a certificate is issued. A dedicated instructor certificate-request screen was intentionally deferred because the current instructor dashboard has no existing certificate-management surface; instructors cannot approve, reject, or revoke records. No Composer dependency changed, so `composer update` is not required. Manual migration, tests, build, route inspection, and browser verification remain required.
+
+### Phase 42C: Student My Courses Paid and Unpaid Course Sections
+
+Updated Student My Courses to split Paid/Active Courses from Unpaid Courses / Courses Awaiting Payment. Active courses are detected through the existing course access logic, including active enrollments with approved/free access and active subscription plan access. Unpaid cards are sourced from the current student’s pending/submitted/rejected course payments, paid enrollments without access, and pending/rejected/expired subscription plan courses. Pay actions reuse the existing course enrollment, payment proof, and subscription renewal routes so pending payments are reused instead of duplicated and admin approval flow remains unchanged.
+
+No migration was added. Manual testing, asset build, and browser verification remain required.
+
+### Phase 42D: Completed Lesson and Course Card Polish
+
+Polished student completion UI without changing completion rules. My Courses active cards now use Completed as the primary state for completed courses, keep certificate status visible, and expose View Certificate for issued certificates. The student learning page now labels video, reading, and generic lesson completion states distinctly, shows quiz/final-test/assignment actions based on attempts or submissions, and includes a compact completion summary for videos, readings, quizzes, assignments, final test, overall progress, and course status. Lesson completion continues to use the existing access checks and update-or-create progress behavior.
+
+No migration was added. Manual tests, asset build, route inspection, and browser verification remain required.
+
+### Phase 42E: Instructor Live Class Creation
+
+Added instructor-side live class creation and editing using the existing `live_classes` table and `LiveClass` model fields: course, instructor, title, description, meeting URL, platform, start/end time, status, and recording URL. Instructors can schedule, edit, and cancel their own live classes from the instructor workspace, with course selection restricted to their owned or already assigned courses. Student live class display remains protected by enrollment/access routes, and the course player now shows simple live class details while leaving smart timing behavior for a later phase. Admin Filament live class management remains unchanged.
+
+No migration was added. Manual tests, asset build, route inspection, and browser verification remain required.
+
+### Phase 42F: Live Class Smart Join and Recording Buttons
+
+Added time-based live class state helpers on the existing `LiveClass` model and used them for student and instructor live class actions. Upcoming classes no longer expose active join buttons, live-now classes expose Join Class only, ended classes expose Watch Recording only when a recording URL exists, and cancelled classes show no active student action. Student join and recording redirects now re-check authentication, course access, class timing, and URL availability before redirecting away. Instructor live class lists show clear smart status labels and keep edit/add-recording paths available through the existing form.
+
+No migration was added. Manual tests, asset build, route inspection, and browser verification remain required.
+
+### Phase 42G: Payment Proof Reference Cleanup
+
+Removed the student-facing reference number requirement from manual payment proof upload. Students now submit payment method and proof file only, while the existing nullable `payments.reference` column is kept for old data. New proof submissions no longer overwrite legacy reference values, and student payment summaries only show a clearly labeled Legacy Reference when an older value already exists. Admin payment management keeps reference as optional legacy information and continues to review proof files, amount, method, status, and approval/rejection without depending on a reference number. My Courses Pay Now, pending payment reuse, rejected retry, and subscription/course payment proof flows continue to use the existing payment routes.
+
+No migration was added. Manual tests, asset build, route inspection, and browser verification remain required.

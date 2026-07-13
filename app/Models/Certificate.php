@@ -14,8 +14,17 @@ class Certificate extends Model
 {
     use HasFactory;
 
+    public const STATUS_PENDING = 'pending';
     public const STATUS_ISSUED = 'issued';
+    public const STATUS_REJECTED = 'rejected';
     public const STATUS_REVOKED = 'revoked';
+
+    public const STATUSES = [
+        self::STATUS_PENDING,
+        self::STATUS_ISSUED,
+        self::STATUS_REJECTED,
+        self::STATUS_REVOKED,
+    ];
 
     protected $fillable = [
         'user_id',
@@ -29,6 +38,9 @@ class Certificate extends Model
         'signer_title',
         'signature_image_path',
         'status',
+        'reviewed_by',
+        'reviewed_at',
+        'rejection_reason',
         'issued_at',
         'revoked_at',
     ];
@@ -38,6 +50,7 @@ class Certificate extends Model
         return [
             'score' => 'integer',
             'issued_at' => 'datetime',
+            'reviewed_at' => 'datetime',
             'revoked_at' => 'datetime',
         ];
     }
@@ -48,7 +61,7 @@ class Certificate extends Model
             $certificate->certificate_number ??= self::generateCertificateNumber();
             $certificate->verification_code ??= self::generateVerificationCode();
             $certificate->issued_at ??= now();
-            $certificate->status ??= self::STATUS_ISSUED;
+            $certificate->status ??= self::STATUS_PENDING;
             $certificate->score ??= self::finalTestScoreFor($certificate->user_id, $certificate->course_id);
         });
     }
@@ -131,6 +144,21 @@ class Certificate extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function isOfficial(): bool
+    {
+        return $this->status === self::STATUS_ISSUED;
+    }
+
+    public function instructor(): ?User
+    {
+        return $this->course?->instructor;
     }
 
     public function skills(): HasMany

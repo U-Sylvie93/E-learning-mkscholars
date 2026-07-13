@@ -1013,3 +1013,128 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Admin reports use the correct navbar/main MK Scholars logo.
 - Final Test button says `Start Test`.
 - Normal quiz button still says `Start Quiz`.
+
+## Phase 42A Certificate Stamp, Signatures, and QR QA
+
+- Admin can upload official certificate stamp.
+- Admin can upload admin/issuer signature.
+- Admin can set issuer name and issuer title.
+- Instructor name appears on certificate.
+- Instructor signature appears when available.
+- Certificate still renders when instructor signature is missing.
+- Certificate displays official stamp when available.
+- Certificate displays admin/issuer signature when available.
+- Certificate includes QR code for public verification.
+- QR code uses verification code, not database ID.
+- QR code opens public certificate verification page.
+- Public verification page does not expose quiz answers or private attempt data.
+- Certificate displays Final Test Score when available.
+- Missing stamp/signature does not break PDF/print certificate.
+- Only admin can manage official certificate settings.
+
+## Phase 42B Certificate Approval Workflow QA
+
+- Eligible completion creates or keeps one certificate record per student/course.
+- Pending certificate does not appear as fully official.
+- Admin can view pending certificates.
+- Admin can approve/issue certificate.
+- Admin can reject pending certificate.
+- Admin can revoke issued certificate.
+- Issued certificate displays official stamp, issuer signature, instructor signature, QR code, and Final Test Score when available.
+- Pending/rejected/revoked certificates do not display as valid official certificates.
+- Public verification validates only issued certificates.
+- Public verification rejects pending, rejected, and revoked certificates.
+- Verification uses certificate verification code, not database ID.
+- Viewer cannot approve/reject/revoke certificates.
+- Content editor cannot manage certificates.
+- Instructor cannot approve/revoke certificates.
+- Student can see own certificate status.
+- Student cannot see another student’s certificate.
+- Certificate records are not duplicated after repeated completion checks.
+
+## Phase 42C Student My Courses Paid and Unpaid Courses QA
+
+- Student My Courses page has Paid/Active Courses section.
+- Student My Courses page has Unpaid Courses section.
+- Active courses show title, image, instructor, progress, and access button.
+- Completed active courses show completed status.
+- Incomplete active courses show Continue Learning.
+- Unpaid courses show payment/access status clearly.
+- Unpaid course has Pay Now button.
+- Pending payment course does not create duplicate payment records.
+- Rejected payment course allows retry according to existing payment flow.
+- Student can pay from My Courses without going back to homepage.
+- Student cannot see or pay for another student’s course/payment.
+- Guest cannot access My Courses.
+- Payment links use secure Laravel route helpers and do not hardcode HTTP.
+- Existing admin payment approval flow still works.
+
+## Phase 42D Completed Lesson and Course Card Polish QA
+
+- Incomplete active course card shows Continue Learning.
+- Completed active course card shows Completed.
+- Completed course can still show certificate status.
+- Issued certificate provides View Certificate action if available.
+- Pending certificate shows Pending Approval.
+- Video lesson shows Mark Video as Completed before completion.
+- Completed video lesson shows Video Completed.
+- Reading lesson shows Mark Reading as Completed before completion.
+- Completed reading lesson shows Reading Completed.
+- Normal lesson completion shows clear Lesson Completed state.
+- Clicking completion more than once does not duplicate progress.
+- Guest cannot mark lesson complete.
+- Student cannot mark lesson complete without course access.
+- Normal quiz still says Start Quiz.
+- Final test says Start Test.
+- Completed final test shows Final Test Completed.
+- Assignment submitted/completed status is clear.
+- Student learning page shows videos, readings, quizzes, assignments, final test, and overall progress summary.
+- UI remains mobile responsive.
+
+## Phase 42E Instructor Live Class Creation QA
+
+- Instructor can create a live class for own course.
+- Instructor can edit live class for own course.
+- Instructor cannot create or edit live class for another instructor’s course.
+- Instructor live class form follows admin-side live class structure.
+- Instructor live class form validates title, course, start time, and end time.
+- End time must be after start time.
+- Join URL and recording URL must be valid URLs when provided.
+- Instructor course builder/workspace lists existing live classes.
+- Student can view live classes only for accessible/enrolled courses.
+- Guest cannot view protected live class links.
+- Student and guest cannot create live classes.
+- Content editor restrictions are respected if content editor permissions exist.
+- Admin can still manage all live classes through Filament.
+
+## Phase 42F Live Class Smart Buttons QA
+
+- Upcoming class shows Upcoming state.
+- Upcoming class does not allow Join Class.
+- During class time, Join Class is active.
+- During class time, Watch Recording is not active even when recording URL exists.
+- After class ends, Join Class is not active.
+- After class ends, Watch Recording is active only when recording URL exists.
+- Ended class without recording shows Recording Not Available.
+- Cancelled class does not show active join or recording actions.
+- Guest cannot access join or recording routes.
+- Student without course access cannot access join or recording routes.
+- Enrolled student can join only during class time.
+- Enrolled student can watch recording only after class ends when recording exists.
+- Instructor can still edit class and add/update recording URL.
+- Instructor live class list shows clear status labels.
+- Admin live class management remains unchanged.
+
+## Phase 42G Payment Proof Reference Cleanup QA
+
+- Student payment proof form no longer asks for reference number.
+- Student can submit payment proof without reference number.
+- Reference number is not required in validation.
+- Payment proof upload still works.
+- Admin can review payment proof without reference number.
+- Admin can approve/reject payment without reference number.
+- Old records with reference numbers remain safe.
+- My Courses Pay Now still works.
+- Pending payment reuse still works.
+- Rejected payment retry still works.
+- No insecure HTTP form action is introduced.

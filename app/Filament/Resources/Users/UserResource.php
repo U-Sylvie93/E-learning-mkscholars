@@ -14,6 +14,7 @@ use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -46,6 +47,17 @@ class UserResource extends Resource
                 ->required()
                 ->options(self::roleOptions())
                 ->disabled(fn (?User $record): bool => $record?->id === auth()->id()),
+            FileUpload::make('signature_path')
+                ->label('Instructor signature')
+                ->helperText('Admin-managed certificate signature. PNG, JPG, or WebP; max 2MB.')
+                ->disk('public')
+                ->directory('certificates/instructor-signatures')
+                ->image()
+                ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp'])
+                ->maxSize(2048)
+                ->downloadable()
+                ->openable()
+                ->visible(fn ($get, ?User $record): bool => $get('role') === User::ROLE_INSTRUCTOR || $record?->role === User::ROLE_INSTRUCTOR),
             Select::make('approval_status')
                 ->label('Approval status')
                 ->required()

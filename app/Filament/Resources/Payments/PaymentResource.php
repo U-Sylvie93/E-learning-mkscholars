@@ -49,7 +49,11 @@ class PaymentResource extends Resource
                 Payment::PURPOSE_OTHER => 'Other',
             ]),
             Select::make('status')->required()->options(self::statusOptions()),
-            TextInput::make('reference')->maxLength(255),
+            TextInput::make('reference')
+                ->label('Legacy Reference')
+                ->maxLength(255)
+                ->helperText('Optional legacy value from older student payment proof submissions.')
+                ->visible(fn (?Payment $record): bool => filled($record?->reference)),
             FileUpload::make('proof_path')
                 ->label('Proof file')
                 ->disk('public')
@@ -76,6 +80,7 @@ class PaymentResource extends Resource
                     ->formatStateUsing(fn (?string $state, Payment $record): string => $record->providerLabel())
                     ->sortable(),
                 TextColumn::make('provider_reference')->label('Provider ref')->placeholder('N/A')->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('reference')->label('Legacy ref')->placeholder('N/A')->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('amount')->money('RWF')->sortable(),
                 TextColumn::make('currency')->sortable(),
                 TextColumn::make('status')->badge()->sortable(),

@@ -32,6 +32,14 @@
                                 <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Status</p>
                                 <p class="mt-2 font-bold text-mk-navy">{{ $certificate->status }}</p>
                             </div>
+                            <div class="rounded-lg bg-white p-4">
+                                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Certificate Code</p>
+                                <p class="mt-2 font-bold text-mk-navy">{{ $certificate->verification_code }}</p>
+                            </div>
+                            <div class="rounded-lg bg-white p-4">
+                                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Instructor</p>
+                                <p class="mt-2 font-bold text-mk-navy">{{ $certificate->instructor()?->name ?? 'MK Scholars Faculty' }}</p>
+                            </div>
                             @if ($certificateScore !== null)
                                 <div class="rounded-lg bg-white p-4">
                                     <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Final Test Score</p>
@@ -71,10 +79,18 @@
             @else
                 <div class="mx-auto max-w-2xl text-center">
                     <x-card>
-                        <x-badge tone="gray">Invalid certificate</x-badge>
-                        <h1 class="mt-5 text-3xl font-extrabold tracking-normal text-mk-navy">Certificate Not Valid</h1>
+                        <x-badge tone="gray">{{ $verificationStatus === \App\Models\Certificate::STATUS_PENDING ? 'Pending approval' : 'Invalid certificate' }}</x-badge>
+                        <h1 class="mt-5 text-3xl font-extrabold tracking-normal text-mk-navy">{{ $verificationStatus === \App\Models\Certificate::STATUS_PENDING ? 'Certificate Not Yet Issued' : 'Certificate Not Valid' }}</h1>
                         <p class="mt-4 text-sm leading-6 text-slate-600">
-                            This certificate could not be found or has been revoked. Please check the verification code and try again.
+                            @if ($verificationStatus === \App\Models\Certificate::STATUS_PENDING)
+                                This certificate is awaiting admin approval and is not yet an official MK Scholars credential.
+                            @elseif ($verificationStatus === \App\Models\Certificate::STATUS_REJECTED)
+                                This certificate request was not approved and cannot be verified as an official credential.
+                            @elseif ($verificationStatus === \App\Models\Certificate::STATUS_REVOKED)
+                                This certificate has been revoked and is no longer valid.
+                            @else
+                                This certificate could not be found. Please check the verification code and try again.
+                            @endif
                         </p>
                     </x-card>
                 </div>

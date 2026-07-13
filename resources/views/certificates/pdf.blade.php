@@ -5,7 +5,7 @@
     <title>{{ $certificate->course_title }} Certificate</title>
     @php
         $logoPath = public_path('images/mk-scholars-logo.webp');
-        $logoData = file_exists($logoPath) ? 'data:image/webp;base64,'.base64_encode(file_get_contents($logoPath)) : null;
+        $logoData = $certificateLogoDataUri ?? (file_exists($logoPath) ? 'data:image/webp;base64,'.base64_encode(file_get_contents($logoPath)) : null);
         $signatureData = $certificate->signatureImageDataUri();
         $certificateScore = $certificate->displayScore();
     @endphp
@@ -190,6 +190,12 @@
             word-break: break-word;
             overflow-wrap: anywhere;
         }
+
+        .qr-code { width: 96px; height: 96px; margin: 0 auto 8px; }
+        .official-grid { margin-top: 34px; width: 100%; table-layout: fixed; }
+        .official-grid td { width: 33.33%; padding: 0 14px; text-align: center; vertical-align: bottom; }
+        .official-image { display: block; max-width: 150px; max-height: 68px; margin: 0 auto 8px; }
+        .stamp-image { max-height: 92px; }
     </style>
 </head>
 <body>
@@ -207,6 +213,7 @@
 
             <p class="intro">for successfully completing</p>
             <div class="course">{{ $certificate->course_title ?: ($certificate->course?->title ?? 'MK Scholars Course') }}</div>
+            <p class="intro">Instructor: <strong>{{ $certificate->instructor()?->name ?? 'MK Scholars Faculty' }}</strong></p>
 
             <table class="meta">
                 <tr>
@@ -241,32 +248,39 @@
             </div>
 
             <div class="verify-box">
-                Verify this credential publicly at:<br>
+                <img src="{{ $qrCodeDataUri }}" alt="Certificate verification QR code" class="qr-code"><br>
+                <strong>Scan to verify this certificate</strong><br>
                 {{ $verificationUrl }}
             </div>
 
-            <table class="footer">
+            <table class="official-grid">
                 <tr>
-                    <td style="width: 50%; color: #64748b; font-size: 12px;">
-                        Issued by MK Scholars Learning Platform
+                    <td>
+                        @if ($instructorSignatureDataUri)
+                            <img src="{{ $instructorSignatureDataUri }}" alt="Instructor signature" class="official-image">
+                        @endif
+                        <div class="signature-line signer-name">{{ $certificate->instructor()?->name ?? 'MK Scholars Faculty' }}</div>
+                        <div class="signer-title">Course Instructor</div>
                     </td>
-                    <td style="width: 50%; text-align: right;">
-                        <div class="signature-wrap">
-                            @if ($signatureData)
-                                <img src="{{ $signatureData }}" alt="Certificate signature" class="signature-image">
-                            @endif
-                            <div class="signature-line">
-                                <div class="signer-name">{{ $certificate->signer_name ?: 'Authorized Signature' }}</div>
-                                @if ($certificate->signer_title)
-                                    <div class="signer-title">{{ $certificate->signer_title }}</div>
-                                @elseif ($certificate->signer_name)
-                                    <div class="signer-title">Authorized Signatory</div>
-                                @endif
-                            </div>
-                        </div>
+                    <td>
+                        @if ($stampDataUri)
+                            <img src="{{ $stampDataUri }}" alt="Official organization stamp" class="official-image stamp-image">
+                        @endif
+                        <div class="signer-name">{{ $certificateSettings->organization_name ?: 'MK Scholars' }}</div>
+                        <div class="signer-title">Official Stamp</div>
+                    </td>
+                    <td>
+                        @if ($issuerSignatureDataUri ?? $signatureData)
+                            <img src="{{ $issuerSignatureDataUri ?? $signatureData }}" alt="Issuer signature" class="official-image">
+                        @endif
+                        <div class="signature-line signer-name">{{ $certificateSettings->issuer_name ?: ($certificate->signer_name ?: 'Authorized Signature') }}</div>
+                        <div class="signer-title">{{ $certificateSettings->issuer_title ?: ($certificate->signer_title ?: 'Authorized Signatory') }}</div>
                     </td>
                 </tr>
             </table>
+            @if ($certificateSettings->certificate_footer_note)
+                <p class="verify">{{ $certificateSettings->certificate_footer_note }}</p>
+            @endif
         </div>
     </div>
 </body>

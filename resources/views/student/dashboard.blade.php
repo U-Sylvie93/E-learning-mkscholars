@@ -60,14 +60,21 @@
             @else
                 <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                     @foreach ($enrolledCourses as $item)
+                        @php
+                            $completed = (bool) ($item['completion']?->completed_at ?? null) || (bool) ($item['completion']?->is_eligible_for_certificate ?? false);
+                        @endphp
                         <x-course-progress-card
                             :course="$item['course']"
                             :href="route('student.courses.learn', $item['course'])"
                             :progress="$item['progress']"
-                            action-label="Continue Learning"
+                            :action-label="$completed ? 'Completed' : 'Continue Learning'"
+                            :action-variant="$completed ? 'secondary' : 'primary'"
                         >
                             <x-slot:meta>
                                 <x-badge tone="blue">{{ $item['course']->level }}</x-badge>
+                                @if ($completed)
+                                    <x-badge tone="success">Completed</x-badge>
+                                @endif
                             </x-slot:meta>
                         </x-course-progress-card>
                     @endforeach

@@ -30,7 +30,7 @@
         <div class="mk-container grid gap-8 lg:grid-cols-[0.95fr_0.55fr]">
             <div class="space-y-6">
                 <x-card>
-                    <div class="grid gap-5 md:grid-cols-4">
+                    <div class="grid gap-5 md:grid-cols-3">
                         <div>
                             <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Amount</p>
                             <p class="mt-2 text-2xl font-extrabold text-mk-navy">{{ number_format((float) $payment->amount, 0) }} {{ $payment->currency }}</p>
@@ -43,11 +43,14 @@
                             <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Course</p>
                             <p class="mt-2 font-bold text-mk-navy">{{ $paymentTitle }}</p>
                         </div>
-                        <div>
-                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Reference</p>
-                            <p class="mt-2 font-bold text-mk-navy">{{ $payment->reference ?: 'Not added' }}</p>
-                        </div>
                     </div>
+
+                    @if ($payment->reference)
+                        <div class="mt-6 rounded-lg border border-slate-100 bg-slate-50 p-4">
+                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Legacy Reference</p>
+                            <p class="mt-2 break-words text-sm font-bold text-mk-navy">{{ $payment->reference }}</p>
+                        </div>
+                    @endif
 
                     @if ($payment->admin_notes)
                         <div class="mt-6 rounded-lg border border-mk-gold/30 bg-mk-goldSoft p-4">
@@ -81,14 +84,6 @@
                                     @endforeach
                                 </select>
                                 @error('payment_method_id')
-                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            <div>
-                                <label for="reference" class="text-sm font-bold text-mk-navy">Reference number</label>
-                                <input id="reference" name="reference" type="text" value="{{ old('reference', $payment->reference) }}" class="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" placeholder="Transaction ID or receipt number">
-                                @error('reference')
                                     <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
                             </div>
@@ -152,4 +147,3 @@
         </div>
     </section>
 </x-dashboard-layout>
-

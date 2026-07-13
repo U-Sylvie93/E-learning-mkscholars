@@ -12,6 +12,10 @@
 
     <section class="py-16">
         <div class="mk-container">
+            @if ($errors->has('live_class'))
+                <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">{{ $errors->first('live_class') }}</div>
+            @endif
+
             @if ($liveClasses->isEmpty())
                 <x-card>
                     <h2 class="text-xl font-bold text-mk-navy">No live classes yet</h2>
@@ -27,7 +31,8 @@
                         @endphp
                         <x-card class="flex h-full flex-col">
                             <div class="flex flex-wrap items-center gap-2">
-                                <x-badge :tone="$liveClass->status === 'live' ? 'green' : 'gray'">{{ $liveClass->status }}</x-badge>
+                                <x-badge :tone="$liveClass->displayStatusTone()">{{ $liveClass->displayStatus() }}</x-badge>
+                                <x-badge tone="gray">{{ str_replace('_', ' ', $liveClass->status) }}</x-badge>
                                 <x-badge tone="blue">{{ str_replace('_', ' ', $liveClass->platform) }}</x-badge>
                                 @if ($attendance)
                                     <x-badge tone="gold">{{ $attendance->status }}</x-badge>
@@ -52,15 +57,22 @@
                             </div>
 
                             <div class="mt-6">
-                                @if ($liveClass->status === 'completed' && $liveClass->recording_url)
-                                    <x-button :href="$liveClass->recording_url" class="w-full" variant="secondary">Watch Recording</x-button>
-                                @elseif ($liveClass->status === 'completed')
-                                    <div class="rounded-lg bg-slate-50 p-4 text-center text-sm font-semibold text-slate-500">Recording unavailable</div>
-                                @else
+                                @if ($liveClass->canJoin())
                                     <form method="POST" action="{{ route('student.live-classes.join', $liveClass) }}">
                                         @csrf
-                                        <x-button type="submit" class="w-full">{{ $liveClass->status === 'live' ? 'Join Class' : 'Open Meeting Link' }}</x-button>
+                                        <x-button type="submit" class="w-full">Join Class</x-button>
                                     </form>
+                                @elseif ($liveClass->canWatchRecording())
+                                    <x-button :href="route('student.live-classes.recording', $liveClass)" class="w-full" variant="secondary">Watch Recording</x-button>
+                                @elseif ($liveClass->status === \App\Models\LiveClass::STATUS_CANCELLED)
+                                    <div class="rounded-lg bg-slate-50 p-4 text-center text-sm font-semibold text-slate-500">Cancelled</div>
+                                @elseif ($liveClass->isEnded())
+                                    <div class="rounded-lg bg-slate-50 p-4 text-center">
+                                        <p class="text-sm font-bold text-slate-700">Class Ended</p>
+                                        <p class="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Recording Not Available</p>
+                                    </div>
+                                @else
+                                    <div class="rounded-lg bg-slate-50 p-4 text-center text-sm font-semibold text-slate-500">Class starts soon</div>
                                 @endif
                             </div>
                         </x-card>
@@ -70,4 +82,3 @@
         </div>
     </section>
 </x-dashboard-layout>
-

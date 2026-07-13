@@ -353,13 +353,14 @@ Route::view('/contact', 'pages.contact')->name('contact');
 
 Route::get('/certificates/verify/{verification_code}', function (string $verification_code) {
     $certificate = Certificate::query()
-        ->with('skills')
+        ->with(['skills', 'course.instructor'])
         ->where('verification_code', $verification_code)
         ->first();
 
     return view('pages.certificate-verify', [
         'certificate' => $certificate,
         'isValid' => $certificate?->status === Certificate::STATUS_ISSUED,
+        'verificationStatus' => $certificate?->status,
     ]);
 })->name('certificates.verify');
 
@@ -540,6 +541,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
     Route::get('/student/dashboard', function () use ($courseProgress) {
         $user = Auth::user();
         $notificationService = app(AppNotificationService::class);
+        $completionService = app(CourseCompletionService::class);
 
         $mentorAssignment = MentorAssignment::query()
             ->with(['mentor', 'course', 'checkIns' => fn ($query) => $query->orderBy('scheduled_at')])
@@ -577,10 +579,15 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
                 ->take(3)
                 ->get()
                 ->filter(fn (Enrollment $enrollment): bool => (bool) $enrollment->course)
-                ->map(fn (Enrollment $enrollment): array => [
-                    'course' => $enrollment->course,
-                    'progress' => $courseProgress($user, $enrollment->course),
-                ])
+                ->map(function (Enrollment $enrollment) use ($user, $courseProgress, $completionService): array {
+                    $completion = $completionService->calculate($user, $enrollment->course);
+
+                    return [
+                        'course' => $enrollment->course,
+                        'progress' => $courseProgress($user, $enrollment->course),
+                        'completion' => $completion,
+                    ];
+                })
                 ->values(),
             'mentorAssignment' => $mentorAssignment,
             'nextCheckIn' => $mentorAssignment?->checkIns
@@ -1067,13 +1074,11 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
         $validated = $request->validate([
             'payment_method_id' => ['required', Rule::exists('payment_methods', 'id')->where('status', PaymentMethod::STATUS_ACTIVE)],
-            'reference' => ['nullable', 'string', 'max:255'],
             'proof_file' => ['required', 'file', 'max:10240', 'mimes:pdf,png,jpg,jpeg'],
         ]);
 
         $payment->update([
             'payment_method_id' => $validated['payment_method_id'],
-            'reference' => $validated['reference'] ?? null,
             'proof_path' => $request->file('proof_file')->store('payment-proofs', 'public'),
             'status' => Payment::STATUS_SUBMITTED,
             'submitted_at' => now(),
@@ -1092,25 +1097,186 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return redirect()->route('student.payments.show', $payment);
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.payments.submit');
 
-    Route::get('/student/my-courses', function () use ($courseProgress) {
+    Route::get('/student/my-courses', function () use ($courseProgress, $hasCourseAccess) {
         $user = Auth::user();
         $completionService = app(CourseCompletionService::class);
 
         $enrollments = Enrollment::query()
-            ->with(['course.academy'])
+            ->with(['course.academy', 'course.instructor'])
             ->where('user_id', $user->id)
             ->latest('enrolled_at')
             ->get()
-            ->filter(fn (Enrollment $enrollment): bool => (bool) $enrollment->course)
+            ->filter(fn (Enrollment $enrollment): bool => (bool) $enrollment->course && $enrollment->course->status === Course::STATUS_PUBLISHED);
+
+        $activeCourses = $enrollments
+            ->filter(fn (Enrollment $enrollment): bool => $hasCourseAccess($user, $enrollment->course))
+            ->map(function (Enrollment $enrollment) use ($user, $courseProgress, $completionService): array {
+                $course = $enrollment->course;
+                $completion = $completionService->calculate($user, $course);
+                $certificate = Certificate::query()
+                    ->where('user_id', $user->id)
+                    ->where('course_id', $course->id)
+                    ->latest()
+                    ->first();
+
+                return [
+                    'enrollment' => $enrollment,
+                    'course' => $course,
+                    'progress' => $courseProgress($user, $course),
+                    'completion' => $completion,
+                    'certificate' => $certificate,
+                    'access_label' => $course->isFree() ? 'Active' : 'Paid',
+                ];
+            });
+
+        $activeSubscriptions = Subscription::query()
+            ->with(['subscriptionPlan.courses.academy', 'subscriptionPlan.courses.instructor'])
+            ->where('user_id', $user->id)
+            ->where('status', Subscription::STATUS_ACTIVE)
+            ->where(function ($query): void {
+                $query->whereNull('starts_at')->orWhere('starts_at', '<=', now());
+            })
+            ->where(function ($query): void {
+                $query->whereNull('ends_at')->orWhere('ends_at', '>', now());
+            })
+            ->get();
+
+        $activeSubscriptionCourses = $activeSubscriptions
+            ->flatMap(fn (Subscription $subscription) => $subscription->subscriptionPlan?->courses
+                ? $subscription->subscriptionPlan->courses
+                    ->filter(fn (Course $course): bool => $course->status === Course::STATUS_PUBLISHED)
+                    ->map(function (Course $course) use ($subscription, $user, $courseProgress, $completionService): array {
+                        $completion = $completionService->calculate($user, $course);
+                        $certificate = Certificate::query()
+                            ->where('user_id', $user->id)
+                            ->where('course_id', $course->id)
+                            ->latest()
+                            ->first();
+
+                        return [
+                            'enrollment' => null,
+                            'course' => $course,
+                            'progress' => $courseProgress($user, $course),
+                            'completion' => $completion,
+                            'certificate' => $certificate,
+                            'access_label' => $subscription->subscriptionPlan?->name ?? 'Active subscription',
+                        ];
+                    })
+                : collect())
+            ->reject(fn (array $item): bool => $activeCourses->contains(fn (array $active): bool => $active['course']->is($item['course'])));
+
+        $activeCourses = $activeCourses
+            ->concat($activeSubscriptionCourses)
+            ->unique(fn (array $item): int => $item['course']->id)
+            ->values();
+
+        $coursePayments = Payment::query()
+            ->with(['course.academy', 'course.instructor'])
+            ->where('user_id', $user->id)
+            ->where('purpose', Payment::PURPOSE_COURSE)
+            ->whereIn('status', [Payment::STATUS_PENDING, Payment::STATUS_SUBMITTED, Payment::STATUS_REJECTED])
+            ->latest()
+            ->get()
+            ->filter(fn (Payment $payment): bool => (bool) $payment->course && $payment->course->status === Course::STATUS_PUBLISHED && ! $hasCourseAccess($user, $payment->course))
+            ->map(fn (Payment $payment): array => [
+                'course' => $payment->course,
+                'payment' => $payment,
+                'subscription' => null,
+                'status_label' => match ($payment->status) {
+                    Payment::STATUS_SUBMITTED => 'Pending Payment',
+                    Payment::STATUS_REJECTED => 'Payment Rejected',
+                    default => 'Unpaid',
+                },
+                'status_tone' => $payment->status === Payment::STATUS_REJECTED ? 'danger' : 'warning',
+                'reason' => match ($payment->status) {
+                    Payment::STATUS_SUBMITTED => 'Payment proof is awaiting admin review.',
+                    Payment::STATUS_REJECTED => 'The previous proof was rejected. Upload a new proof to continue.',
+                    default => 'Upload payment proof to unlock course access.',
+                },
+                'pay_label' => match ($payment->status) {
+                    Payment::STATUS_SUBMITTED => 'Payment Pending',
+                    Payment::STATUS_REJECTED => 'Pay Again',
+                    default => 'Pay Now',
+                },
+                'pay_href' => route('student.payments.show', $payment),
+                'pay_form_route' => null,
+            ]);
+
+        $blockedEnrollmentCourses = $enrollments
+            ->reject(fn (Enrollment $enrollment): bool => $hasCourseAccess($user, $enrollment->course))
+            ->reject(fn (Enrollment $enrollment): bool => $coursePayments->contains(fn (array $item): bool => $item['course']->is($enrollment->course)))
             ->map(fn (Enrollment $enrollment): array => [
-                'enrollment' => $enrollment,
                 'course' => $enrollment->course,
-                'progress' => $courseProgress($user, $enrollment->course),
-                'completion' => $completionService->calculate($user, $enrollment->course),
+                'payment' => null,
+                'subscription' => null,
+                'status_label' => $enrollment->status === Enrollment::STATUS_CANCELLED ? 'Not Enrolled' : 'Unpaid',
+                'status_tone' => 'warning',
+                'reason' => $enrollment->course->requiresPayment()
+                    ? 'Course access is blocked until payment is submitted and approved.'
+                    : 'Enrollment is not active.',
+                'pay_label' => $enrollment->course->requiresPayment() ? 'Pay Now' : 'View Details',
+                'pay_href' => null,
+                'pay_form_route' => $enrollment->course->requiresPayment() ? route('courses.enroll', $enrollment->course) : null,
+            ]);
+
+        $subscriptionIssues = Subscription::query()
+            ->with(['subscriptionPlan.courses.academy', 'subscriptionPlan.courses.instructor', 'payment'])
+            ->where('user_id', $user->id)
+            ->where(function ($query): void {
+                $query->whereIn('status', [Subscription::STATUS_PENDING, Subscription::STATUS_REJECTED, Subscription::STATUS_EXPIRED])
+                    ->orWhere(fn ($activeQuery) => $activeQuery
+                        ->where('status', Subscription::STATUS_ACTIVE)
+                        ->whereNotNull('ends_at')
+                        ->where('ends_at', '<=', now()));
+            })
+            ->latest()
+            ->get()
+            ->flatMap(fn (Subscription $subscription) => $subscription->subscriptionPlan?->courses
+                ? $subscription->subscriptionPlan->courses
+                    ->filter(fn (Course $course): bool => $course->status === Course::STATUS_PUBLISHED && ! $hasCourseAccess($user, $course))
+                    ->map(function (Course $course) use ($subscription): array {
+                        $label = $subscription->isExpired() ? 'Expired' : ($subscription->status === Subscription::STATUS_REJECTED ? 'Payment Rejected' : 'Pending Payment');
+                        $payment = $subscription->payment;
+
+                        return [
+                            'course' => $course,
+                            'payment' => $payment,
+                            'subscription' => $subscription,
+                            'status_label' => $label,
+                            'status_tone' => $subscription->status === Subscription::STATUS_REJECTED ? 'danger' : 'warning',
+                            'reason' => match ($label) {
+                                'Expired' => 'Your subscription for this course has expired. Renew to restore access.',
+                                'Payment Rejected' => 'The subscription payment was rejected. Upload a new proof to continue.',
+                                default => 'Subscription payment is awaiting proof or admin review.',
+                            },
+                            'pay_label' => match ($label) {
+                                'Expired' => 'Renew Plan',
+                                'Payment Rejected' => 'Pay Again',
+                                default => 'Payment Pending',
+                            },
+                            'pay_href' => $payment ? route('student.payments.show', $payment) : route('student.subscriptions.show', $subscription),
+                            'pay_form_route' => $label === 'Expired' ? route('student.subscriptions.renew', $subscription) : null,
+                        ];
+                    })
+                : collect());
+
+        $unpaidCourses = $coursePayments
+            ->concat($blockedEnrollmentCourses)
+            ->concat($subscriptionIssues)
+            ->unique(fn (array $item): int => $item['course']->id)
+            ->values();
+
+        $enrollments = $activeCourses->map(fn (array $item): array => [
+                'enrollment' => $item['enrollment'],
+                'course' => $item['course'],
+                'progress' => $item['progress'],
+                'completion' => $item['completion'],
             ]);
 
         return view('student.my-courses', [
             'enrollments' => $enrollments,
+            'activeCourses' => $activeCourses,
+            'unpaidCourses' => $unpaidCourses,
         ]);
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.my-courses');
 
@@ -1202,7 +1368,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             : collect();
         $currentLiveClasses = LiveClass::query()
             ->with(['course', 'module.course', 'lesson.module.course', 'instructor'])
-            ->whereIn('status', [LiveClass::STATUS_SCHEDULED, LiveClass::STATUS_LIVE, LiveClass::STATUS_COMPLETED])
+            ->whereIn('status', [LiveClass::STATUS_SCHEDULED, LiveClass::STATUS_LIVE, LiveClass::STATUS_COMPLETED, LiveClass::STATUS_CANCELLED])
             ->where(function ($query) use ($course, $currentLesson): void {
                 $query->where('course_id', $course->id)
                     ->orWhereHas('module', fn ($moduleQuery) => $moduleQuery->where('course_id', $course->id))
@@ -1776,6 +1942,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
         $courseIds = Enrollment::query()
             ->where('user_id', $user->id)
+            ->where('status', Enrollment::STATUS_ACTIVE)
             ->pluck('course_id');
 
         $liveClasses = LiveClass::query()
@@ -1785,7 +1952,6 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
                     ->orWhereHas('module', fn ($moduleQuery) => $moduleQuery->whereIn('course_id', $courseIds))
                     ->orWhereHas('lesson.module', fn ($moduleQuery) => $moduleQuery->whereIn('course_id', $courseIds));
             })
-            ->where('status', '!=', LiveClass::STATUS_CANCELLED)
             ->orderBy('starts_at')
             ->get();
 
@@ -1801,8 +1967,21 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $course = $liveClass->associatedCourse();
 
         abort_unless($course?->status === Course::STATUS_PUBLISHED, 404);
-        abort_unless($hasCourseAccess($user, $course), 403);
-        abort_if($liveClass->status === LiveClass::STATUS_CANCELLED, 404);
+        if (! $hasCourseAccess($user, $course)) {
+            return back()->withErrors(['live_class' => 'You do not have access to this class.']);
+        }
+
+        if ($liveClass->isUpcoming()) {
+            return back()->withErrors(['live_class' => 'Class has not started yet.']);
+        }
+
+        if ($liveClass->isEnded()) {
+            return back()->withErrors(['live_class' => 'Class has ended.']);
+        }
+
+        if (! $liveClass->canJoin()) {
+            return back()->withErrors(['live_class' => 'Class has not started yet.']);
+        }
 
         LiveClassAttendance::updateOrCreate(
             [
@@ -1820,6 +1999,24 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
         return redirect()->away($liveClass->meeting_url);
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.live-classes.join');
+
+    Route::get('/student/live-classes/{liveClass}/recording', function (LiveClass $liveClass) use ($hasCourseAccess) {
+        $user = Auth::user();
+
+        $liveClass->load(['course', 'module.course', 'lesson.module.course']);
+        $course = $liveClass->associatedCourse();
+
+        abort_unless($course?->status === Course::STATUS_PUBLISHED, 404);
+        if (! $hasCourseAccess($user, $course)) {
+            return back()->withErrors(['live_class' => 'You do not have access to this class.']);
+        }
+
+        if (! $liveClass->canWatchRecording()) {
+            return back()->withErrors(['live_class' => 'Recording is not available yet.']);
+        }
+
+        return redirect()->away($liveClass->recording_url);
+    })->middleware('role:'.User::ROLE_STUDENT)->name('student.live-classes.recording');
 
     Route::get('/student/mentorship', function () {
         abort_unless(config('mkscholars.features.mentorship_enabled', false), 404);
@@ -1867,7 +2064,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
         abort_unless($certificate->user_id === $user->id, 403);
 
-        $certificate->load(['skills', 'course']);
+        $certificate->load(['skills', 'course.instructor']);
 
         return view('student.certificate-show', [
             'certificate' => $certificate,
@@ -2043,6 +2240,34 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
                     ->orWhereHas('module', fn ($moduleQuery) => $moduleQuery->where('course_id', $course->id))
                     ->orWhereHas('lesson.module', fn ($moduleQuery) => $moduleQuery->where('course_id', $course->id));
             });
+    };
+
+    $abortUnlessInstructorLiveClass = function (User $instructor, LiveClass $liveClass) use ($abortUnlessInstructorCourse): Course {
+        $liveClass->loadMissing(['course', 'module.course', 'lesson.module.course']);
+
+        abort_unless((int) $liveClass->instructor_id === (int) $instructor->id, 403);
+
+        $course = $liveClass->associatedCourse();
+        abort_unless($course instanceof Course, 404);
+        $abortUnlessInstructorCourse($instructor, $course);
+
+        return $course;
+    };
+
+    $validateInstructorLiveClass = function (Request $request, User $instructor) use ($instructorCourseIds): array {
+        $courseIds = $instructorCourseIds($instructor)->all();
+
+        return $request->validate([
+            'course_id' => ['required', 'integer', Rule::in($courseIds)],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:5000'],
+            'meeting_url' => ['required', 'url', 'max:255'],
+            'platform' => ['required', Rule::in(LiveClass::PLATFORMS)],
+            'starts_at' => ['required', 'date'],
+            'ends_at' => ['required', 'date', 'after:starts_at'],
+            'status' => ['required', Rule::in(LiveClass::STATUSES)],
+            'recording_url' => ['nullable', 'url', 'max:255'],
+        ]);
     };
 
     Route::get('/instructor/dashboard', function () use ($instructorCoursesQuery, $instructorCourseIds, $instructorLiveClassesForCourse) {
@@ -2628,7 +2853,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return back();
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.notifications.read-all');
 
-    Route::get('/instructor/live-classes', function () {
+    Route::get('/instructor/live-classes', function () use ($instructorCoursesQuery) {
         $user = Auth::user();
 
         $liveClasses = LiveClass::query()
@@ -2639,8 +2864,113 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
         return view('instructor.live-classes', [
             'liveClasses' => $liveClasses,
+            'courses' => $instructorCoursesQuery($user)->orderBy('title')->get(),
         ]);
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.live-classes.index');
+
+    Route::get('/instructor/live-classes/create', function (Request $request) use ($instructorCoursesQuery) {
+        $user = Auth::user();
+        $courses = $instructorCoursesQuery($user)->orderBy('title')->get();
+
+        abort_if($courses->isEmpty(), 403);
+
+        return view('instructor.live-class-form', [
+            'liveClass' => new LiveClass([
+                'course_id' => $courses->contains('id', $request->integer('course_id')) ? $request->integer('course_id') : $courses->first()->id,
+                'platform' => LiveClass::PLATFORM_ZOOM,
+                'status' => LiveClass::STATUS_SCHEDULED,
+                'starts_at' => now()->addDay()->startOfHour(),
+                'ends_at' => now()->addDay()->startOfHour()->addHour(),
+            ]),
+            'courses' => $courses,
+            'mode' => 'create',
+        ]);
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.live-classes.create');
+
+    Route::post('/instructor/live-classes', function (Request $request) use ($validateInstructorLiveClass) {
+        $user = Auth::user();
+        $validated = $validateInstructorLiveClass($request, $user);
+
+        $liveClass = LiveClass::create([
+            ...$validated,
+            'module_id' => null,
+            'lesson_id' => null,
+            'instructor_id' => $user->id,
+        ]);
+
+        return redirect()
+            ->route('instructor.live-classes.edit', $liveClass)
+            ->with('status', 'Live class saved.');
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.live-classes.store');
+
+    Route::get('/instructor/live-classes/{liveClass}/edit', function (LiveClass $liveClass) use ($abortUnlessInstructorLiveClass, $instructorCoursesQuery) {
+        $user = Auth::user();
+        $abortUnlessInstructorLiveClass($user, $liveClass);
+
+        return view('instructor.live-class-form', [
+            'liveClass' => $liveClass,
+            'courses' => $instructorCoursesQuery($user)->orderBy('title')->get(),
+            'mode' => 'edit',
+        ]);
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.live-classes.edit');
+
+    Route::put('/instructor/live-classes/{liveClass}', function (Request $request, LiveClass $liveClass) use ($abortUnlessInstructorLiveClass, $validateInstructorLiveClass) {
+        $user = Auth::user();
+        $abortUnlessInstructorLiveClass($user, $liveClass);
+        $validated = $validateInstructorLiveClass($request, $user);
+
+        $liveClass->update([
+            ...$validated,
+            'module_id' => null,
+            'lesson_id' => null,
+            'instructor_id' => $user->id,
+        ]);
+
+        return redirect()
+            ->route('instructor.live-classes.edit', $liveClass)
+            ->with('status', 'Live class updated.');
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.live-classes.update');
+
+    Route::post('/instructor/live-classes/{liveClass}/cancel', function (LiveClass $liveClass) use ($abortUnlessInstructorLiveClass) {
+        $user = Auth::user();
+        $abortUnlessInstructorLiveClass($user, $liveClass);
+
+        $liveClass->update(['status' => LiveClass::STATUS_CANCELLED]);
+
+        return redirect()
+            ->route('instructor.live-classes.index')
+            ->with('status', 'Live class cancelled.');
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.live-classes.cancel');
+
+    Route::get('/instructor/live-classes/{liveClass}/join', function (LiveClass $liveClass) use ($abortUnlessInstructorLiveClass) {
+        $user = Auth::user();
+        $abortUnlessInstructorLiveClass($user, $liveClass);
+
+        if ($liveClass->isUpcoming()) {
+            return back()->withErrors(['live_class' => 'Class has not started yet.']);
+        }
+
+        if ($liveClass->isEnded()) {
+            return back()->withErrors(['live_class' => 'Class has ended.']);
+        }
+
+        if (! $liveClass->canJoin()) {
+            return back()->withErrors(['live_class' => 'Class has not started yet.']);
+        }
+
+        return redirect()->away($liveClass->meeting_url);
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.live-classes.join');
+
+    Route::get('/instructor/live-classes/{liveClass}/recording', function (LiveClass $liveClass) use ($abortUnlessInstructorLiveClass) {
+        $user = Auth::user();
+        $abortUnlessInstructorLiveClass($user, $liveClass);
+
+        if (! $liveClass->canWatchRecording()) {
+            return back()->withErrors(['live_class' => 'Recording is not available yet.']);
+        }
+
+        return redirect()->away($liveClass->recording_url);
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.live-classes.recording');
 
     Route::get('/mentor/dashboard', function () {
         $user = Auth::user();

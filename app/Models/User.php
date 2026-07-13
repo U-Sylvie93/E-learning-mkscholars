@@ -86,6 +86,7 @@ class User extends Authenticatable implements FilamentUser
         'email',
         'password',
         'role',
+        'signature_path',
         'approval_status',
         'approved_at',
         'approved_by',
@@ -339,6 +340,5 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(ApplicationStatusHistory::class, 'changed_by');
     }
 }
-
 
 
