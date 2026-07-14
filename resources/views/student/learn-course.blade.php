@@ -268,22 +268,21 @@
                                         - {{ $liveClass->ends_at->format('M j, Y g:i A') }}
                                     @endif
                                 </p>
-                                @if ($liveClass->canJoin())
-                                    <form method="POST" action="{{ route('student.live-classes.join', $liveClass) }}" class="mt-3">
-                                        @csrf
-                                        <x-button type="submit" size="sm" class="w-full">Join Class</x-button>
-                                    </form>
-                                @elseif ($liveClass->canWatchRecording())
-                                    <x-button :href="route('student.live-classes.recording', $liveClass)" size="sm" variant="secondary" class="mt-3 w-full">Watch Recording</x-button>
-                                @elseif ($liveClass->status === \App\Models\LiveClass::STATUS_CANCELLED)
+                                @if ($liveClass->status === \App\Models\LiveClass::STATUS_CANCELLED)
                                     <div class="mt-3 rounded-lg bg-white p-3 text-center text-sm font-semibold text-slate-500">Cancelled</div>
-                                @elseif ($liveClass->isEnded())
-                                    <div class="mt-3 rounded-lg bg-white p-3 text-center">
-                                        <p class="text-sm font-bold text-slate-700">Class Ended</p>
-                                        <p class="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Recording Not Available</p>
-                                    </div>
                                 @else
-                                    <div class="mt-3 rounded-lg bg-white p-3 text-center text-sm font-semibold text-slate-500">Class starts soon</div>
+                                    @if ($liveClass->canJoin())
+                                        <form method="POST" action="{{ route('student.live-classes.join', $liveClass) }}" class="mt-3">
+                                            @csrf
+                                            <x-button type="submit" size="sm" class="w-full">Join Class</x-button>
+                                        </form>
+                                    @endif
+                                    @if ($liveClass->canWatchRecording())
+                                        <x-button :href="route('student.live-classes.recording', $liveClass)" size="sm" variant="secondary" class="mt-3 w-full">Watch Recording</x-button>
+                                    @endif
+                                    @if (! $liveClass->canJoin() && ! $liveClass->canWatchRecording())
+                                        <div class="mt-3 rounded-lg bg-white p-3 text-center text-sm font-semibold text-slate-500">Links not available yet</div>
+                                    @endif
                                 @endif
                             </div>
                         @endforeach

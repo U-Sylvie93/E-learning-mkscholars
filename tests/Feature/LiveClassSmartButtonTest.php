@@ -23,7 +23,7 @@ class LiveClassSmartButtonTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_upcoming_live_class_does_not_show_active_join_button_or_redirect(): void
+    public function test_upcoming_live_class_with_meeting_link_shows_join_and_redirects(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-07-13 10:00:00'));
         [$student, $instructor, $course] = $this->enrolledStudentWithCourse('upcoming-smart-button');
@@ -37,12 +37,12 @@ class LiveClassSmartButtonTest extends TestCase
             ->get(route('student.live-classes'))
             ->assertOk()
             ->assertSee('Upcoming')
-            ->assertSee('Class starts soon')
-            ->assertDontSee('Join Class');
+            ->assertSee('Join Class')
+            ->assertDontSee('Links not available yet');
 
         $this->actingAs($student)
             ->post(route('student.live-classes.join', $liveClass))
-            ->assertSessionHasErrors(['live_class' => 'Class has not started yet.']);
+            ->assertRedirect($liveClass->meeting_url);
     }
 
     public function test_live_class_can_be_joined_at_exact_start_and_end_time(): void
@@ -105,7 +105,7 @@ class LiveClassSmartButtonTest extends TestCase
             ->assertSessionHasErrors(['live_class' => 'Meeting link is not available.']);
     }
 
-    public function test_live_class_during_time_shows_join_and_redirects_without_recording_button(): void
+    public function test_live_class_with_meeting_and_recording_links_shows_both_buttons(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-07-13 10:30:00'));
         [$student, $instructor, $course] = $this->enrolledStudentWithCourse('live-smart-button');
@@ -121,14 +121,14 @@ class LiveClassSmartButtonTest extends TestCase
             ->assertOk()
             ->assertSee('Live Now')
             ->assertSee('Join Class')
-            ->assertDontSee('Watch Recording');
+            ->assertSee('Watch Recording');
 
         $this->actingAs($student)
             ->post(route('student.live-classes.join', $liveClass))
             ->assertRedirect($liveClass->meeting_url);
     }
 
-    public function test_ended_live_class_with_recording_shows_and_redirects_to_recording(): void
+    public function test_ended_live_class_with_links_still_allows_join_and_recording(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-07-13 12:00:00'));
         [$student, $instructor, $course] = $this->enrolledStudentWithCourse('recording-smart-button');
@@ -143,12 +143,35 @@ class LiveClassSmartButtonTest extends TestCase
             ->get(route('student.live-classes'))
             ->assertOk()
             ->assertSee('Recording Available')
-            ->assertSee('Watch Recording')
-            ->assertDontSee('Join Class');
+            ->assertSee('Join Class')
+            ->assertSee('Watch Recording');
 
         $this->actingAs($student)
             ->post(route('student.live-classes.join', $liveClass))
-            ->assertSessionHasErrors(['live_class' => 'Class has ended.']);
+            ->assertRedirect($liveClass->meeting_url);
+
+        $this->actingAs($student)
+            ->get(route('student.live-classes.recording', $liveClass))
+            ->assertRedirect($liveClass->recording_url);
+    }
+
+    public function test_recording_link_redirects_without_requiring_class_to_have_ended(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-07-13 09:00:00'));
+        [$student, $instructor, $course] = $this->enrolledStudentWithCourse('early-recording-link');
+        $liveClass = $this->liveClass($instructor, $course, [
+            'starts_at' => now()->addHours(2),
+            'ends_at' => now()->addHours(3),
+            'recording_url' => 'https://example.test/recording',
+            'status' => LiveClass::STATUS_SCHEDULED,
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('student.live-classes'))
+            ->assertOk()
+            ->assertSee('Upcoming')
+            ->assertSee('Watch Recording')
+            ->assertSee('Join Class');
 
         $this->actingAs($student)
             ->get(route('student.live-classes.recording', $liveClass))
@@ -169,8 +192,8 @@ class LiveClassSmartButtonTest extends TestCase
             ->get(route('student.live-classes'))
             ->assertOk()
             ->assertSee('Class Ended')
-            ->assertSee('Recording Not Available')
-            ->assertDontSee('Join Class');
+            ->assertSee('Join Class')
+            ->assertDontSee('Watch Recording');
 
         $this->actingAs($student)
             ->get(route('student.live-classes.recording', $liveClass))
@@ -226,7 +249,7 @@ class LiveClassSmartButtonTest extends TestCase
             ->assertSessionHasErrors(['live_class' => 'You do not have access to this class.']);
     }
 
-    public function test_instructor_can_use_own_time_checked_live_class_links_only(): void
+    public function test_instructor_can_use_own_live_class_links_only(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-07-13 10:30:00'));
         [$student, $instructor, $course] = $this->enrolledStudentWithCourse('instructor-smart-button');
@@ -234,7 +257,14 @@ class LiveClassSmartButtonTest extends TestCase
         $liveClass = $this->liveClass($instructor, $course, [
             'starts_at' => now()->subMinutes(30),
             'ends_at' => now()->addMinutes(30),
+            'recording_url' => 'https://example.test/recording',
         ]);
+
+        $this->actingAs($instructor)
+            ->get(route('instructor.live-classes.index'))
+            ->assertOk()
+            ->assertSee('Join Class')
+            ->assertSee('Watch Recording');
 
         $this->actingAs($instructor)
             ->get(route('instructor.live-classes.join', $liveClass))

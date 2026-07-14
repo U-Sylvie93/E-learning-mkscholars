@@ -60,6 +60,7 @@
                             @if ($paper->exam_type)
                                 <x-badge tone="gray">{{ $paper->exam_type }}</x-badge>
                             @endif
+                            <x-badge :tone="$paper->isFree() ? 'green' : 'gold'">{{ $paper->priceLabel() }}</x-badge>
                         </div>
                         <h2 class="mt-4 text-xl font-extrabold text-mk-navy">{{ $paper->title }}</h2>
                         <dl class="mt-4 grid gap-2 text-sm text-slate-600">

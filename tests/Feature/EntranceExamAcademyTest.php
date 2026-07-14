@@ -61,6 +61,7 @@ class EntranceExamAcademyTest extends TestCase
         $this->assertStringContainsString("FileUpload::make('paper_file_path')", $resource);
         $this->assertStringContainsString("->acceptedFileTypes(['application/pdf'])", $resource);
         $this->assertStringContainsString('->maxSize(20480)', $resource);
+        $this->assertStringContainsString("TextInput::make('price_amount')", $resource);
     }
 
     public function test_academy_index_shows_published_papers_and_filters_by_classification(): void
@@ -71,6 +72,7 @@ class EntranceExamAcademyTest extends TestCase
             ->assertOk()
             ->assertSee('Entrance Exam Academy')
             ->assertSee($paper->title)
+            ->assertSee('5,000 RWF')
             ->assertDontSee($draftPaper->title);
 
         $this->get(route('entrance-exam-academy.index', [
@@ -93,7 +95,8 @@ class EntranceExamAcademyTest extends TestCase
             ->assertSee($paper->institution->name)
             ->assertSee($paper->program->name)
             ->assertSee($paper->subject->name)
-            ->assertSee('Read Paper')
+            ->assertSee('5,000 RWF')
+            ->assertSee('Login to Read')
             ->assertDontSee($paper->paper_file_path, false)
             ->assertDontSee('Download');
     }
@@ -147,6 +150,49 @@ class EntranceExamAcademyTest extends TestCase
             ->where('purpose', Payment::PURPOSE_ENTRANCE_EXAM)
             ->where('entrance_exam_past_paper_id', $paper->id)
             ->count());
+    }
+
+    public function test_pay_now_uses_admin_set_paper_price(): void
+    {
+        [$student, $paper] = $this->paperContext();
+        $paper->update([
+            'price_amount' => 7500,
+            'currency' => 'RWF',
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('entrance-exam-academy.papers.pay', $paper))
+            ->assertRedirect();
+
+        $payment = Payment::query()
+            ->where('user_id', $student->id)
+            ->where('entrance_exam_past_paper_id', $paper->id)
+            ->where('purpose', Payment::PURPOSE_ENTRANCE_EXAM)
+            ->firstOrFail();
+
+        $this->assertSame('7500.00', $payment->amount);
+        $this->assertSame('RWF', $payment->currency);
+        $this->assertSame(Payment::STATUS_PENDING, $payment->status);
+    }
+
+    public function test_free_paper_can_be_read_by_authenticated_student_without_payment(): void
+    {
+        Storage::fake('public');
+        [$student, $paper] = $this->paperContext();
+        $paper->update(['price_amount' => 0]);
+        Storage::disk('public')->put($paper->paper_file_path, '%PDF-1.4 free entrance paper');
+
+        $this->actingAs($student)
+            ->get(route('entrance-exam-academy.papers.show', $paper))
+            ->assertOk()
+            ->assertSee('Free')
+            ->assertSee('Read Paper')
+            ->assertDontSee('Pay Now');
+
+        $this->actingAs($student)
+            ->get(route('entrance-exam-academy.papers.inline', $paper))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
     }
 
     public function test_pdf_viewer_requires_login_and_approved_payment_without_warning_text_or_download_button(): void
@@ -247,6 +293,8 @@ class EntranceExamAcademyTest extends TestCase
             'paper_file_path' => 'entrance-exam/past-papers/math-2025.pdf',
             'paper_file_disk' => 'public',
             'paper_file_mime' => 'application/pdf',
+            'price_amount' => 5000,
+            'currency' => 'RWF',
             'status' => EntranceExamPastPaper::STATUS_PUBLISHED,
             'uploaded_by' => $admin->id,
         ]);
@@ -255,6 +303,8 @@ class EntranceExamAcademyTest extends TestCase
             'paper_file_path' => 'entrance-exam/past-papers/draft.pdf',
             'paper_file_disk' => 'public',
             'paper_file_mime' => 'application/pdf',
+            'price_amount' => 5000,
+            'currency' => 'RWF',
             'status' => EntranceExamPastPaper::STATUS_DRAFT,
             'uploaded_by' => $admin->id,
         ]);

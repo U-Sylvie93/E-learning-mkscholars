@@ -34,6 +34,8 @@ class EntranceExamPastPaper extends Model
         'paper_file_path',
         'paper_file_disk',
         'paper_file_mime',
+        'price_amount',
+        'currency',
         'page_count',
         'is_featured',
         'status',
@@ -44,6 +46,7 @@ class EntranceExamPastPaper extends Model
     {
         return [
             'exam_year' => 'integer',
+            'price_amount' => 'decimal:2',
             'page_count' => 'integer',
             'is_featured' => 'boolean',
         ];
@@ -59,6 +62,7 @@ class EntranceExamPastPaper extends Model
             }
 
             $paper->paper_file_disk ??= 'public';
+            $paper->currency ??= 'RWF';
             $paper->status ??= self::STATUS_DRAFT;
 
             if (blank($paper->paper_file_mime) && filled($paper->paper_file_path)) {
@@ -116,6 +120,20 @@ class EntranceExamPastPaper extends Model
         }
 
         return str($this->paper_file_path)->lower()->endsWith('.pdf');
+    }
+
+    public function isFree(): bool
+    {
+        return (float) ($this->price_amount ?? 0) <= 0;
+    }
+
+    public function priceLabel(): string
+    {
+        if ($this->isFree()) {
+            return 'Free';
+        }
+
+        return number_format((float) $this->price_amount, 0).' '.($this->currency ?: 'RWF');
     }
 
     public static function statusOptions(): array

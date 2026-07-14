@@ -120,12 +120,12 @@ class LiveClass extends Model
 
     public function canJoin(?CarbonInterface $now = null): bool
     {
-        return filled($this->meeting_url) && $this->isLiveNow($now);
+        return $this->status !== self::STATUS_CANCELLED && filled($this->meeting_url);
     }
 
     public function canWatchRecording(?CarbonInterface $now = null): bool
     {
-        return filled($this->recording_url) && $this->isEnded($now);
+        return $this->status !== self::STATUS_CANCELLED && filled($this->recording_url);
     }
 
     public function displayStatus(?CarbonInterface $now = null): string
@@ -155,7 +155,7 @@ class LiveClass extends Model
             return 'danger';
         }
 
-        if ($this->isLiveNow($now) || $this->canWatchRecording($now)) {
+        if ($this->isLiveNow($now) || ($this->isEnded($now) && $this->canWatchRecording($now))) {
             return 'green';
         }
 

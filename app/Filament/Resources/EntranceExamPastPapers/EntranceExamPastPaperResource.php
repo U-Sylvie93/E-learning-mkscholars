@@ -77,6 +77,15 @@ class EntranceExamPastPaperResource extends Resource
             TextInput::make('exam_type')
                 ->maxLength(120)
                 ->placeholder('National entrance, mock, aptitude, placement'),
+            TextInput::make('price_amount')
+                ->numeric()
+                ->minValue(0)
+                ->label('Price amount')
+                ->helperText('Set to 0 or leave empty to make this paper free after student login.'),
+            TextInput::make('currency')
+                ->required()
+                ->default('RWF')
+                ->maxLength(8),
             Select::make('status')
                 ->required()
                 ->options(EntranceExamPastPaper::statusOptions())
@@ -107,6 +116,10 @@ class EntranceExamPastPaperResource extends Resource
                 TextColumn::make('subject.name')->label('Subject')->searchable()->sortable()->placeholder('General'),
                 TextColumn::make('exam_year')->label('Year')->sortable(),
                 TextColumn::make('exam_type')->badge()->searchable(),
+                TextColumn::make('price_amount')
+                    ->label('Price')
+                    ->formatStateUsing(fn (EntranceExamPastPaper $record): string => $record->priceLabel())
+                    ->sortable(),
                 TextColumn::make('status')->badge()->sortable(),
                 IconColumn::make('is_featured')->label('Featured')->boolean(),
                 TextColumn::make('uploadedBy.name')->label('Uploaded by')->placeholder('System')->toggleable(),

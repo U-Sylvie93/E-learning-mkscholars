@@ -70,17 +70,18 @@
                             </div>
 
                             <div class="mt-6 flex flex-wrap gap-2">
-                                @if ($liveClass->canJoin())
-                                    <x-button :href="route('instructor.live-classes.join', $liveClass)" size="sm">Join Class</x-button>
-                                @elseif ($liveClass->canWatchRecording())
-                                    <x-button :href="route('instructor.live-classes.recording', $liveClass)" size="sm" variant="secondary">Watch Recording</x-button>
-                                    <x-button :href="route('instructor.live-classes.edit', $liveClass)" size="sm" variant="ghost">Edit Recording</x-button>
-                                @elseif ($liveClass->isEnded() && $liveClass->status !== \App\Models\LiveClass::STATUS_CANCELLED)
-                                    <x-button :href="route('instructor.live-classes.edit', $liveClass)" size="sm" variant="secondary">Add Recording</x-button>
-                                @elseif ($liveClass->isUpcoming())
-                                    <span class="inline-flex items-center rounded-md bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600">Upcoming</span>
-                                @else
+                                @if ($liveClass->status === \App\Models\LiveClass::STATUS_CANCELLED)
                                     <span class="inline-flex items-center rounded-md bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600">Cancelled</span>
+                                @else
+                                    @if ($liveClass->canJoin())
+                                        <x-button :href="route('instructor.live-classes.join', $liveClass)" size="sm">Join Class</x-button>
+                                    @endif
+                                    @if ($liveClass->canWatchRecording())
+                                        <x-button :href="route('instructor.live-classes.recording', $liveClass)" size="sm" variant="secondary">Watch Recording</x-button>
+                                        <x-button :href="route('instructor.live-classes.edit', $liveClass)" size="sm" variant="ghost">Edit Recording</x-button>
+                                    @else
+                                        <x-button :href="route('instructor.live-classes.edit', $liveClass)" size="sm" variant="secondary">Add Recording</x-button>
+                                    @endif
                                 @endif
                             </div>
 
@@ -95,12 +96,12 @@
                                 </div>
                                 <div class="rounded-lg bg-slate-50 p-3">
                                     <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Join URL</p>
-                                    <p class="mt-1 font-semibold text-slate-500">{{ $liveClass->canJoin() ? 'Available through Join Class' : 'Available during class time' }}</p>
+                                    <p class="mt-1 font-semibold text-slate-500">{{ $liveClass->canJoin() ? 'Available through Join Class' : 'Not added' }}</p>
                                 </div>
                                 <div class="rounded-lg bg-slate-50 p-3">
                                     <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Recording URL</p>
                                     @if ($liveClass->recording_url)
-                                        <p class="mt-1 font-semibold text-slate-500">{{ $liveClass->canWatchRecording() ? 'Recording available' : 'Added; available after class ends' }}</p>
+                                        <p class="mt-1 font-semibold text-slate-500">Recording available</p>
                                     @else
                                         <p class="mt-1 font-semibold text-slate-500">Not added</p>
                                     @endif

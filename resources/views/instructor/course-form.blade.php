@@ -184,24 +184,24 @@
                     </label>
                     <label class="block text-sm font-bold text-mk-navy">
                         Full course overview
-                        <div class="mt-2 overflow-hidden rounded-lg border border-slate-200 bg-white focus-within:border-mk-gold focus-within:ring-2 focus-within:ring-mk-gold/30">
-                            <div class="flex flex-wrap gap-1 border-b border-slate-100 bg-slate-50 p-2" data-markdown-toolbar="course-overview-input">
-                                @php($toolClass = 'inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-slate-200 bg-white px-2 text-xs font-black text-mk-navy shadow-sm transition hover:border-mk-gold hover:bg-mk-goldSoft')
-                                <button type="button" class="{{ $toolClass }}" title="Bold" aria-label="Bold" data-wrap="**">B</button>
-                                <button type="button" class="{{ $toolClass }} italic" title="Italic" aria-label="Italic" data-wrap="*">I</button>
-                                <button type="button" class="{{ $toolClass }} line-through" title="Strikethrough" aria-label="Strikethrough" data-wrap="~~">S</button>
-                                <button type="button" class="{{ $toolClass }}" title="Link" aria-label="Link" data-insert="[Link text](https://example.com)">Link</button>
-                                <button type="button" class="{{ $toolClass }}" title="Heading" aria-label="Heading" data-prefix="## ">H</button>
-                                <button type="button" class="{{ $toolClass }}" title="Quote" aria-label="Quote" data-prefix="> ">Quote</button>
-                                <button type="button" class="{{ $toolClass }}" title="Inline code" aria-label="Inline code" data-wrap="`">&lt;/&gt;</button>
-                                <button type="button" class="{{ $toolClass }}" title="Bulleted list" aria-label="Bulleted list" data-prefix="- ">UL</button>
-                                <button type="button" class="{{ $toolClass }}" title="Numbered list" aria-label="Numbered list" data-prefix="1. ">OL</button>
-                                <button type="button" class="{{ $toolClass }}" title="Table" aria-label="Table" data-insert="| Topic | Detail |\n| --- | --- |\n| Example | Description |\n">Table</button>
-                                <button type="button" class="{{ $toolClass }}" title="Image" aria-label="Image" data-insert="![Image alt](https://example.com/image.jpg)">Img</button>
-                                <button type="button" class="{{ $toolClass }}" title="Undo" aria-label="Undo" data-action="undo">Undo</button>
-                                <button type="button" class="{{ $toolClass }}" title="Redo" aria-label="Redo" data-action="redo">Redo</button>
+                        <div class="mt-2 overflow-hidden rounded-lg border border-slate-700 bg-slate-950 shadow-sm focus-within:border-mk-gold focus-within:ring-2 focus-within:ring-mk-gold/30">
+                            <div class="flex flex-wrap gap-1 border-b border-slate-800 bg-slate-900 p-2" data-markdown-toolbar="course-overview-input">
+                                @php($toolClass = 'inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-700 bg-slate-950 text-slate-200 shadow-sm transition hover:border-mk-gold hover:bg-slate-800 hover:text-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/40')
+                                <button type="button" class="{{ $toolClass }}" title="Bold" aria-label="Bold" data-wrap="**"><x-editor-icon name="bold" /></button>
+                                <button type="button" class="{{ $toolClass }}" title="Italic" aria-label="Italic" data-wrap="*"><x-editor-icon name="italic" /></button>
+                                <button type="button" class="{{ $toolClass }}" title="Strikethrough" aria-label="Strikethrough" data-wrap="~~"><x-editor-icon name="strike" /></button>
+                                <button type="button" class="{{ $toolClass }}" title="Link" aria-label="Link" data-insert="[Link text](https://example.com)"><x-editor-icon name="link" /></button>
+                                <button type="button" class="{{ $toolClass }}" title="Heading" aria-label="Heading" data-prefix="## "><x-editor-icon name="heading" /></button>
+                                <button type="button" class="{{ $toolClass }}" title="Quote" aria-label="Quote" data-prefix="> "><x-editor-icon name="quote" /></button>
+                                <button type="button" class="{{ $toolClass }}" title="Inline code" aria-label="Inline code" data-wrap="`"><x-editor-icon name="code" /></button>
+                                <button type="button" class="{{ $toolClass }}" title="Bulleted list" aria-label="Bulleted list" data-prefix="- "><x-editor-icon name="list" /></button>
+                                <button type="button" class="{{ $toolClass }}" title="Numbered list" aria-label="Numbered list" data-prefix="1. "><x-editor-icon name="numbered-list" /></button>
+                                <button type="button" class="{{ $toolClass }}" title="Table" aria-label="Table" data-insert="| Topic | Detail |\n| --- | --- |\n| Example | Description |\n"><x-editor-icon name="table" /></button>
+                                <button type="button" class="{{ $toolClass }}" title="Image" aria-label="Image" data-insert="![Image alt](https://example.com/image.jpg)"><x-editor-icon name="image" /></button>
+                                <button type="button" class="{{ $toolClass }}" title="Undo" aria-label="Undo" data-action="undo"><x-editor-icon name="undo" /></button>
+                                <button type="button" class="{{ $toolClass }}" title="Redo" aria-label="Redo" data-action="redo"><x-editor-icon name="redo" /></button>
                             </div>
-                            <textarea id="course-overview-input" name="full_description" rows="10" class="w-full border-0 px-3 py-2 text-sm leading-6 focus:outline-none focus:ring-0" placeholder="# What students will learn&#10;&#10;Describe the course, projects, lessons, and support students receive.">{{ old('full_description', $course->full_description) }}</textarea>
+                            <textarea id="course-overview-input" name="full_description" rows="10" class="w-full border-0 bg-slate-950 px-4 py-3 font-mono text-sm leading-6 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-0" placeholder="# What students will learn&#10;&#10;Describe the course, projects, lessons, and support students receive.">{{ old('full_description', $course->full_description) }}</textarea>
                         </div>
                         <span class="mt-1 block text-xs font-semibold text-slate-500">Supports the same Markdown storage path as admin: headings, lists, tables, links, images, inline code, and code blocks render through the safe course content renderer.</span>
                     </label>

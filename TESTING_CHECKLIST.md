@@ -1278,3 +1278,23 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Instructor dashboard includes currently live classes by checking `ends_at >= now()`.
 - Student and instructor live class cards do not show conflicting raw persisted status badges beside smart timing status.
 - Live class create/update parsing uses the app timezone for submitted start/end values.
+
+## Phase 43H Hotfix QA
+
+- Instructor Course Overview editor visually matches the admin Content/Body Markdown editor style more closely.
+- Instructor editor toolbar uses clear icons for formatting controls.
+- Instructor editor supports heading, bold, italic, strike, link, quote, code, bulleted list, numbered list, table, image, undo, and redo.
+- Instructor can save rich course overview content.
+- Live class Join Class button appears when meeting URL exists.
+- Live class Watch Recording button appears when recording URL exists.
+- Live class buttons are not blocked by incorrect time/status logic.
+- Guest cannot access live class links.
+- Unauthorized student cannot access live class links.
+- Cancelled live class does not show active join/recording buttons.
+- Admin can set entrance exam past paper price.
+- Entrance exam paper detail shows price.
+- Free entrance exam paper can be read without payment after login.
+- Paid entrance exam paper requires approved payment.
+- Pay Now uses admin-set paper price.
+- Entrance exam payment does not duplicate pending records.
+- Approved payment unlocks paper viewer.

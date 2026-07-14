@@ -76,6 +76,12 @@
                             <div class="flex flex-wrap gap-2">
                                 <x-badge :tone="$liveClass->displayStatusTone()">{{ $liveClass->displayStatus() }}</x-badge>
                                 <x-badge tone="blue">{{ $liveClass->attendances->count() }} attendance records</x-badge>
+                                @if ($liveClass->canJoin())
+                                    <x-button :href="route('instructor.live-classes.join', $liveClass)" size="sm">Join Class</x-button>
+                                @endif
+                                @if ($liveClass->canWatchRecording())
+                                    <x-button :href="route('instructor.live-classes.recording', $liveClass)" size="sm" variant="secondary">Watch Recording</x-button>
+                                @endif
                                 <x-button :href="route('instructor.live-classes.edit', $liveClass)" size="sm" variant="secondary">Edit Live Class</x-button>
                             </div>
                         </div>

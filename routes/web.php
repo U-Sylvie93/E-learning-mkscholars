@@ -438,12 +438,16 @@ Route::get('/entrance-exam-academy/papers/{paper:slug}', function (EntranceExamP
     return view('pages.entrance-exam-academy.show', [
         'paper' => $paper,
         'payment' => $payment,
-        'hasAccess' => $payment?->status === Payment::STATUS_APPROVED,
+        'hasAccess' => $paper->isFree() || $payment?->status === Payment::STATUS_APPROVED,
     ]);
 })->name('entrance-exam-academy.papers.show');
 
 Route::post('/entrance-exam-academy/papers/{paper:slug}/pay', function (EntranceExamPastPaper $paper) {
     abort_unless($paper->isPublished(), 404);
+
+    if ($paper->isFree()) {
+        return redirect()->route('entrance-exam-academy.papers.view', $paper);
+    }
 
     $user = Auth::user();
     $payment = Payment::query()
@@ -459,8 +463,8 @@ Route::post('/entrance-exam-academy/papers/{paper:slug}/pay', function (Entrance
         ->createPendingPayment([
             'user_id' => $user->id,
             'entrance_exam_past_paper_id' => $paper->id,
-            'amount' => config('mkscholars.entrance_exam.paper_price_amount', 5000),
-            'currency' => config('mkscholars.entrance_exam.currency', 'RWF'),
+            'amount' => $paper->price_amount,
+            'currency' => $paper->currency ?: 'RWF',
             'purpose' => Payment::PURPOSE_ENTRANCE_EXAM,
         ]);
 
@@ -469,7 +473,7 @@ Route::post('/entrance-exam-academy/papers/{paper:slug}/pay', function (Entrance
 
 Route::get('/entrance-exam-academy/papers/{paper:slug}/view', function (EntranceExamPastPaper $paper) {
     abort_unless($paper->isPublished(), 404);
-    if (! Payment::query()
+    if (! $paper->isFree() && ! Payment::query()
         ->where('user_id', Auth::id())
         ->where('purpose', Payment::PURPOSE_ENTRANCE_EXAM)
         ->where('entrance_exam_past_paper_id', $paper->id)
@@ -489,7 +493,7 @@ Route::get('/entrance-exam-academy/papers/{paper:slug}/view', function (Entrance
 
 Route::get('/entrance-exam-academy/papers/{paper:slug}/inline', function (EntranceExamPastPaper $paper) {
     abort_unless($paper->isPublished(), 404);
-    if (! Payment::query()
+    if (! $paper->isFree() && ! Payment::query()
         ->where('user_id', Auth::id())
         ->where('purpose', Payment::PURPOSE_ENTRANCE_EXAM)
         ->where('entrance_exam_past_paper_id', $paper->id)
@@ -2193,24 +2197,12 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             return back()->withErrors(['live_class' => 'You do not have access to this class.']);
         }
 
-        if ($liveClass->isUpcoming()) {
-            return back()->withErrors(['live_class' => 'Class has not started yet.']);
-        }
-
-        if ($liveClass->isEnded()) {
-            return back()->withErrors(['live_class' => 'Class has ended.']);
-        }
-
         if ($liveClass->status === LiveClass::STATUS_CANCELLED) {
             return back()->withErrors(['live_class' => 'This class has been cancelled.']);
         }
 
         if (! filled($liveClass->meeting_url)) {
             return back()->withErrors(['live_class' => 'Meeting link is not available.']);
-        }
-
-        if (! $liveClass->canJoin()) {
-            return back()->withErrors(['live_class' => 'Class is not available to join right now.']);
         }
 
         LiveClassAttendance::updateOrCreate(
@@ -2245,7 +2237,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             return back()->withErrors(['live_class' => 'This class has been cancelled.']);
         }
 
-        if (! $liveClass->canWatchRecording()) {
+        if (! filled($liveClass->recording_url)) {
             return back()->withErrors(['live_class' => 'Recording is not available yet.']);
         }
 
@@ -3240,24 +3232,12 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $user = Auth::user();
         $abortUnlessInstructorLiveClass($user, $liveClass);
 
-        if ($liveClass->isUpcoming()) {
-            return back()->withErrors(['live_class' => 'Class has not started yet.']);
-        }
-
-        if ($liveClass->isEnded()) {
-            return back()->withErrors(['live_class' => 'Class has ended.']);
-        }
-
         if ($liveClass->status === LiveClass::STATUS_CANCELLED) {
             return back()->withErrors(['live_class' => 'This class has been cancelled.']);
         }
 
         if (! filled($liveClass->meeting_url)) {
             return back()->withErrors(['live_class' => 'Meeting link is not available.']);
-        }
-
-        if (! $liveClass->canJoin()) {
-            return back()->withErrors(['live_class' => 'Class is not available to join right now.']);
         }
 
         return redirect()->away($liveClass->meeting_url);
@@ -3271,7 +3251,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             return back()->withErrors(['live_class' => 'This class has been cancelled.']);
         }
 
-        if (! $liveClass->canWatchRecording()) {
+        if (! filled($liveClass->recording_url)) {
             return back()->withErrors(['live_class' => 'Recording is not available yet.']);
         }
 

@@ -14,6 +14,7 @@
                         @if ($paper->exam_type)
                             <x-badge tone="gray">{{ $paper->exam_type }}</x-badge>
                         @endif
+                        <x-badge :tone="$paper->isFree() ? 'green' : 'gold'">{{ $paper->priceLabel() }}</x-badge>
                     </div>
                     <h1 class="mt-4 text-3xl font-black tracking-normal text-mk-navy sm:text-4xl">{{ $paper->title }}</h1>
                     @if ($paper->description)
@@ -49,6 +50,7 @@
                         <div class="rounded-lg bg-slate-50 p-4"><dt class="text-xs font-bold uppercase tracking-wide text-slate-500">Institution</dt><dd class="mt-1 font-bold text-mk-navy">{{ $paper->institution?->name ?? 'General' }}</dd></div>
                         <div class="rounded-lg bg-slate-50 p-4"><dt class="text-xs font-bold uppercase tracking-wide text-slate-500">Program / Faculty</dt><dd class="mt-1 font-bold text-mk-navy">{{ $paper->program?->name ?? 'General' }}</dd></div>
                         <div class="rounded-lg bg-slate-50 p-4"><dt class="text-xs font-bold uppercase tracking-wide text-slate-500">Subject</dt><dd class="mt-1 font-bold text-mk-navy">{{ $paper->subject?->name ?? 'General' }}</dd></div>
+                        <div class="rounded-lg bg-slate-50 p-4"><dt class="text-xs font-bold uppercase tracking-wide text-slate-500">Price</dt><dd class="mt-1 font-bold text-mk-navy">{{ $paper->priceLabel() }}</dd></div>
                         <div class="rounded-lg bg-slate-50 p-4"><dt class="text-xs font-bold uppercase tracking-wide text-slate-500">Year</dt><dd class="mt-1 font-bold text-mk-navy">{{ $paper->exam_year ?? 'Not specified' }}</dd></div>
                         <div class="rounded-lg bg-slate-50 p-4"><dt class="text-xs font-bold uppercase tracking-wide text-slate-500">Exam type</dt><dd class="mt-1 font-bold text-mk-navy">{{ $paper->exam_type ?? 'Not specified' }}</dd></div>
                     </dl>

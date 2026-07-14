@@ -51,7 +51,11 @@ class InstructorCourseFormPolishTest extends TestCase
             ->assertSee('aria-label="Undo"', false)
             ->assertSee('aria-label="Redo"', false)
             ->assertSee('data-action="undo"', false)
-            ->assertSee('data-action="redo"', false);
+            ->assertSee('data-action="redo"', false)
+            ->assertSee('<svg', false)
+            ->assertDontSee('>Link</button>', false)
+            ->assertDontSee('>Table</button>', false)
+            ->assertDontSee('>Img</button>', false);
     }
 
     public function test_instructor_can_create_course_without_level_duration_and_slug_is_generated(): void

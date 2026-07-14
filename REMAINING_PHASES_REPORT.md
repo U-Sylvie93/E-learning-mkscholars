@@ -591,3 +591,15 @@ Migration added:
 - `2026_07_14_434000_add_entrance_exam_paper_to_payments_table.php`
 
 Manual migration, tests, asset build, route inspection, entrance exam payment checks, student/admin payment checks, instructor toolbar browser checks, and live-class timing checks remain required.
+
+### Phase 43H: Instructor Editor, Simple Live Links, and Entrance Exam Paper Pricing
+
+Refined the instructor Full Course Overview editor to use a darker admin-style Markdown editing shell with icon-only toolbar controls for formatting, links, lists, tables, images, undo, and redo while preserving the existing Markdown storage/rendering path. Live class action behavior was simplified so authorized users can open Join Class whenever a meeting URL exists and Watch Recording whenever a recording URL exists, unless the class is cancelled; timing remains informational for status labels but no longer blocks links.
+
+Entrance Exam Academy past papers now have admin-managed `price_amount` and `currency` fields. Public paper cards/details show Free or the configured price. Free published papers are readable by authenticated students without payment, while paid papers still require an approved per-paper entrance exam payment. Pay Now now creates or reuses manual payments using the paper's admin-set price instead of a config fallback.
+
+Migration added:
+
+- `2026_07_15_430000_add_price_fields_to_entrance_exam_past_papers_table.php`
+
+Manual migration, tests, asset build, route inspection, instructor editor browser checks, live class link checks, and free/paid entrance exam paper payment checks remain required.
