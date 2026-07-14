@@ -12,7 +12,12 @@ use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\CourseReview;
 use App\Models\Enrollment;
+use App\Models\EntranceExamInstitution;
+use App\Models\EntranceExamPastPaper;
+use App\Models\EntranceExamProgram;
+use App\Models\EntranceExamSubject;
 use App\Models\Lesson;
+use App\Models\LessonActivity;
 use App\Models\LessonProgress;
 use App\Models\LiveClass;
 use App\Models\LiveClassAttendance;
@@ -36,6 +41,7 @@ use App\Services\CertificatePdfService;
 use App\Services\QuizAttemptService;
 use App\Services\Payments\PaymentProviderManager;
 use App\Support\CourseContentRenderer;
+use App\Support\LoginAuthenticator;
 use App\Rules\YouTubeUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -364,8 +370,105 @@ Route::get('/certificates/verify/{verification_code}', function (string $verific
     ]);
 })->name('certificates.verify');
 
+Route::get('/entrance-exam-academy', function (Request $request) {
+    if (! Schema::hasTable('entrance_exam_past_papers')) {
+        return view('pages.entrance-exam-academy.index', [
+            'papers' => new \Illuminate\Pagination\LengthAwarePaginator(collect(), 0, 12),
+            'institutions' => collect(),
+            'programs' => collect(),
+            'subjects' => collect(),
+            'years' => collect(),
+            'examTypes' => collect(),
+            'filters' => $request->only(['q', 'institution', 'program', 'subject', 'year', 'exam_type']),
+        ]);
+    }
+
+    $filters = $request->validate([
+        'q' => ['nullable', 'string', 'max:120'],
+        'institution' => ['nullable', 'integer'],
+        'program' => ['nullable', 'integer'],
+        'subject' => ['nullable', 'integer'],
+        'year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
+        'exam_type' => ['nullable', 'string', 'max:120'],
+    ]);
+
+    $papers = EntranceExamPastPaper::query()
+        ->with(['institution', 'program', 'subject'])
+        ->where('status', EntranceExamPastPaper::STATUS_PUBLISHED)
+        ->when($filters['q'] ?? null, fn ($query, string $term) => $query->where(function ($paperQuery) use ($term): void {
+            $paperQuery->where('title', 'like', '%'.$term.'%')
+                ->orWhere('description', 'like', '%'.$term.'%')
+                ->orWhere('exam_type', 'like', '%'.$term.'%');
+        }))
+        ->when($filters['institution'] ?? null, fn ($query, $institutionId) => $query->where('entrance_exam_institution_id', $institutionId))
+        ->when($filters['program'] ?? null, fn ($query, $programId) => $query->where('entrance_exam_program_id', $programId))
+        ->when($filters['subject'] ?? null, fn ($query, $subjectId) => $query->where('entrance_exam_subject_id', $subjectId))
+        ->when($filters['year'] ?? null, fn ($query, $year) => $query->where('exam_year', $year))
+        ->when($filters['exam_type'] ?? null, fn ($query, $type) => $query->where('exam_type', $type))
+        ->orderByDesc('is_featured')
+        ->orderByDesc('exam_year')
+        ->orderBy('title')
+        ->paginate(12)
+        ->withQueryString();
+
+    return view('pages.entrance-exam-academy.index', [
+        'papers' => $papers,
+        'institutions' => EntranceExamInstitution::query()->where('status', EntranceExamInstitution::STATUS_ACTIVE)->orderBy('name')->get(),
+        'programs' => EntranceExamProgram::query()->where('status', EntranceExamProgram::STATUS_ACTIVE)->orderBy('name')->get(),
+        'subjects' => EntranceExamSubject::query()->where('status', EntranceExamSubject::STATUS_ACTIVE)->orderBy('name')->get(),
+        'years' => EntranceExamPastPaper::query()->where('status', EntranceExamPastPaper::STATUS_PUBLISHED)->whereNotNull('exam_year')->distinct()->orderByDesc('exam_year')->pluck('exam_year'),
+        'examTypes' => EntranceExamPastPaper::query()->where('status', EntranceExamPastPaper::STATUS_PUBLISHED)->whereNotNull('exam_type')->distinct()->orderBy('exam_type')->pluck('exam_type'),
+        'filters' => $filters,
+    ]);
+})->name('entrance-exam-academy.index');
+
+Route::get('/entrance-exam-academy/papers/{paper:slug}', function (EntranceExamPastPaper $paper) {
+    abort_unless($paper->isPublished(), 404);
+
+    $paper->load(['institution', 'program', 'subject']);
+
+    return view('pages.entrance-exam-academy.show', [
+        'paper' => $paper,
+    ]);
+})->name('entrance-exam-academy.papers.show');
+
+Route::get('/entrance-exam-academy/papers/{paper:slug}/view', function (EntranceExamPastPaper $paper) {
+    abort_unless($paper->isPublished(), 404);
+
+    $paper->load(['institution', 'program', 'subject']);
+
+    return view('pages.entrance-exam-academy.viewer', [
+        'paper' => $paper,
+        'watermark' => Auth::user()?->email ?: 'MK Scholars',
+    ]);
+})->middleware('auth')->name('entrance-exam-academy.papers.view');
+
+Route::get('/entrance-exam-academy/papers/{paper:slug}/inline', function (EntranceExamPastPaper $paper) {
+    abort_unless($paper->isPublished(), 404);
+    abort_unless($paper->hasPdfFile(), 404);
+
+    $disk = Storage::disk($paper->paperFileDisk());
+    abort_unless($disk->exists($paper->paper_file_path), 404);
+
+    return response()->file($disk->path($paper->paper_file_path), [
+        'Content-Type' => 'application/pdf',
+        'Content-Disposition' => 'inline; filename="'.Str::slug($paper->title ?: 'entrance-exam-paper').'.pdf"',
+        'X-Content-Type-Options' => 'nosniff',
+    ]);
+})->middleware('auth')->name('entrance-exam-academy.papers.inline');
+
 Route::middleware('guest')->group(function (): void {
     Route::view('/login', 'auth.login')->name('login');
+    Route::post('/login', function (Request $request, LoginAuthenticator $authenticator) {
+        $credentials = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
+        ]);
+
+        $user = $authenticator->attempt($credentials, $request->boolean('remember'));
+
+        return redirect($user->dashboardPath());
+    })->name('login.store');
     Route::view('/register', 'auth.register')->name('register');
 });
 
@@ -537,7 +640,47 @@ $updatePassword = function (Request $request) {
 
     return back()->with('password_status', 'Your password has been updated.');
 };
-Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $courseProgress, $activeSubscriptionForCourse, $hasCourseAccess, $settingsPage, $updateProfile, $updatePassword): void {
+
+$deleteInstructorSignature = function (?string $path): void {
+    if (filled($path) && Str::startsWith($path, 'certificates/instructor-signatures/')) {
+        Storage::disk('public')->delete($path);
+    }
+};
+
+$updateInstructorSignature = function (Request $request) use ($deleteInstructorSignature) {
+    $validated = $request->validate([
+        'signature' => ['required', 'file', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+    ]);
+
+    $user = $request->user();
+    $oldPath = $user->signature_path;
+    $path = $validated['signature']->store('certificates/instructor-signatures', 'public');
+
+    $user->update([
+        'signature_path' => $path,
+    ]);
+
+    if ($oldPath !== $path) {
+        $deleteInstructorSignature($oldPath);
+    }
+
+    return back()->with('signature_status', 'Your certificate signature has been updated.');
+};
+
+$removeInstructorSignature = function (Request $request) use ($deleteInstructorSignature) {
+    $user = $request->user();
+    $oldPath = $user->signature_path;
+
+    $user->update([
+        'signature_path' => null,
+    ]);
+
+    $deleteInstructorSignature($oldPath);
+
+    return back()->with('signature_status', 'Your certificate signature has been removed.');
+};
+
+Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $courseProgress, $activeSubscriptionForCourse, $hasCourseAccess, $settingsPage, $updateProfile, $updatePassword, $updateInstructorSignature, $removeInstructorSignature): void {
     Route::get('/student/dashboard', function () use ($courseProgress) {
         $user = Auth::user();
         $notificationService = app(AppNotificationService::class);
@@ -1417,6 +1560,31 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         ]);
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.courses.learn');
 
+    Route::get('/student/lesson-materials/{activity}/view', function (LessonActivity $activity) use ($hasCourseAccess) {
+        $user = Auth::user();
+
+        $activity->load('lesson.module.course');
+        $course = $activity->lesson?->module?->course;
+
+        abort_unless($activity->status === Course::STATUS_PUBLISHED, 404);
+        abort_unless($course?->status === Course::STATUS_PUBLISHED, 404);
+        abort_unless($hasCourseAccess($user, $course), 403);
+        abort_unless($activity->hasUploadedResource(), 404);
+        abort_unless($activity->isPdfResource(), 404);
+
+        $disk = Storage::disk($activity->resourceDisk());
+        abort_unless($disk->exists($activity->resource_path), 404);
+
+        $path = $disk->path($activity->resource_path);
+        $filename = Str::slug($activity->title ?: 'lesson-notes').'.pdf';
+
+        return response()->file($path, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$filename.'"',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    })->middleware('role:'.User::ROLE_STUDENT)->name('student.lesson-materials.view');
+
     Route::post('/student/courses/{course}/reviews', function (Request $request, Course $course) {
         $user = Auth::user();
 
@@ -1614,14 +1782,15 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'option_id' => ['nullable', 'integer'],
             'option_ids' => ['nullable', 'array'],
             'option_ids.*' => ['integer'],
+            'answer_text' => ['nullable', 'string', 'max:20000'],
         ]);
 
         $questions = $quizAttemptService->publishedQuestions($quiz)->values();
         $question = $questions->get($questionIndex);
-        $selectedOptionIds = $question?->question_type === QuizQuestion::TYPE_MULTIPLE_CHOICE
+        $selectedOptionIds = $question?->acceptsMultipleOptions()
             ? ($validated['option_ids'] ?? (isset($validated['option_id']) ? [(int) $validated['option_id']] : []))
             : (int) ($validated['option_id'] ?? 0);
-        $quizAttemptService->saveAnswer($attempt, $quiz, $questionIndex, $selectedOptionIds);
+        $quizAttemptService->saveAnswer($attempt, $quiz, $questionIndex, $selectedOptionIds, $validated['answer_text'] ?? null);
 
         if ($request->boolean('finish') || $questionIndex >= $questions->count() - 1) {
             $quizAttemptService->submit($attempt, $quiz);
@@ -1809,13 +1978,13 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         }
 
         foreach ($assignment->questions as $question) {
-            if ($question->question_type === AssignmentQuestion::TYPE_MULTIPLE_CHOICE) {
+            if ($question->acceptsMultipleOptions()) {
                 $rules['question_answers.'.$question->id] = [
                     $question->is_required ? 'required' : 'nullable',
                     'array',
                 ];
                 $rules['question_answers.'.$question->id.'.*'] = ['integer'];
-            } elseif (in_array($question->question_type, [AssignmentQuestion::TYPE_SINGLE_CHOICE, AssignmentQuestion::TYPE_TRUE_FALSE], true)) {
+            } elseif ($question->acceptsSingleOption()) {
                 $rules['question_answers.'.$question->id] = [
                     $question->is_required ? 'required' : 'nullable',
                     'integer',
@@ -1846,7 +2015,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $questionAnswers = collect($validated['question_answers'] ?? []);
 
         foreach ($assignment->questions as $question) {
-            if (! in_array($question->question_type, [AssignmentQuestion::TYPE_SINGLE_CHOICE, AssignmentQuestion::TYPE_MULTIPLE_CHOICE, AssignmentQuestion::TYPE_TRUE_FALSE], true)) {
+            if (! $question->requiresOptions()) {
                 continue;
             }
 
@@ -1910,7 +2079,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
             foreach ($assignment->questions as $question) {
                 $answer = $questionAnswers->get((string) $question->id, $questionAnswers->get($question->id));
-                $isObjectiveQuestion = in_array($question->question_type, [AssignmentQuestion::TYPE_SINGLE_CHOICE, AssignmentQuestion::TYPE_MULTIPLE_CHOICE, AssignmentQuestion::TYPE_TRUE_FALSE], true);
+                $isObjectiveQuestion = $question->requiresOptions();
                 $selectedOptionIds = collect($isObjectiveQuestion ? (is_array($answer) ? $answer : (filled($answer) ? [$answer] : [])) : [])
                     ->map(fn ($optionId): int => (int) $optionId)
                     ->filter()
@@ -1979,8 +2148,16 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             return back()->withErrors(['live_class' => 'Class has ended.']);
         }
 
+        if ($liveClass->status === LiveClass::STATUS_CANCELLED) {
+            return back()->withErrors(['live_class' => 'This class has been cancelled.']);
+        }
+
+        if (! filled($liveClass->meeting_url)) {
+            return back()->withErrors(['live_class' => 'Meeting link is not available.']);
+        }
+
         if (! $liveClass->canJoin()) {
-            return back()->withErrors(['live_class' => 'Class has not started yet.']);
+            return back()->withErrors(['live_class' => 'Class is not available to join right now.']);
         }
 
         LiveClassAttendance::updateOrCreate(
@@ -2009,6 +2186,10 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         abort_unless($course?->status === Course::STATUS_PUBLISHED, 404);
         if (! $hasCourseAccess($user, $course)) {
             return back()->withErrors(['live_class' => 'You do not have access to this class.']);
+        }
+
+        if ($liveClass->status === LiveClass::STATUS_CANCELLED) {
+            return back()->withErrors(['live_class' => 'This class has been cancelled.']);
         }
 
         if (! $liveClass->canWatchRecording()) {
@@ -2167,6 +2348,11 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         }
 
         $questionType = $data['question_type'] ?? QuizQuestion::TYPE_SINGLE_CHOICE;
+        $requiresOptions = in_array($questionType, [
+            QuizQuestion::TYPE_SINGLE_CHOICE,
+            QuizQuestion::TYPE_MULTIPLE_CHOICE,
+            QuizQuestion::TYPE_TRUE_FALSE,
+        ], true);
         $rawOptions = collect($data['options'] ?? [])
             ->map(fn ($option, int|string $index): array => [
                 'index' => (int) $index,
@@ -2175,41 +2361,41 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             ->filter(fn (array $option): bool => filled($option['text']))
             ->values();
 
-        if ($questionType === QuizQuestion::TYPE_TRUE_FALSE && $rawOptions->isEmpty()) {
+        if ($questionType === QuizQuestion::TYPE_TRUE_FALSE) {
             $rawOptions = collect([
                 ['index' => 0, 'text' => 'True'],
                 ['index' => 1, 'text' => 'False'],
             ]);
         }
 
-        if ($rawOptions->count() < 2) {
+        if ($requiresOptions && $rawOptions->count() < 2) {
             throw ValidationException::withMessages([
                 'options' => 'Add at least two options for this question.',
             ]);
         }
 
-        $correctIndexes = $questionType === QuizQuestion::TYPE_MULTIPLE_CHOICE
-            ? collect($data['correct_option_indexes'] ?? [])->map(fn ($index): int => (int) $index)->unique()->values()
-            : collect([(int) ($data['correct_option_index'] ?? -1)]);
-        $availableIndexes = $rawOptions->pluck('index');
-        $validCorrectIndexes = $correctIndexes->intersect($availableIndexes)->values();
+        $validCorrectIndexes = collect();
 
-        if ($questionType === QuizQuestion::TYPE_MULTIPLE_CHOICE && $validCorrectIndexes->isEmpty()) {
-            throw ValidationException::withMessages([
-                'correct_option_indexes' => 'Choose at least one correct answer.',
-            ]);
-        }
+        if ($requiresOptions) {
+            $correctIndexes = $questionType === QuizQuestion::TYPE_MULTIPLE_CHOICE
+                ? collect($data['correct_option_indexes'] ?? [])->map(fn ($index): int => (int) $index)->unique()->values()
+                : collect([(int) ($data['correct_option_index'] ?? -1)]);
+            $availableIndexes = $rawOptions->pluck('index');
+            $validCorrectIndexes = $correctIndexes->intersect($availableIndexes)->values();
 
-        if ($questionType !== QuizQuestion::TYPE_MULTIPLE_CHOICE && $validCorrectIndexes->count() !== 1) {
-            throw ValidationException::withMessages([
-                'correct_option_index' => 'Choose exactly one correct answer.',
-            ]);
-        }
+            if ($questionType === QuizQuestion::TYPE_MULTIPLE_CHOICE && $validCorrectIndexes->isEmpty()) {
+                throw ValidationException::withMessages([
+                    'correct_option_indexes' => 'Choose at least one correct answer.',
+                ]);
+            }
 
-        if ($questionType === QuizQuestion::TYPE_SINGLE_CHOICE && $validCorrectIndexes->count() !== 1) {
-            throw ValidationException::withMessages([
-                'correct_option_index' => 'Single-choice questions need exactly one correct answer.',
-            ]);
+            if ($questionType !== QuizQuestion::TYPE_MULTIPLE_CHOICE && $validCorrectIndexes->count() !== 1) {
+                throw ValidationException::withMessages([
+                    'correct_option_index' => 'Choose exactly one correct answer.',
+                ]);
+            }
+        } else {
+            $rawOptions = collect();
         }
 
         $question = $quiz->questions()->create([
@@ -2343,6 +2529,14 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         ->middleware('role:'.User::ROLE_INSTRUCTOR)
         ->name('instructor.settings.password');
 
+    Route::post('/instructor/settings/signature', $updateInstructorSignature)
+        ->middleware('role:'.User::ROLE_INSTRUCTOR)
+        ->name('instructor.settings.signature');
+
+    Route::post('/instructor/settings/signature/remove', $removeInstructorSignature)
+        ->middleware('role:'.User::ROLE_INSTRUCTOR)
+        ->name('instructor.settings.signature.remove');
+
     Route::get('/instructor/courses', function () use ($instructorCoursesQuery, $instructorLiveClassesForCourse) {
         $user = Auth::user();
 
@@ -2365,6 +2559,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'course' => new Course([
                 'access_type' => Course::ACCESS_FREE,
                 'is_free' => true,
+                'offers_certificate' => false,
                 'currency' => 'RWF',
                 'status' => Course::STATUS_DRAFT,
             ]),
@@ -2386,9 +2581,10 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'short_description' => ['required', 'string', 'max:600'],
             'full_description' => ['nullable', 'string'],
             'featured_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
-            'level' => ['required', 'string', 'max:80'],
-            'duration' => ['required', 'string', 'max:80'],
+            'level' => ['nullable', 'string', 'max:80'],
+            'duration' => ['nullable', 'string', 'max:80'],
             'access_type' => ['required', Rule::in([Course::ACCESS_FREE, Course::ACCESS_PAID])],
+            'offers_certificate' => ['nullable', 'boolean'],
             'price_amount' => ['nullable', 'numeric', 'min:0'],
             'currency' => ['nullable', 'string', 'max:8'],
             'status' => ['required', Rule::in(Course::STATUSES)],
@@ -2404,6 +2600,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $validated['slug'] = $uniqueSlug('courses', $validated['title'], $validated['slug'] ?? null);
         $validated['instructor_id'] = Auth::id();
         $validated['is_free'] = $validated['access_type'] === Course::ACCESS_FREE;
+        $validated['offers_certificate'] = (bool) ($validated['offers_certificate'] ?? false);
         $validated['currency'] = $validated['currency'] ?: 'RWF';
         $validated['learning_outcomes'] = collect(preg_split('/\r\n|\r|\n/', (string) ($validated['learning_outcomes'] ?? '')))
             ->map(fn ($outcome) => trim($outcome))
@@ -2419,13 +2616,13 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
     Route::get('/instructor/courses/{course}/edit', function (Course $course) use ($abortUnlessInstructorOwnsCourse) {
         $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
 
-        $course->load(['academy', 'modules.lessons.quizzes.questions.options', 'modules.lessons.assignments.questions.options']);
+        $course->load(['academy', 'modules.lessons.activities', 'modules.lessons.quizzes.questions.options', 'modules.lessons.assignments.questions.options']);
 
         return view('instructor.course-form', [
             'course' => $course,
             'academies' => Academy::query()->orderBy('name')->get(),
-            'modules' => $course->modules()->with('lessons')->orderBy('sort_order')->orderBy('title')->get(),
-            'lessons' => Lesson::query()->whereHas('module', fn ($query) => $query->where('course_id', $course->id))->orderBy('sort_order')->orderBy('title')->get(),
+            'modules' => $course->modules()->with(['lessons.activities' => fn ($query) => $query->orderBy('sort_order')->orderBy('id')])->orderBy('sort_order')->orderBy('title')->get(),
+            'lessons' => Lesson::query()->with(['activities' => fn ($query) => $query->orderBy('sort_order')->orderBy('id')])->whereHas('module', fn ($query) => $query->where('course_id', $course->id))->orderBy('sort_order')->orderBy('title')->get(),
             'quizzes' => Quiz::query()
                 ->with(['lesson.module', 'questions.options'])
                 ->where('quiz_type', Quiz::TYPE_LESSON_QUIZ)
@@ -2443,19 +2640,20 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         ]);
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.courses.edit');
 
-    Route::put('/instructor/courses/{course}', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse) {
+    Route::put('/instructor/courses/{course}', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse, $uniqueSlug) {
         $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
 
         $validated = $request->validate([
             'academy_id' => ['required', 'exists:academies,id'],
             'title' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'alpha_dash', Rule::unique('courses', 'slug')->ignore($course)],
+            'slug' => ['nullable', 'string', 'max:255', 'alpha_dash', Rule::unique('courses', 'slug')->ignore($course)],
             'short_description' => ['required', 'string', 'max:600'],
             'full_description' => ['nullable', 'string'],
             'featured_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
-            'level' => ['required', 'string', 'max:80'],
-            'duration' => ['required', 'string', 'max:80'],
+            'level' => ['nullable', 'string', 'max:80'],
+            'duration' => ['nullable', 'string', 'max:80'],
             'access_type' => ['required', Rule::in([Course::ACCESS_FREE, Course::ACCESS_PAID])],
+            'offers_certificate' => ['nullable', 'boolean'],
             'price_amount' => ['nullable', 'numeric', 'min:0'],
             'currency' => ['nullable', 'string', 'max:8'],
             'status' => ['required', Rule::in(Course::STATUSES)],
@@ -2472,8 +2670,9 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
         unset($validated['featured_image']);
 
-        $validated['slug'] = Str::slug($validated['slug']);
+        $validated['slug'] = $uniqueSlug('courses', $validated['title'], $validated['slug'] ?? null, $course->id);
         $validated['is_free'] = $validated['access_type'] === Course::ACCESS_FREE;
+        $validated['offers_certificate'] = (bool) ($validated['offers_certificate'] ?? false);
         $validated['currency'] = $validated['currency'] ?: 'RWF';
         $validated['learning_outcomes'] = collect(preg_split('/\r\n|\r|\n/', (string) ($validated['learning_outcomes'] ?? '')))
             ->map(fn ($outcome) => trim($outcome))
@@ -2543,6 +2742,43 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
         return back()->with('status', 'Lesson added.');
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.lessons.store');
+
+    Route::post('/instructor/courses/{course}/lesson-materials', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse) {
+        $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
+
+        $validated = $request->validate([
+            'lesson_id' => ['required', 'exists:lessons,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'instructions' => ['nullable', 'string', 'max:1000'],
+            'material_file' => ['required', 'file', 'max:10240', 'mimes:pdf,png,jpg,jpeg,webp,doc,docx,ppt,pptx'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'status' => ['required', Rule::in(Course::STATUSES)],
+        ]);
+
+        $lesson = Lesson::query()
+            ->whereKey($validated['lesson_id'])
+            ->whereHas('module', fn ($query) => $query->where('course_id', $course->id))
+            ->first();
+
+        abort_unless($lesson, 422, 'The selected lesson does not belong to this course.');
+
+        $file = $request->file('material_file');
+        $path = $file->store('lesson-materials', 'public');
+
+        $lesson->activities()->create([
+            'activity_type' => 'download',
+            'type' => 'material',
+            'title' => $validated['title'],
+            'instructions' => $validated['instructions'] ?? null,
+            'resource_path' => $path,
+            'resource_disk' => 'public',
+            'resource_mime' => $file->getMimeType(),
+            'sort_order' => $validated['sort_order'] ?? (($lesson->activities()->max('sort_order') ?? 0) + 1),
+            'status' => $validated['status'],
+        ]);
+
+        return back()->with('status', 'Lesson material uploaded.');
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.lesson-materials.store');
 
     Route::post('/instructor/courses/{course}/quizzes', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse, $lessonBelongsToInstructorCourse, $storeInstructorQuizQuestion) {
         $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
@@ -2711,7 +2947,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
                 ->filter(fn (array $option): bool => filled($option['text']))
                 ->values();
 
-            if ($questionType === AssignmentQuestion::TYPE_TRUE_FALSE && $rawOptions->isEmpty()) {
+            if ($questionType === AssignmentQuestion::TYPE_TRUE_FALSE) {
                 $rawOptions = collect([
                     ['index' => 0, 'text' => 'True'],
                     ['index' => 1, 'text' => 'False'],
@@ -2954,8 +3190,16 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             return back()->withErrors(['live_class' => 'Class has ended.']);
         }
 
+        if ($liveClass->status === LiveClass::STATUS_CANCELLED) {
+            return back()->withErrors(['live_class' => 'This class has been cancelled.']);
+        }
+
+        if (! filled($liveClass->meeting_url)) {
+            return back()->withErrors(['live_class' => 'Meeting link is not available.']);
+        }
+
         if (! $liveClass->canJoin()) {
-            return back()->withErrors(['live_class' => 'Class has not started yet.']);
+            return back()->withErrors(['live_class' => 'Class is not available to join right now.']);
         }
 
         return redirect()->away($liveClass->meeting_url);
@@ -2964,6 +3208,10 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
     Route::get('/instructor/live-classes/{liveClass}/recording', function (LiveClass $liveClass) use ($abortUnlessInstructorLiveClass) {
         $user = Auth::user();
         $abortUnlessInstructorLiveClass($user, $liveClass);
+
+        if ($liveClass->status === LiveClass::STATUS_CANCELLED) {
+            return back()->withErrors(['live_class' => 'This class has been cancelled.']);
+        }
 
         if (! $liveClass->canWatchRecording()) {
             return back()->withErrors(['live_class' => 'Recording is not available yet.']);

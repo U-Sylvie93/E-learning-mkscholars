@@ -5,7 +5,8 @@
         <p class="mt-2 text-sm leading-6 text-slate-600">Secure access for students, instructors, mentors, and admins.</p>
     </div>
 
-    <form wire:submit="login" class="grid gap-5">
+    <form method="POST" action="{{ route('login.store', absolute: false) }}" wire:submit="login" class="grid gap-5">
+        @csrf
         @if (session('status'))
             <div class="rounded-lg border border-mk-gold/40 bg-mk-goldSoft px-4 py-3 text-sm font-semibold text-mk-navy">
                 {{ session('status') }}
@@ -18,7 +19,7 @@
                 <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400" aria-hidden="true">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </span>
-                <input wire:model.blur="email" class="mk-input pl-12" id="email" type="email" autocomplete="email" placeholder="Enter your email address">
+                <input wire:model="email" class="mk-input pl-12" id="email" name="email" type="email" autocomplete="email" placeholder="Enter your email address" required>
             </div>
             @error('email') <p class="mt-2 text-sm font-semibold text-red-600">{{ $message }}</p> @enderror
         </div>
@@ -29,13 +30,13 @@
                 <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400" aria-hidden="true">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke-linecap="round"/></svg>
                 </span>
-                <input wire:model.blur="password" class="mk-input pl-12" id="password" type="password" autocomplete="current-password" placeholder="Enter your password">
+                <input wire:model="password" class="mk-input pl-12" id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required>
             </div>
             @error('password') <p class="mt-2 text-sm font-semibold text-red-600">{{ $message }}</p> @enderror
         </div>
 
         <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
-            <input wire:model="remember" type="checkbox" class="rounded border-slate-300 text-mk-gold focus:ring-mk-gold">
+            <input wire:model="remember" name="remember" type="checkbox" value="1" class="rounded border-slate-300 text-mk-gold focus:ring-mk-gold">
             <span>Keep me signed in</span>
         </label>
 

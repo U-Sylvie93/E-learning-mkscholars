@@ -1138,3 +1138,123 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Pending payment reuse still works.
 - Rejected payment retry still works.
 - No insecure HTTP form action is introduced.
+
+## Phase 43A Instructor Course Form Polish QA
+
+- Required fields show red star indicators.
+- Optional fields do not show red stars.
+- Level is optional.
+- Duration is optional.
+- Instructor can create a course without level and duration.
+- Full Course Overview editor supports headings, lists, tables, code blocks, links, and images where supported.
+- Course overview renders tables correctly on student/public pages.
+- Course overview renders code blocks correctly.
+- Instructor-created slug is automatically generated from title.
+- Slug is lowercase and uses hyphens between words.
+- Duplicate slug gets a unique suffix.
+- Certificate toggle is available on course creation/edit.
+- Certificate tag appears only for courses with certificate enabled.
+- Certificate is not issued for courses that do not offer certificates.
+- Existing courses continue to display correctly.
+
+## Phase 43A Live Class Timing Hotfix QA
+
+- Upcoming live class shows Upcoming before start time.
+- Live class shows Live Now when current time reaches start time.
+- Instructor live class list does not stay stuck on Upcoming during the meeting time.
+- Student live class card shows Join Class during the meeting time.
+- Join Class opens only during the start/end time window.
+- Join Class does not open before class starts.
+- Join Class does not open after class ends.
+- Watch Recording opens only after class ends and recording URL exists.
+- If both meeting URL and recording URL exist, Join Class works during class and recording works after class.
+- Cancelled class does not expose active join or recording actions.
+- LiveClass time comparisons use Carbon/date casts safely.
+
+## Phase 43B Question Answer Type Fixes QA
+
+- Single-choice questions show options and one correct answer.
+- Multiple-choice questions show options and allow multiple correct answers.
+- True/False questions show True and False only.
+- True/False questions allow exactly one correct answer.
+- Short-answer questions show a text input and no option boxes.
+- Long-answer questions show a textarea and no option boxes.
+- File-upload assignment questions show file upload input where supported.
+- Instructor builder hides option boxes for text/file questions.
+- Admin builder remains compatible with question types.
+- Student quiz page renders correct input by question type.
+- Student assignment page renders correct input by question type.
+- Text answers save correctly where supported.
+- Multiple-choice scoring uses exact selected answer set.
+- True/False scoring works.
+- Assignment completion still works after mixed question submissions.
+- Existing quiz and assignment records remain safe.
+
+## Phase 43C PDF Notes and Rich Content Rendering QA
+
+- Instructor can upload PDF notes/materials.
+- Instructor can still upload image materials.
+- Invalid material file types are rejected.
+- Student can view PDF notes inside the learning page.
+- PDF opens inline instead of forcing download.
+- Guest cannot access protected lesson PDFs.
+- Student cannot access PDFs from courses they do not have access to.
+- PDF viewer uses secure route/helpers and does not expose private paths.
+- Full Course Overview tables render cleanly.
+- Tables are readable on mobile and horizontally scroll if needed.
+- Code blocks render with readable styling.
+- Images render responsively without overflowing.
+- Existing lesson/course content still displays correctly.
+
+## Phase 43D Login One-Click QA
+
+- Login submits with one click.
+- Login button uses submit behavior.
+- Login form has one clean form and no nested forms.
+- Login form includes CSRF protection.
+- Student can log in with one click.
+- Instructor can log in with one click.
+- Admin/Filament login still works.
+- Invalid login shows validation error.
+- Pending/unapproved users remain blocked.
+- Login redirects to the correct role dashboard.
+- Login form does not use insecure HTTP action.
+- Login button is not blocked by overlay or disabled too early.
+
+## Phase 43E Instructor Signature Settings QA
+
+- Instructor settings/profile page shows Certificate Signature section.
+- Instructor can upload signature image.
+- Signature upload accepts PNG, JPG, JPEG, and WebP.
+- Invalid signature file type is rejected.
+- Oversized signature file is rejected.
+- Current signature preview displays when available.
+- Instructor can replace signature.
+- Instructor can remove signature if implemented.
+- Instructor can update only their own signature.
+- Student, guest, and non-instructor users cannot update instructor signature.
+- Admin can still manage instructor signature from Filament Users.
+- Issued certificate displays instructor-uploaded signature.
+- Certificate still renders cleanly when instructor signature is missing.
+
+## Phase 43F Entrance Exam Academy Foundation QA
+
+- Admin can create entrance exam institutions.
+- Admin can create entrance exam programs/faculties.
+- Admin can create entrance exam subjects.
+- Admin can upload PDF past papers.
+- Past papers can be classified by institution, program, subject, year, and exam type.
+- Only PDF files are accepted for past papers.
+- Draft papers are not visible publicly.
+- Published papers appear in the academy.
+- Students/users can browse published past papers.
+- Search/filter works by institution, program, subject, year, and exam type.
+- Paper detail page shows title and metadata.
+- Read Paper opens an in-browser PDF viewer.
+- PDF viewer does not show a direct download button.
+- PDF file is served through a protected route.
+- Guest cannot access protected paper PDF if login is required.
+- Unpublished paper PDF cannot be viewed by changing URL.
+- Raw storage paths are not exposed.
+- Read-only limitation is documented.
+- UI is mobile responsive.

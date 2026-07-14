@@ -18,7 +18,7 @@
                             {{ $attempt->status === \App\Models\QuizAttempt::STATUS_PASSED ? 'Passed' : 'Not passed' }}
                         </x-badge>
                         <h1 class="mt-4 text-3xl font-black tracking-normal text-mk-navy">{{ $assessmentName }} result</h1>
-                        <p class="mt-2 text-sm leading-6 text-slate-600">Your saved answers were graded using the published correct options for this {{ $assessmentNoun }}.</p>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Objective answers were graded from published correct options. Text answers are saved for review and are not auto-scored.</p>
                     </div>
                     <x-button :href="$quiz->lesson_id ? route('student.courses.learn', ['course' => $course, 'lesson' => $quiz->lesson_id]) : route('student.courses.learn', $course)" variant="secondary">Back to learning</x-button>
                 </div>
@@ -59,18 +59,22 @@
                                     ->all();
                                 $selectedOptions = $answer->question?->options?->whereIn('id', $selectedOptionIds)->pluck('option_text')->values() ?? collect();
                                 $correctOptions = $answer->question?->options?->where('is_correct', true)->pluck('option_text')->values() ?? collect();
+                                $answerText = $answer->answer_text;
+                                $displayedAnswer = $answer->question?->acceptsTextAnswer()
+                                    ? ($answerText ?: 'No answer entered')
+                                    : ($selectedOptions->isNotEmpty() ? $selectedOptions->join(', ') : 'No answer selected');
                             @endphp
                             <article class="rounded-mk-md border border-slate-200 bg-white p-4">
                                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                     <div class="min-w-0">
                                         <p class="break-words text-sm font-black text-mk-navy">{{ $loop->iteration }}. {{ $answer->question?->question_text ?? $assessmentName.' question' }}</p>
-                                        <p class="mt-2 break-words text-sm leading-6 text-slate-600">Your answer: <span class="font-bold text-mk-navy">{{ $selectedOptions->isNotEmpty() ? $selectedOptions->join(', ') : 'No answer selected' }}</span></p>
-                                        @if (! $answer->is_correct && $correctOptions->isNotEmpty())
+                                        <p class="mt-2 break-words text-sm leading-6 text-slate-600">Your answer: <span class="font-bold text-mk-navy">{{ $displayedAnswer }}</span></p>
+                                        @if (! $answer->question?->acceptsTextAnswer() && ! $answer->is_correct && $correctOptions->isNotEmpty())
                                             <p class="mt-1 break-words text-sm leading-6 text-slate-600">Correct answer: <span class="font-bold text-emerald-700">{{ $correctOptions->join(', ') }}</span></p>
                                         @endif
                                     </div>
                                     <div class="shrink-0">
-                                        <x-badge :tone="$answer->is_correct ? 'green' : 'gray'">{{ $answer->is_correct ? 'Correct' : 'Incorrect' }}</x-badge>
+                                        <x-badge :tone="$answer->question?->acceptsTextAnswer() ? 'gray' : ($answer->is_correct ? 'green' : 'gray')">{{ $answer->question?->acceptsTextAnswer() ? 'Submitted' : ($answer->is_correct ? 'Correct' : 'Incorrect') }}</x-badge>
                                         <p class="mt-2 text-xs font-black uppercase tracking-wide text-slate-500">{{ $answer->points_awarded }} pts</p>
                                     </div>
                                 </div>

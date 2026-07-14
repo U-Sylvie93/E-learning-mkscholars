@@ -128,35 +128,37 @@
     }
 
     .mk-rich-content img {
-        @apply h-auto max-w-full rounded-lg border border-slate-200 shadow-sm;
+        @apply my-4 h-auto max-w-full rounded-lg border border-slate-200 object-contain shadow-sm;
     }
 
     .mk-rich-content code {
-        @apply rounded bg-slate-100 px-1.5 py-0.5 text-sm font-semibold text-mk-navy;
+        @apply break-words rounded bg-slate-100 px-1.5 py-0.5 font-mono text-sm font-semibold text-mk-navy;
     }
 
     .mk-rich-content pre {
-        @apply max-w-full overflow-x-auto rounded-lg bg-mk-navy p-4 text-sm text-white;
+        @apply max-w-full overflow-x-auto rounded-lg bg-mk-navy p-4 font-mono text-sm leading-6 text-white shadow-sm;
     }
 
     .mk-rich-content pre code {
-        @apply bg-transparent p-0 text-white;
+        @apply whitespace-pre bg-transparent p-0 text-white;
     }
 
     .mk-rich-table {
-        @apply max-w-full overflow-x-auto rounded-lg border border-slate-200 shadow-sm;
+        @apply my-5 max-w-full overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm;
+        -webkit-overflow-scrolling: touch;
     }
 
     .mk-rich-table table {
         @apply w-full min-w-[640px] border-collapse text-left text-sm;
     }
 
-    .mk-rich-table thead {
+    .mk-rich-table thead,
+    .mk-rich-table tr:first-child th {
         @apply bg-mk-navy text-white;
     }
 
     .mk-rich-table th {
-        @apply border border-slate-200 px-4 py-3 font-bold;
+        @apply whitespace-nowrap border border-slate-200 px-4 py-3 font-bold;
     }
 
     .mk-rich-table td {

@@ -15,6 +15,7 @@ class QuizAnswer extends Model
         'quiz_question_id',
         'quiz_option_id',
         'selected_option_ids',
+        'answer_text',
         'is_correct',
         'points_awarded',
     ];

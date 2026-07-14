@@ -119,11 +119,7 @@
                                                     ? collect($oldAnswer)->map(fn ($optionId) => (string) $optionId)->all()
                                                     : ($oldAnswer !== null ? [(string) $oldAnswer] : $savedOptionIds);
                                                 $currentAnswer = old('question_answers.'.$question->id, $savedAnswer?->answer);
-                                                $isObjectiveQuestion = in_array($question->question_type, [
-                                                    \App\Models\AssignmentQuestion::TYPE_SINGLE_CHOICE,
-                                                    \App\Models\AssignmentQuestion::TYPE_MULTIPLE_CHOICE,
-                                                    \App\Models\AssignmentQuestion::TYPE_TRUE_FALSE,
-                                                ], true);
+                                                $isObjectiveQuestion = $question->requiresOptions();
                                             @endphp
                                             <div class="block rounded-lg border border-slate-100 bg-slate-50 p-4">
                                                 <p class="block text-sm font-bold text-mk-navy">
@@ -145,11 +141,11 @@
                                                         @foreach ($question->options as $option)
                                                             <label class="flex items-start gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
                                                                 <input
-                                                                    type="{{ $question->question_type === \App\Models\AssignmentQuestion::TYPE_MULTIPLE_CHOICE ? 'checkbox' : 'radio' }}"
-                                                                    name="question_answers[{{ $question->id }}]{{ $question->question_type === \App\Models\AssignmentQuestion::TYPE_MULTIPLE_CHOICE ? '[]' : '' }}"
+                                                                    type="{{ $question->acceptsMultipleOptions() ? 'checkbox' : 'radio' }}"
+                                                                    name="question_answers[{{ $question->id }}]{{ $question->acceptsMultipleOptions() ? '[]' : '' }}"
                                                                     value="{{ $option->id }}"
                                                                     @checked(in_array((string) $option->id, $selectedOptionIds, true))
-                                                                    @required($question->is_required && $question->question_type !== \App\Models\AssignmentQuestion::TYPE_MULTIPLE_CHOICE)
+                                                                    @required($question->is_required && ! $question->acceptsMultipleOptions())
                                                                     class="mt-1 rounded border-slate-300 text-mk-gold focus:ring-mk-gold"
                                                                 >
                                                                 <span>{{ $option->option_text }}</span>

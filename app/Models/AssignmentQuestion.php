@@ -66,4 +66,44 @@ class AssignmentQuestion extends Model
     {
         return $this->hasMany(AssignmentOption::class)->orderBy('sort_order')->orderBy('id');
     }
+
+    public function requiresOptions(): bool
+    {
+        return in_array($this->question_type, [
+            self::TYPE_SINGLE_CHOICE,
+            self::TYPE_MULTIPLE_CHOICE,
+            self::TYPE_TRUE_FALSE,
+        ], true);
+    }
+
+    public function acceptsSingleOption(): bool
+    {
+        return in_array($this->question_type, [
+            self::TYPE_SINGLE_CHOICE,
+            self::TYPE_TRUE_FALSE,
+        ], true);
+    }
+
+    public function acceptsMultipleOptions(): bool
+    {
+        return $this->question_type === self::TYPE_MULTIPLE_CHOICE;
+    }
+
+    public function acceptsTextAnswer(): bool
+    {
+        return in_array($this->question_type, [
+            self::TYPE_TEXT,
+            self::TYPE_TEXTAREA,
+        ], true);
+    }
+
+    public function acceptsFileAnswer(): bool
+    {
+        return false;
+    }
+
+    public function isTrueFalse(): bool
+    {
+        return $this->question_type === self::TYPE_TRUE_FALSE;
+    }
 }

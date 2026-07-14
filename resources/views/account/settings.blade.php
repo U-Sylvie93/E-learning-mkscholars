@@ -82,6 +82,62 @@
                     </form>
                 </x-card>
 
+                @if ($role === \App\Models\User::ROLE_INSTRUCTOR)
+                    @php
+                        $signatureUrl = filled($user->signature_path) && \Illuminate\Support\Facades\Storage::disk('public')->exists($user->signature_path)
+                            ? \Illuminate\Support\Facades\Storage::disk('public')->url($user->signature_path)
+                            : null;
+                    @endphp
+
+                    <x-card>
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <h3 class="text-xl font-extrabold text-mk-navy">Certificate Signature</h3>
+                                <p class="mt-1 text-sm leading-6 text-slate-600">Upload a clear PNG, JPG, JPEG, or WebP image of your signature. This signature will appear on certificates for your courses.</p>
+                            </div>
+                            @if (session('signature_status'))
+                                <x-badge tone="green">{{ session('signature_status') }}</x-badge>
+                            @endif
+                        </div>
+
+                        <div class="mt-6 grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+                            <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Current signature</p>
+                                <div class="mt-3 flex min-h-32 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white p-4">
+                                    @if ($signatureUrl)
+                                        <img src="{{ $signatureUrl }}" alt="Current certificate signature" class="max-h-24 max-w-full object-contain">
+                                    @else
+                                        <p class="text-center text-sm font-semibold text-slate-500">No signature uploaded yet.</p>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div>
+                                <form method="POST" action="{{ route('instructor.settings.signature') }}" enctype="multipart/form-data" class="space-y-4">
+                                    @csrf
+                                    <div>
+                                        <label for="signature" class="text-sm font-bold text-mk-navy">{{ $signatureUrl ? 'Replace signature' : 'Upload signature' }}</label>
+                                        <input id="signature" name="signature" type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" required class="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 text-sm font-semibold text-mk-navy shadow-sm file:mr-4 file:rounded-md file:border-0 file:bg-mk-gold file:px-4 file:py-2 file:text-sm file:font-bold file:text-mk-navy focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30">
+                                        <p class="mt-2 text-xs font-semibold text-slate-500">Maximum file size: 2MB.</p>
+                                        @error('signature')
+                                            <p class="mt-2 text-sm font-semibold text-red-600">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+
+                                    <button type="submit" class="inline-flex w-full items-center justify-center rounded-md bg-mk-gold px-5 py-3 text-sm font-bold text-mk-navy shadow-sm transition hover:bg-yellow-300 sm:w-auto">Save Signature</button>
+                                </form>
+
+                                @if ($signatureUrl)
+                                    <form method="POST" action="{{ route('instructor.settings.signature.remove') }}" class="mt-4">
+                                        @csrf
+                                        <button type="submit" class="inline-flex w-full items-center justify-center rounded-md border border-red-200 bg-white px-5 py-3 text-sm font-bold text-red-700 shadow-sm transition hover:bg-red-50 sm:w-auto">Remove Signature</button>
+                                    </form>
+                                @endif
+                            </div>
+                        </div>
+                    </x-card>
+                @endif
+
                 <x-card>
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>

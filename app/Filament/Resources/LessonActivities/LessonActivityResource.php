@@ -12,6 +12,7 @@ use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -63,8 +64,28 @@ class LessonActivityResource extends Resource
                     ->rows(5)
                     ->columnSpanFull(),
                 TextInput::make('resource_url')
+                    ->label('External resource URL')
                     ->url()
                     ->maxLength(255),
+                FileUpload::make('resource_path')
+                    ->label('Uploaded notes/material')
+                    ->helperText('Allowed: PDF, images, Word, PowerPoint. Max 10MB.')
+                    ->disk('public')
+                    ->directory('lesson-materials')
+                    ->acceptedFileTypes([
+                        'application/pdf',
+                        'image/png',
+                        'image/jpeg',
+                        'image/webp',
+                        'application/msword',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        'application/vnd.ms-powerpoint',
+                        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                    ])
+                    ->maxSize(10240)
+                    ->downloadable()
+                    ->openable()
+                    ->columnSpanFull(),
                 TextInput::make('sort_order')
                     ->numeric()
                     ->default(0)

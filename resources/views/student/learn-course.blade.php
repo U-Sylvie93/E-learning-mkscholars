@@ -217,7 +217,22 @@
                                 <p class="text-xs font-black uppercase tracking-wide text-mk-gold">{{ $activity->activity_type ?? $activity->type }}</p>
                                 <p class="mt-1 break-words text-sm font-bold text-mk-navy">{{ $activity->title }}</p>
                                 @if ($activity->instructions)<p class="mt-1 text-sm leading-6 text-slate-600">{{ $activity->instructions }}</p>@endif
-                                @if ($activity->resource_url)
+                                @if ($activity->hasUploadedResource() && $activity->isPdfResource())
+                                    <div class="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-white" data-testid="lesson-pdf-viewer">
+                                        <iframe
+                                            src="{{ route('student.lesson-materials.view', $activity) }}"
+                                            title="{{ $activity->title }} PDF notes"
+                                            class="h-[70vh] min-h-[420px] w-full"
+                                        ></iframe>
+                                    </div>
+                                    <p class="mt-2 text-xs font-semibold text-slate-500">PDF opens inline for reading. Browser controls may still allow downloads or printing.</p>
+                                @elseif ($activity->hasUploadedResource() && $activity->isImageResource() && \Illuminate\Support\Facades\Storage::disk($activity->resourceDisk())->exists($activity->resource_path))
+                                    <img src="{{ \Illuminate\Support\Facades\Storage::disk($activity->resourceDisk())->url($activity->resource_path) }}" alt="{{ $activity->title }}" class="mt-3 h-auto max-w-full rounded-lg border border-slate-200 shadow-sm">
+                                @elseif ($activity->hasUploadedResource())
+                                    <div class="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-sm font-semibold text-slate-600">
+                                        Material uploaded for this lesson. Ask your instructor if it should be viewable in the browser.
+                                    </div>
+                                @elseif ($activity->resource_url)
                                     <a href="{{ $activity->resource_url }}" class="mk-focus mt-2 inline-flex rounded-sm text-sm font-bold text-mk-navy underline decoration-mk-gold underline-offset-4" target="_blank" rel="noopener noreferrer">Open resource</a>
                                 @endif
                             </div>
@@ -314,7 +329,9 @@
                             <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Completion</p>
                             <h3 class="mt-1 text-lg font-extrabold text-mk-navy">Course completion</h3>
                         </div>
-                        <x-badge :tone="$completion->is_eligible_for_certificate ? 'success' : 'warning'">{{ $completion->is_eligible_for_certificate ? 'Certificate eligible' : 'In progress' }}</x-badge>
+                        <x-badge :tone="$completion->is_eligible_for_certificate ? 'success' : 'warning'">
+                            {{ $course->offersCertificate() && $completion->is_eligible_for_certificate ? 'Certificate eligible' : ($completion->is_eligible_for_certificate ? 'Completed' : 'In progress') }}
+                        </x-badge>
                     </div>
                     <div class="mt-4 space-y-2 text-sm">
                         <div class="flex justify-between gap-3"><span class="text-slate-500">Videos completed</span><span class="font-bold text-mk-navy">{{ $videoLessons->filter(fn ($lesson) => $completedLessonIdCollection->contains($lesson->id))->count() }} / {{ $videoLessons->count() }}</span></div>
@@ -326,6 +343,9 @@
                         @endif
                         <div class="flex justify-between gap-3 border-t border-slate-100 pt-2"><span class="text-slate-500">Overall progress</span><span class="font-bold text-mk-navy">{{ $progress }}%</span></div>
                         <div class="flex justify-between gap-3"><span class="text-slate-500">Course status</span><span class="font-bold text-mk-navy">{{ $completion->is_eligible_for_certificate ? 'Completed' : 'In Progress' }}</span></div>
+                        @if (! $course->offersCertificate())
+                            <div class="flex justify-between gap-3"><span class="text-slate-500">Certificate</span><span class="font-bold text-mk-navy">Not offered</span></div>
+                        @endif
                     </div>
                 </section>
 

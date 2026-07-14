@@ -515,3 +515,67 @@ No migration was added. Manual tests, asset build, route inspection, and browser
 Removed the student-facing reference number requirement from manual payment proof upload. Students now submit payment method and proof file only, while the existing nullable `payments.reference` column is kept for old data. New proof submissions no longer overwrite legacy reference values, and student payment summaries only show a clearly labeled Legacy Reference when an older value already exists. Admin payment management keeps reference as optional legacy information and continues to review proof files, amount, method, status, and approval/rejection without depending on a reference number. My Courses Pay Now, pending payment reuse, rejected retry, and subscription/course payment proof flows continue to use the existing payment routes.
 
 No migration was added. Manual tests, asset build, route inspection, and browser verification remain required.
+
+### Phase 43A: Instructor Course Form Polish and Live Class Timing Hotfix
+
+Polished the instructor course form with required-field red stars, optional level/duration handling, automatic unique slug generation from the title, a stronger Markdown overview editing surface, and a course-level certificate toggle. Public course cards, course details, student course progress, certificate preparation, and admin certificate creation now respect whether a course offers certificates. Existing courses are marked certificate-enabled during migration to preserve current behavior, while newly created courses default to no certificate unless enabled.
+
+Live class timing now treats the start/end window as the source of truth for Join Class and Watch Recording behavior, including the exact start and end times. Scheduled classes no longer stay visually stuck as Upcoming once the current time is inside the meeting window, and cancelled or missing-link states return clearer messages.
+
+Migration added:
+
+- `2026_07_14_430000_add_offers_certificate_and_optional_course_fields.php`
+
+Manual migration, tests, asset build, route inspection, instructor course-form browser checks, student course-card checks, and live-class timing checks remain required.
+
+### Phase 43B: Question Answer Type Fixes
+
+Centralized quiz and assignment question-type behavior with helpers for option-based, text-based, multiple-select, single-select, and true/false questions. Quiz answers now have a nullable `answer_text` field so short/long text answers can be saved without fake options. Option-based quiz scoring remains unchanged, multiple-choice still uses exact selected-set matching, and unscored text quiz questions are saved for review without counting against the auto-graded total.
+
+Instructor quiz and assignment builders now hide option boxes for text answers, force True/False to the standard True and False choices, and keep options visible for single-choice and multiple-choice. Student quiz and assignment pages render radio buttons, checkboxes, text inputs, and textareas based on the saved question type. Admin question resources were updated to expose the supported types and keep quiz options attached to option-based questions.
+
+Migration added:
+
+- `2026_07_14_431000_add_answer_text_to_quiz_answers_table.php`
+
+Manual migration, tests, asset build, route inspection, instructor builder browser checks, student quiz checks, and student assignment submission checks remain required.
+
+### Phase 43C: PDF Notes Upload, PDF Viewer, and Rich Content Rendering
+
+Added file-backed lesson materials using the existing `lesson_activities` model instead of introducing a separate materials table. Instructors can upload PDF, image, Word, and PowerPoint materials from the course builder; admins can also attach uploaded resources through the Lesson Activities resource. Student learning pages embed uploaded PDFs through a protected route that verifies authentication, student access, published course/activity status, and file existence before returning the PDF inline.
+
+Rich content styling was tightened for course overviews and lesson notes: tables stay wrapped in a horizontally scrollable bordered container, code blocks use readable monospace styling with horizontal overflow protection, and images stay responsive inside their containers.
+
+Migration added:
+
+- `2026_07_14_432000_add_uploaded_resource_fields_to_lesson_activities_table.php`
+
+Manual migration, tests, asset build, route inspection, instructor upload browser checks, student PDF viewer checks, and mobile rich-content checks remain required.
+
+### Phase 43D: Login One-Click Fix
+
+Fixed the login form so it no longer depends on a blur-triggered Livewire state sync before submission. The form now renders as one standard POST form with a route-helper action, CSRF token, named email/password/remember fields, and a submit button, while Livewire continues to enhance the same form when available.
+
+The shared login logic now lives in `LoginAuthenticator`, and both the Livewire login action and native `POST /login` route use it to preserve password validation, session regeneration, approval checks, and existing role dashboard redirects. Filament admin login remains configured separately through the existing admin panel provider.
+
+No migration was added. Manual tests, asset build, route inspection, student/instructor login browser checks, and Filament admin login checks remain required.
+
+### Phase 43E: Instructor Signature Settings
+
+Added instructor-managed certificate signature upload to the existing shared account settings page. Instructors now see a Certificate Signature section with current preview, PNG/JPG/JPEG/WebP upload up to 2MB, replacement, and removal controls. Uploaded files are stored on the public disk under `certificates/instructor-signatures` and saved to the existing `users.signature_path` field.
+
+The upload and removal routes are instructor-only and update only the authenticated instructor record. Old signature files are deleted when replacing or removing, limited to the instructor-signatures storage folder. Admin Filament user signature management remains unchanged, and certificate display/PDF paths continue to use the existing instructor `signature_path` behavior.
+
+No migration was added. Manual tests, asset build, route inspection, instructor settings browser checks, admin user-resource checks, and issued certificate display/PDF checks remain required.
+
+### Phase 43F: Entrance Exam Academy Foundation
+
+Added the foundation for an Entrance Exam Academy with institutions, programs/faculties, subjects, and past papers. Admins manage the area through new Filament resources, including institution logos and PDF-only past paper uploads up to 20MB. Past papers can be classified by institution, program, subject, year, exam type, featured status, and draft/published/archived status.
+
+Public users can browse published papers at the Entrance Exam Academy, filter by classification, and view paper metadata. The actual PDF viewer and inline PDF response require authentication, serve only published PDF records, return inline PDF headers, and avoid exposing raw storage paths or direct download buttons. The viewer includes a watermark overlay and documents the limitation that read-only viewing cannot prevent screenshots, screen recording, browser inspection, or external capture.
+
+Migration added:
+
+- `2026_07_14_433000_create_entrance_exam_academy_tables.php`
+
+Online timed entrance exam practice, scoring, and attempts are intentionally deferred. Manual migration, tests, asset build, route inspection, admin upload checks, public filter checks, authenticated PDF viewer checks, and mobile checks remain required.

@@ -13,6 +13,8 @@ class CertificateService
 {
     public function prepareForEligibleCompletion(User $student, Course $course): Certificate
     {
+        abort_unless($course->offersCertificate(), 422, 'This course does not offer certificates.');
+
         return DB::transaction(function () use ($student, $course): Certificate {
             $existing = Certificate::query()
                 ->where('user_id', $student->id)

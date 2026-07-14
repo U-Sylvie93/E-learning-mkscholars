@@ -120,7 +120,7 @@
                     </div>
                     <div class="grid gap-4 md:grid-cols-2">
                     <label class="block text-sm font-bold text-mk-navy">
-                        Academy
+                        Academy <span class="text-red-600" aria-hidden="true">*</span>
                         <select name="academy_id" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" required>
                             @foreach ($academies as $academy)
                                 <option value="{{ $academy->id }}" @selected((int) old('academy_id', $course->academy_id) === (int) $academy->id)>{{ $academy->name }}</option>
@@ -128,21 +128,22 @@
                         </select>
                     </label>
                     <label class="block text-sm font-bold text-mk-navy">
-                        Title
-                        <input name="title" value="{{ old('title', $course->title) }}" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" required>
+                        Title <span class="text-red-600" aria-hidden="true">*</span>
+                        <input id="course-title-input" name="title" value="{{ old('title', $course->title) }}" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" required>
                         <span class="mt-1 block text-xs font-semibold text-slate-500">Use a clear student-facing title.</span>
                     </label>
                     <label class="block text-sm font-bold text-mk-navy">
                         Slug
-                        <input name="slug" value="{{ old('slug', $course->slug) }}" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" placeholder="auto-created if blank on create">
+                        <input id="course-slug-input" name="slug" value="{{ old('slug', $course->slug) }}" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" placeholder="auto-created if blank">
+                        <span class="mt-1 block text-xs font-semibold text-slate-500">Leave blank to generate a unique lowercase hyphenated slug from the title.</span>
                     </label>
                     <label class="block text-sm font-bold text-mk-navy">
                         Level
-                        <input name="level" value="{{ old('level', $course->level ?? 'Beginner') }}" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" required>
+                        <input name="level" value="{{ old('level', $course->level) }}" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" placeholder="Optional">
                     </label>
                     <label class="block text-sm font-bold text-mk-navy">
                         Duration
-                        <input name="duration" value="{{ old('duration', $course->duration ?? '4 weeks') }}" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" required>
+                        <input name="duration" value="{{ old('duration', $course->duration) }}" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" placeholder="Optional">
                     </label>
                     </div>
                 </section>
@@ -178,12 +179,27 @@
                         <p class="mt-1 text-sm leading-6 text-slate-600">Markdown-style headings, paragraphs, lists, links, and tables are rendered safely on public pages.</p>
                     </div>
                     <label class="block text-sm font-bold text-mk-navy">
-                        Short description
+                        Short description <span class="text-red-600" aria-hidden="true">*</span>
                         <textarea name="short_description" rows="3" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" required>{{ old('short_description', $course->short_description) }}</textarea>
                     </label>
                     <label class="block text-sm font-bold text-mk-navy">
                         Full course overview
-                        <textarea name="full_description" rows="8" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm leading-6 focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" placeholder="# What students will learn&#10;&#10;Describe the course, projects, lessons, and support students receive.">{{ old('full_description', $course->full_description) }}</textarea>
+                        <div class="mt-2 overflow-hidden rounded-lg border border-slate-200 bg-white focus-within:border-mk-gold focus-within:ring-2 focus-within:ring-mk-gold/30">
+                            <div class="flex flex-wrap gap-1 border-b border-slate-100 bg-slate-50 p-2" data-markdown-toolbar="course-overview-input">
+                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black text-mk-navy hover:bg-white" data-prefix="# ">H1</button>
+                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black text-mk-navy hover:bg-white" data-prefix="## ">H2</button>
+                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black text-mk-navy hover:bg-white" data-wrap="**">B</button>
+                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black italic text-mk-navy hover:bg-white" data-wrap="*">I</button>
+                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black text-mk-navy hover:bg-white" data-prefix="- ">List</button>
+                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black text-mk-navy hover:bg-white" data-insert="| Topic | Detail |\n| --- | --- |\n| Example | Description |\n">Table</button>
+                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black text-mk-navy hover:bg-white" data-wrap="`">Code</button>
+                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black text-mk-navy hover:bg-white" data-insert="```\ncode block\n```\n">Block</button>
+                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black text-mk-navy hover:bg-white" data-insert="[Link text](https://example.com)">Link</button>
+                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black text-mk-navy hover:bg-white" data-insert="![Image alt](https://example.com/image.jpg)">Image</button>
+                            </div>
+                            <textarea id="course-overview-input" name="full_description" rows="10" class="w-full border-0 px-3 py-2 text-sm leading-6 focus:outline-none focus:ring-0" placeholder="# What students will learn&#10;&#10;Describe the course, projects, lessons, and support students receive.">{{ old('full_description', $course->full_description) }}</textarea>
+                        </div>
+                        <span class="mt-1 block text-xs font-semibold text-slate-500">Supports the same Markdown storage path as admin: headings, lists, tables, links, images, inline code, and code blocks render through the safe course content renderer.</span>
                     </label>
                 </section>
 
@@ -207,7 +223,7 @@
                     </div>
                     <div class="grid gap-4 md:grid-cols-2">
                     <label class="block text-sm font-bold text-mk-navy">
-                        Status
+                        Status <span class="text-red-600" aria-hidden="true">*</span>
                         <select name="status" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" required>
                             @foreach (\App\Models\Course::STATUSES as $status)
                                 <option value="{{ $status }}" @selected(old('status', $course->status ?? \App\Models\Course::STATUS_DRAFT) === $status)>{{ str($status)->headline() }}</option>
@@ -215,11 +231,19 @@
                         </select>
                     </label>
                     <label class="block text-sm font-bold text-mk-navy">
-                        Access type
+                        Access type <span class="text-red-600" aria-hidden="true">*</span>
                         <select name="access_type" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" required>
                             <option value="free" @selected(old('access_type', $course->access_type ?? 'free') === 'free')>Free</option>
                             <option value="paid" @selected(old('access_type', $course->access_type ?? 'free') === 'paid')>Paid</option>
                         </select>
+                    </label>
+                    <label class="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm font-bold text-mk-navy md:col-span-2">
+                        <input name="offers_certificate" type="hidden" value="0">
+                        <input name="offers_certificate" type="checkbox" value="1" class="mt-1 rounded border-slate-300 text-mk-gold focus:ring-mk-gold" @checked((bool) old('offers_certificate', $course->offers_certificate))>
+                        <span>
+                            Course offers certificate
+                            <span class="mt-1 block text-xs font-semibold text-slate-500">Enable this only when students should see certificate tags and become eligible for certificate preparation after completion.</span>
+                        </span>
                     </label>
                     <div class="grid gap-4 sm:grid-cols-2">
                         <label class="block text-sm font-bold text-mk-navy">
@@ -243,6 +267,102 @@
                 </div>
             </form>
         </x-card>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const titleInput = document.getElementById('course-title-input');
+                const slugInput = document.getElementById('course-slug-input');
+
+                if (titleInput && slugInput) {
+                    const slugify = (value) => value
+                        .toString()
+                        .toLowerCase()
+                        .trim()
+                        .replace(/[^a-z0-9\s-]/g, '')
+                        .replace(/\s+/g, '-')
+                        .replace(/-+/g, '-')
+                        .replace(/^-|-$/g, '');
+
+                    titleInput.addEventListener('input', () => {
+                        if (! slugInput.dataset.manuallyEdited) {
+                            slugInput.value = slugify(titleInput.value);
+                        }
+                    });
+
+                    slugInput.addEventListener('input', () => {
+                        slugInput.dataset.manuallyEdited = 'true';
+                    });
+                }
+
+                document.querySelectorAll('[data-markdown-toolbar]').forEach((toolbar) => {
+                    const target = document.getElementById(toolbar.dataset.markdownToolbar);
+                    if (! target) {
+                        return;
+                    }
+
+                    toolbar.querySelectorAll('button').forEach((button) => {
+                        button.addEventListener('click', () => {
+                            const start = target.selectionStart;
+                            const end = target.selectionEnd;
+                            const selected = target.value.slice(start, end);
+                            let replacement = button.dataset.insert;
+
+                            if (! replacement) {
+                                if (button.dataset.wrap) {
+                                    replacement = button.dataset.wrap + (selected || 'text') + button.dataset.wrap;
+                                } else {
+                                    replacement = button.dataset.prefix + (selected || 'Text');
+                                }
+                            }
+
+                            replacement = replacement.replace(/\\n/g, '\n');
+                            target.setRangeText(replacement, start, end, 'end');
+                            target.focus();
+                        });
+                    });
+                });
+
+                document.querySelectorAll('[data-question-type-select]').forEach((select) => {
+                    const form = select.closest('form');
+                    const optionPanel = form?.querySelector('[data-option-panel]');
+                    const optionInputs = optionPanel ? Array.from(optionPanel.querySelectorAll('input[name*="[option_text]"]')) : [];
+
+                    const updateOptionPanel = () => {
+                        const type = select.value;
+                        const needsOptions = ['single_choice', 'multiple_choice', 'true_false'].includes(type);
+
+                        if (optionPanel) {
+                            optionPanel.classList.toggle('hidden', ! needsOptions);
+                        }
+
+                        if (type === 'true_false') {
+                            optionInputs.forEach((input, index) => {
+                                if (index === 0) {
+                                    input.value = 'True';
+                                    input.placeholder = 'True';
+                                } else if (index === 1) {
+                                    input.value = 'False';
+                                    input.placeholder = 'False';
+                                } else {
+                                    input.value = '';
+                                    input.placeholder = 'Unused for True/False';
+                                }
+                            });
+                        } else {
+                            optionInputs.forEach((input, index) => {
+                                if (input.value === 'True' || input.value === 'False') {
+                                    input.value = '';
+                                }
+                                input.placeholder = `Option ${index + 1}`;
+                            });
+                        }
+                    };
+
+                    select.addEventListener('change', updateOptionPanel);
+                    updateOptionPanel();
+                });
+            });
+        </script>
 
         @if ($course->exists)
             <div class="grid gap-6 lg:grid-cols-2">
@@ -311,6 +431,54 @@
                         </div>
                         <x-button type="submit" size="sm">Add Lesson</x-button>
                     </form>
+
+                    @if ($lessons->isNotEmpty())
+                        <div class="mt-8 rounded-lg border border-slate-100 bg-slate-50 p-4">
+                            <p class="text-sm font-bold text-mk-navy">Upload lesson notes/material</p>
+                            <p class="mt-1 text-xs font-semibold text-slate-500">Allowed: PDF, images, Word, PowerPoint. Max 10MB.</p>
+                            <form method="POST" action="{{ route('instructor.lesson-materials.store', $course) }}" enctype="multipart/form-data" class="mt-4 space-y-3">
+                                @csrf
+                                <select name="lesson_id" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm" required>
+                                    <option value="">Attach material to lesson</option>
+                                    @foreach ($lessons as $lesson)
+                                        <option value="{{ $lesson->id }}">{{ $lesson->module?->title }} - {{ $lesson->title }}</option>
+                                    @endforeach
+                                </select>
+                                <input name="title" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm" placeholder="Material title" required>
+                                <textarea name="instructions" rows="2" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm" placeholder="Optional student instructions"></textarea>
+                                <input name="material_file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.ppt,.pptx,application/pdf,image/png,image/jpeg,image/webp,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-mk-gold file:px-4 file:py-2 file:text-sm file:font-bold file:text-mk-navy" required>
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <input name="sort_order" type="number" min="0" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm" placeholder="Sort order">
+                                    <select name="status" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+                                        @foreach (\App\Models\Course::STATUSES as $status)
+                                            <option value="{{ $status }}">{{ str($status)->headline() }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <x-button type="submit" size="sm">Upload Material</x-button>
+                            </form>
+                        </div>
+                    @endif
+
+                    @if ($lessons->flatMap(fn ($lesson) => $lesson->activities)->isNotEmpty())
+                        <div class="mt-6 space-y-3">
+                            <p class="text-sm font-bold text-mk-navy">Uploaded materials</p>
+                            @foreach ($lessons as $lesson)
+                                @foreach ($lesson->activities as $activity)
+                                    @if ($activity->hasUploadedResource() || $activity->resource_url)
+                                        <div class="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <x-badge tone="gray">{{ $lesson->title }}</x-badge>
+                                                <x-badge :tone="$activity->isPdfResource() ? 'gold' : 'blue'">{{ $activity->isPdfResource() ? 'PDF' : str($activity->activity_type)->headline() }}</x-badge>
+                                                <x-status-badge :status="$activity->status" />
+                                            </div>
+                                            <p class="mt-2 text-sm font-bold text-mk-navy">{{ $activity->title }}</p>
+                                        </div>
+                                    @endif
+                                @endforeach
+                            @endforeach
+                        </div>
+                    @endif
                 </x-card>
             </div>
 
@@ -356,10 +524,12 @@
                             </div>
                             <textarea name="question_text" rows="2" class="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Question text"></textarea>
                             <div class="mt-3 grid gap-3 sm:grid-cols-3">
-                                <select name="question_type" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                                <select name="question_type" data-question-type-select class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
                                     <option value="{{ \App\Models\QuizQuestion::TYPE_SINGLE_CHOICE }}">Single choice</option>
                                     <option value="{{ \App\Models\QuizQuestion::TYPE_MULTIPLE_CHOICE }}">Multiple choice</option>
                                     <option value="{{ \App\Models\QuizQuestion::TYPE_TRUE_FALSE }}">True / False</option>
+                                    <option value="{{ \App\Models\QuizQuestion::TYPE_SHORT_ANSWER }}">Short answer</option>
+                                    <option value="{{ \App\Models\QuizQuestion::TYPE_LONG_ANSWER }}">Long answer</option>
                                 </select>
                                 <input name="points" type="number" min="1" value="1" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Points">
                                 <select name="question_status" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
@@ -367,7 +537,7 @@
                                     <option value="{{ \App\Models\QuizQuestion::STATUS_DRAFT }}">Draft</option>
                                 </select>
                             </div>
-                            <div class="mt-3 space-y-2">
+                            <div class="mt-3 space-y-2" data-option-panel>
                                 <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Options</p>
                                 <p class="text-xs font-semibold text-slate-500">No options yet? Add at least two option rows before saving a question.</p>
                                 @foreach (['Option A', 'Option B', 'Option C', 'Option D', 'Option E'] as $index => $label)
@@ -407,11 +577,15 @@
                                         <div class="rounded-lg bg-slate-50 p-3">
                                             <p class="text-sm font-bold text-mk-navy">{{ $question->question_text }}</p>
                                             <div class="mt-2 flex flex-wrap gap-2">
-                                                @forelse ($question->options as $option)
-                                                    <x-badge :tone="$option->is_correct ? 'green' : 'gray'">{{ $option->option_text }}</x-badge>
-                                                @empty
-                                                    <span class="text-xs font-semibold text-slate-500">No options yet</span>
-                                                @endforelse
+                                                @if ($question->requiresOptions())
+                                                    @forelse ($question->options as $option)
+                                                        <x-badge :tone="$option->is_correct ? 'green' : 'gray'">{{ $option->option_text }}</x-badge>
+                                                    @empty
+                                                        <span class="text-xs font-semibold text-slate-500">No options yet</span>
+                                                    @endforelse
+                                                @else
+                                                    <x-badge tone="gray">{{ $question->acceptsLongTextAnswer() ? 'Long Text Answer' : 'Short Text Answer' }}</x-badge>
+                                                @endif
                                             </div>
                                         </div>
                                     @empty
@@ -430,10 +604,12 @@
                                     </div>
                                     <textarea name="question_text" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Question text" required></textarea>
                                     <div class="grid gap-3 sm:grid-cols-3">
-                                        <select name="question_type" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                                        <select name="question_type" data-question-type-select class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
                                             <option value="{{ \App\Models\QuizQuestion::TYPE_SINGLE_CHOICE }}">Single choice</option>
                                             <option value="{{ \App\Models\QuizQuestion::TYPE_MULTIPLE_CHOICE }}">Multiple choice</option>
                                             <option value="{{ \App\Models\QuizQuestion::TYPE_TRUE_FALSE }}">True / False</option>
+                                            <option value="{{ \App\Models\QuizQuestion::TYPE_SHORT_ANSWER }}">Short answer</option>
+                                            <option value="{{ \App\Models\QuizQuestion::TYPE_LONG_ANSWER }}">Long answer</option>
                                         </select>
                                         <input name="points" type="number" min="1" value="1" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Points" required>
                                         <select name="question_status" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
@@ -441,7 +617,7 @@
                                             <option value="{{ \App\Models\QuizQuestion::STATUS_DRAFT }}">Draft</option>
                                         </select>
                                     </div>
-                                    <div class="space-y-2">
+                                    <div class="space-y-2" data-option-panel>
                                         <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Options</p>
                                         <p class="text-xs font-semibold text-slate-500">No options yet? Fill at least two rows.</p>
                                         @foreach (['Option A', 'Option B', 'Option C', 'Option D', 'Option E'] as $index => $label)
@@ -495,11 +671,15 @@
                                 <div class="rounded-lg bg-slate-50 p-3">
                                     <p class="text-sm font-bold text-mk-navy">{{ $question->question_text }}</p>
                                     <div class="mt-2 flex flex-wrap gap-2">
-                                        @forelse ($question->options as $option)
-                                            <x-badge :tone="$option->is_correct ? 'green' : 'gray'">{{ $option->option_text }}</x-badge>
-                                        @empty
-                                            <span class="text-xs font-semibold text-slate-500">No options yet</span>
-                                        @endforelse
+                                        @if ($question->requiresOptions())
+                                            @forelse ($question->options as $option)
+                                                <x-badge :tone="$option->is_correct ? 'green' : 'gray'">{{ $option->option_text }}</x-badge>
+                                            @empty
+                                                <span class="text-xs font-semibold text-slate-500">No options yet</span>
+                                            @endforelse
+                                        @else
+                                            <x-badge tone="gray">{{ $question->acceptsLongTextAnswer() ? 'Long Text Answer' : 'Short Text Answer' }}</x-badge>
+                                        @endif
                                     </div>
                                 </div>
                             @empty
@@ -518,10 +698,12 @@
                             </div>
                             <textarea name="question_text" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Question text" required></textarea>
                             <div class="grid gap-3 sm:grid-cols-3">
-                                <select name="question_type" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                                <select name="question_type" data-question-type-select class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
                                     <option value="{{ \App\Models\QuizQuestion::TYPE_SINGLE_CHOICE }}">Single choice</option>
                                     <option value="{{ \App\Models\QuizQuestion::TYPE_MULTIPLE_CHOICE }}">Multiple choice</option>
                                     <option value="{{ \App\Models\QuizQuestion::TYPE_TRUE_FALSE }}">True / False</option>
+                                    <option value="{{ \App\Models\QuizQuestion::TYPE_SHORT_ANSWER }}">Short answer</option>
+                                    <option value="{{ \App\Models\QuizQuestion::TYPE_LONG_ANSWER }}">Long answer</option>
                                 </select>
                                 <input name="points" type="number" min="1" value="1" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Points" required>
                                 <select name="question_status" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
@@ -529,7 +711,7 @@
                                     <option value="{{ \App\Models\QuizQuestion::STATUS_DRAFT }}">Draft</option>
                                 </select>
                             </div>
-                            <div class="space-y-2">
+                            <div class="space-y-2" data-option-panel>
                                 <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Options</p>
                                 <p class="text-xs font-semibold text-slate-500">No options yet? Fill at least two rows.</p>
                                 @foreach (['Option A', 'Option B', 'Option C', 'Option D', 'Option E'] as $index => $label)
@@ -622,7 +804,7 @@
                             </div>
                             <textarea name="question_text" rows="2" class="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Question prompt"></textarea>
                             <div class="mt-3 grid gap-3 md:grid-cols-2">
-                                <select name="question_type" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                                <select name="question_type" data-question-type-select class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
                                     <option value="textarea">Long answer</option>
                                     <option value="text">Short answer</option>
                                     <option value="single_choice">Single choice</option>
@@ -631,7 +813,7 @@
                                 </select>
                                 <input name="question_points" type="number" min="0" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Question points">
                             </div>
-                            <div class="mt-4 grid gap-3 md:grid-cols-2">
+                            <div class="mt-4 grid gap-3 md:grid-cols-2" data-option-panel>
                                 @for ($optionIndex = 0; $optionIndex < 4; $optionIndex++)
                                     <div class="rounded-lg border border-slate-200 bg-white p-3">
                                         <input name="options[{{ $optionIndex }}][option_text]" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Option {{ $optionIndex + 1 }}">

@@ -11,9 +11,15 @@
         <div class="mk-container grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
             <div>
                 <div class="flex flex-wrap gap-2">
-                    <x-badge tone="blue">{{ $course['level'] }}</x-badge>
-                    <x-badge tone="gray">{{ $course['duration'] }}</x-badge>
-                    <x-badge tone="green">Certificate</x-badge>
+                    @if ($course['level'])
+                        <x-badge tone="blue">{{ $course['level'] }}</x-badge>
+                    @endif
+                    @if ($course['duration'])
+                        <x-badge tone="gray">{{ $course['duration'] }}</x-badge>
+                    @endif
+                    @if ($course['offers_certificate'] ?? false)
+                        <x-badge tone="green">Certificate</x-badge>
+                    @endif
                     @if ($lessonsCount)
                         <x-badge tone="gray">{{ $lessonsCount }} lessons</x-badge>
                     @endif
@@ -218,7 +224,9 @@
             <x-card>
                 <x-section-header eyebrow="FAQ" title="Before you enroll" />
                 <div class="mt-6 space-y-4">
-                    <p class="text-sm leading-6 text-slate-600"><strong class="text-mk-navy">Will I get a certificate?</strong> Certificates can be issued and publicly verified after completion.</p>
+                    @if ($course['offers_certificate'] ?? false)
+                        <p class="text-sm leading-6 text-slate-600"><strong class="text-mk-navy">Will I get a certificate?</strong> Certificates can be issued and publicly verified after completion.</p>
+                    @endif
                     <p class="text-sm leading-6 text-slate-600"><strong class="text-mk-navy">Can I preview lessons?</strong> Free preview lessons are marked inside the syllabus.</p>
                 </div>
             </x-card>
@@ -317,7 +325,6 @@
         </div>
     </section>
 </x-layouts.app>
-
 
 
 

@@ -7,6 +7,7 @@ use App\Filament\Resources\QuizOptions\Pages\CreateQuizOption;
 use App\Filament\Resources\QuizOptions\Pages\EditQuizOption;
 use App\Filament\Resources\QuizOptions\Pages\ListQuizOptions;
 use App\Models\QuizOption;
+use App\Models\QuizQuestion;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -44,8 +45,16 @@ class QuizOptionResource extends Resource
             ->components([
                 Select::make('quiz_question_id')
                     ->label('Quiz question')
-                    ->helperText('Attach this answer option to the correct question.')
-                    ->relationship('question', 'question_text')
+                    ->helperText('Attach options only to single-choice, multiple-choice, or true/false questions.')
+                    ->relationship(
+                        name: 'question',
+                        titleAttribute: 'question_text',
+                        modifyQueryUsing: fn ($query) => $query->whereIn('question_type', [
+                            QuizQuestion::TYPE_SINGLE_CHOICE,
+                            QuizQuestion::TYPE_MULTIPLE_CHOICE,
+                            QuizQuestion::TYPE_TRUE_FALSE,
+                        ]),
+                    )
                     ->searchable()
                     ->preload()
                     ->required(),
@@ -109,5 +118,4 @@ class QuizOptionResource extends Resource
         ];
     }
 }
-
 

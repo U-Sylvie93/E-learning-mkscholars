@@ -10,10 +10,13 @@
         $savedOptionIds = collect($savedAnswer?->selected_option_ids ?? ($savedAnswer?->quiz_option_id ? [$savedAnswer->quiz_option_id] : []))
             ->map(fn ($optionId) => (int) $optionId)
             ->all();
-        $isMultipleChoice = $question->question_type === \App\Models\QuizQuestion::TYPE_MULTIPLE_CHOICE;
+        $isMultipleChoice = $question->acceptsMultipleOptions();
+        $isTextAnswer = $question->acceptsTextAnswer();
+        $isLongTextAnswer = $question->acceptsLongTextAnswer();
         $selectedOptionIds = $isMultipleChoice
             ? collect(old('option_ids', $savedOptionIds))->map(fn ($optionId) => (int) $optionId)->all()
             : [(int) old('option_id', $savedAnswer?->quiz_option_id ?? 0)];
+        $savedTextAnswer = old('answer_text', $savedAnswer?->answer_text);
     @endphp
 
     <div class="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-4xl items-center">
@@ -56,22 +59,35 @@
                     <span class="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-sm font-black text-mk-navy">{{ $question->points }} pts</span>
                 </div>
 
-                <fieldset class="mt-7 space-y-3">
-                    <legend class="sr-only">{{ $isMultipleChoice ? 'Choose all correct answers' : 'Choose one answer' }}</legend>
-                    @foreach ($question->options as $option)
-                        <label class="flex cursor-pointer items-start gap-3 rounded-mk-md border border-slate-200 bg-white p-4 transition hover:border-mk-gold hover:bg-mk-goldSoft/40">
-                            <input
-                                type="{{ $isMultipleChoice ? 'checkbox' : 'radio' }}"
-                                name="{{ $isMultipleChoice ? 'option_ids[]' : 'option_id' }}"
-                                value="{{ $option->id }}"
-                                @checked(in_array($option->id, $selectedOptionIds, true))
-                                @if (! $isMultipleChoice) required @endif
-                                class="mt-1 text-mk-gold focus:ring-mk-gold"
-                            >
-                            <span class="break-words text-sm font-semibold leading-6 text-slate-700">{{ $option->option_text }}</span>
+                @if ($isTextAnswer)
+                    <div class="mt-7">
+                        <label class="block text-sm font-bold text-mk-navy" for="answer_text">
+                            {{ $isLongTextAnswer ? 'Long Text Answer' : 'Short Text Answer' }}
                         </label>
-                    @endforeach
-                </fieldset>
+                        @if ($isLongTextAnswer)
+                            <textarea id="answer_text" name="answer_text" rows="7" required class="mt-3 w-full rounded-mk-md border border-slate-200 px-4 py-3 text-sm leading-6 focus:border-mk-gold focus:ring-mk-gold">{{ $savedTextAnswer }}</textarea>
+                        @else
+                            <input id="answer_text" name="answer_text" value="{{ $savedTextAnswer }}" required class="mt-3 w-full rounded-mk-md border border-slate-200 px-4 py-3 text-sm focus:border-mk-gold focus:ring-mk-gold">
+                        @endif
+                    </div>
+                @else
+                    <fieldset class="mt-7 space-y-3">
+                        <legend class="sr-only">{{ $isMultipleChoice ? 'Choose all correct answers' : 'Choose one answer' }}</legend>
+                        @foreach ($question->options as $option)
+                            <label class="flex cursor-pointer items-start gap-3 rounded-mk-md border border-slate-200 bg-white p-4 transition hover:border-mk-gold hover:bg-mk-goldSoft/40">
+                                <input
+                                    type="{{ $isMultipleChoice ? 'checkbox' : 'radio' }}"
+                                    name="{{ $isMultipleChoice ? 'option_ids[]' : 'option_id' }}"
+                                    value="{{ $option->id }}"
+                                    @checked(in_array($option->id, $selectedOptionIds, true))
+                                    @if (! $isMultipleChoice) required @endif
+                                    class="mt-1 text-mk-gold focus:ring-mk-gold"
+                                >
+                                <span class="break-words text-sm font-semibold leading-6 text-slate-700">{{ $option->option_text }}</span>
+                            </label>
+                        @endforeach
+                    </fieldset>
+                @endif
 
                 <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>

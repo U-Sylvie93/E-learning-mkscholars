@@ -89,10 +89,10 @@ class CourseResource extends Resource
                     ->helperText('Use Markdown for headings, lists, links, images, and tables. Unsafe scripts and embeds are stripped on public pages.')
                     ->columnSpanFull(),
                 TextInput::make('level')
-                    ->required()
+                    ->nullable()
                     ->maxLength(80),
                 TextInput::make('duration')
-                    ->required()
+                    ->nullable()
                     ->maxLength(80),
                 TextInput::make('price')
                     ->numeric()
@@ -108,6 +108,10 @@ class CourseResource extends Resource
                         Course::ACCESS_PAID => 'Paid',
                     ])
                     ->default(Course::ACCESS_FREE),
+                Toggle::make('offers_certificate')
+                    ->label('Course offers certificate')
+                    ->default(false)
+                    ->helperText('Show certificate badges and allow certificate preparation only when enabled.'),
                 TextInput::make('price_amount')
                     ->numeric()
                     ->minValue(0)
@@ -233,6 +237,5 @@ class CourseResource extends Resource
         ];
     }
 }
-
 
 

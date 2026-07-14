@@ -39,6 +39,7 @@ class Course extends Model
         'price_amount',
         'currency',
         'access_type',
+        'offers_certificate',
         'status',
         'featured_image_path',
         'learning_outcomes',
@@ -49,6 +50,7 @@ class Course extends Model
         return [
             'price' => 'decimal:2',
             'is_free' => 'boolean',
+            'offers_certificate' => 'boolean',
             'price_amount' => 'decimal:2',
             'learning_outcomes' => 'array',
         ];
@@ -150,6 +152,11 @@ class Course extends Model
             : 'Paid course';
     }
 
+    public function offersCertificate(): bool
+    {
+        return (bool) $this->offers_certificate;
+    }
+
     public function toPublicCard(): array
     {
         $lessonsCount = $this->relationLoaded('modules')
@@ -169,6 +176,7 @@ class Course extends Model
             'price' => $this->priceLabel(),
             'is_free' => $this->isFree(),
             'access_type' => $this->isFree() ? self::ACCESS_FREE : self::ACCESS_PAID,
+            'offers_certificate' => $this->offersCertificate(),
             'price_amount' => $this->payableAmount(),
             'currency' => $this->currency ?: 'RWF',
             'summary' => $this->short_description,
@@ -198,7 +206,6 @@ class Course extends Model
         return null;
     }
 }
-
 
 
 

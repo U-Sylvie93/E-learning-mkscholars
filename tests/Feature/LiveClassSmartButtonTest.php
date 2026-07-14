@@ -42,7 +42,67 @@ class LiveClassSmartButtonTest extends TestCase
 
         $this->actingAs($student)
             ->post(route('student.live-classes.join', $liveClass))
-            ->assertSessionHasErrors(['live_class' => 'Class has not started yet.']);
+            ->assertSessionHasErrors(['live_class' => 'This class has been cancelled.']);
+    }
+
+    public function test_live_class_can_be_joined_at_exact_start_and_end_time(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-07-13 10:00:00'));
+        [$student, $instructor, $course] = $this->enrolledStudentWithCourse('inclusive-time-window');
+        $liveClass = $this->liveClass($instructor, $course, [
+            'starts_at' => Carbon::parse('2026-07-13 10:00:00'),
+            'ends_at' => Carbon::parse('2026-07-13 11:00:00'),
+            'status' => LiveClass::STATUS_SCHEDULED,
+        ]);
+
+        $this->assertTrue($liveClass->isLiveNow());
+
+        $this->actingAs($student)
+            ->post(route('student.live-classes.join', $liveClass))
+            ->assertRedirect($liveClass->meeting_url);
+
+        Carbon::setTestNow(Carbon::parse('2026-07-13 11:00:00'));
+
+        $this->assertTrue($liveClass->fresh()->isLiveNow());
+
+        $this->actingAs($student)
+            ->post(route('student.live-classes.join', $liveClass))
+            ->assertRedirect($liveClass->meeting_url);
+    }
+
+    public function test_scheduled_status_does_not_keep_current_class_upcoming(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-07-13 10:30:00'));
+        [$student, $instructor, $course] = $this->enrolledStudentWithCourse('scheduled-but-live');
+        $liveClass = $this->liveClass($instructor, $course, [
+            'starts_at' => now()->subMinutes(30),
+            'ends_at' => now()->addMinutes(30),
+            'status' => LiveClass::STATUS_SCHEDULED,
+        ]);
+
+        $this->assertSame('Live Now', $liveClass->displayStatus());
+
+        $this->actingAs($instructor)
+            ->get(route('instructor.live-classes.index'))
+            ->assertOk()
+            ->assertSee('Live Now')
+            ->assertSee('Join Class')
+            ->assertDontSee('Upcoming</span>', false);
+    }
+
+    public function test_missing_meeting_link_has_clear_join_error(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-07-13 10:30:00'));
+        [$student, $instructor, $course] = $this->enrolledStudentWithCourse('missing-meeting-link');
+        $liveClass = $this->liveClass($instructor, $course, [
+            'meeting_url' => '',
+            'starts_at' => now()->subMinutes(30),
+            'ends_at' => now()->addMinutes(30),
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('student.live-classes.join', $liveClass))
+            ->assertSessionHasErrors(['live_class' => 'Meeting link is not available.']);
     }
 
     public function test_live_class_during_time_shows_join_and_redirects_without_recording_button(): void

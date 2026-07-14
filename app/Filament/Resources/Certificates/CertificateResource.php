@@ -242,6 +242,13 @@ class CertificateResource extends Resource
 
         $student = User::find($data['user_id']);
         $course = Course::find($data['course_id']);
+
+        if ($course && ! $course->offersCertificate()) {
+            throw ValidationException::withMessages([
+                'course_id' => 'This course does not offer certificates.',
+            ]);
+        }
+
         $completion = CourseCompletion::query()
             ->where('user_id', $data['user_id'])
             ->where('course_id', $data['course_id'])

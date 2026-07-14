@@ -27,14 +27,20 @@
             </span>
         </div>
         <div class="absolute bottom-4 left-4 right-4 flex flex-wrap gap-2">
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-mk-gold px-3 py-1.5 text-xs font-extrabold text-mk-navy shadow-soft"><x-public-icon name="certificate" class="h-3.5 w-3.5" />Certificate</span>
+            @if ($course['offers_certificate'] ?? false)
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-mk-gold px-3 py-1.5 text-xs font-extrabold text-mk-navy shadow-soft"><x-public-icon name="certificate" class="h-3.5 w-3.5" />Certificate</span>
+            @endif
             <span class="inline-flex items-center gap-1.5 rounded-full bg-white/92 px-3 py-1.5 text-xs font-extrabold text-mk-navy shadow-soft"><x-public-icon name="book" class="h-3.5 w-3.5" />{{ $course['price'] }}</span>
         </div>
     </div>
     <div class="flex flex-1 flex-col p-6">
         <div class="flex flex-wrap items-center gap-2">
-            <x-badge tone="blue">{{ $course['level'] }}</x-badge>
-            <x-badge tone="gray">{{ $course['duration'] }}</x-badge>
+            @if ($course['level'])
+                <x-badge tone="blue">{{ $course['level'] }}</x-badge>
+            @endif
+            @if ($course['duration'])
+                <x-badge tone="gray">{{ $course['duration'] }}</x-badge>
+            @endif
             @if ($lessonsCount)
                 <x-badge tone="gray">{{ $lessonsCount }} lessons</x-badge>
             @endif

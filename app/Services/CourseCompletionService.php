@@ -66,7 +66,7 @@ class CourseCompletionService
             'last_checked_at' => now(),
         ])->save();
 
-        if ($eligible) {
+        if ($eligible && $course->offersCertificate()) {
             app(CertificateService::class)->prepareForEligibleCompletion($user, $course);
         }
 
@@ -264,7 +264,9 @@ class CourseCompletionService
     private function completedLiveClassIds(Course $course)
     {
         return LiveClass::query()
-            ->where('status', LiveClass::STATUS_COMPLETED)
+            ->where('status', '!=', LiveClass::STATUS_CANCELLED)
+            ->whereNotNull('ends_at')
+            ->where('ends_at', '<', now())
             ->where(function ($query) use ($course): void {
                 $query->where('course_id', $course->id)
                     ->orWhereHas('module', fn ($moduleQuery) => $moduleQuery->where('course_id', $course->id))

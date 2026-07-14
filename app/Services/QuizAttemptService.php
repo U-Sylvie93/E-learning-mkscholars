@@ -68,7 +68,7 @@ class QuizAttemptService
             ]);
         }
 
-        if ($questions->contains(fn ($question): bool => $question->options->isEmpty())) {
+        if ($questions->contains(fn (QuizQuestion $question): bool => $question->requiresOptions() && $question->options->isEmpty())) {
             throw ValidationException::withMessages([
                 'quiz' => 'This quiz is missing answer options. Please contact your instructor.',
             ]);
@@ -88,7 +88,7 @@ class QuizAttemptService
             'quiz_id' => $quiz->id,
             'user_id' => $user->id,
             'score' => 0,
-            'total_points' => (int) $questions->sum('points'),
+            'total_points' => (int) $questions->filter(fn (QuizQuestion $question): bool => $question->isAutoGradable())->sum('points'),
             'percentage' => 0,
             'status' => QuizAttempt::STATUS_IN_PROGRESS,
             'started_at' => now(),
@@ -97,7 +97,7 @@ class QuizAttemptService
         ]);
     }
 
-    public function saveAnswer(QuizAttempt $attempt, Quiz $quiz, int $questionIndex, int|array $optionIds): QuizAnswer
+    public function saveAnswer(QuizAttempt $attempt, Quiz $quiz, int $questionIndex, int|array|null $optionIds = null, ?string $answerText = null): QuizAnswer
     {
         if ($attempt->status !== QuizAttempt::STATUS_IN_PROGRESS || $attempt->submitted_at) {
             throw ValidationException::withMessages([
@@ -122,6 +122,36 @@ class QuizAttemptService
             ]);
         }
 
+        if ($question->acceptsTextAnswer()) {
+            $answerText = trim((string) $answerText);
+
+            if ($answerText === '') {
+                throw ValidationException::withMessages([
+                    'answer_text' => 'Please enter an answer.',
+                ]);
+            }
+
+            $answer = QuizAnswer::updateOrCreate(
+                [
+                    'quiz_attempt_id' => $attempt->id,
+                    'quiz_question_id' => $question->id,
+                ],
+                [
+                    'quiz_option_id' => null,
+                    'selected_option_ids' => null,
+                    'answer_text' => $answerText,
+                    'is_correct' => false,
+                    'points_awarded' => 0,
+                ],
+            );
+
+            $attempt->forceFill([
+                'current_question_index' => min($questionIndex + 1, max($questions->count() - 1, 0)),
+            ])->save();
+
+            return $answer;
+        }
+
         $selectedOptionIds = collect(is_array($optionIds) ? $optionIds : [$optionIds])
             ->map(fn ($optionId): int => (int) $optionId)
             ->filter(fn (int $optionId): bool => $optionId > 0)
@@ -129,7 +159,7 @@ class QuizAttemptService
             ->values();
 
         if ($selectedOptionIds->isEmpty()) {
-            $key = $question->question_type === QuizQuestion::TYPE_MULTIPLE_CHOICE ? 'option_ids' : 'option_id';
+            $key = $question->acceptsMultipleOptions() ? 'option_ids' : 'option_id';
             $messages = [$key => 'Please select an answer.'];
 
             if ($key === 'option_ids') {
@@ -139,7 +169,7 @@ class QuizAttemptService
             throw ValidationException::withMessages($messages);
         }
 
-        if ($question->question_type !== QuizQuestion::TYPE_MULTIPLE_CHOICE && $selectedOptionIds->count() !== 1) {
+        if (! $question->acceptsMultipleOptions() && $selectedOptionIds->count() !== 1) {
             throw ValidationException::withMessages([
                 'option_id' => 'Please select one answer.',
             ]);
@@ -148,7 +178,7 @@ class QuizAttemptService
         $availableOptionIds = $question->options->pluck('id')->map(fn ($id): int => (int) $id);
 
         if ($selectedOptionIds->diff($availableOptionIds)->isNotEmpty()) {
-            $key = $question->question_type === QuizQuestion::TYPE_MULTIPLE_CHOICE ? 'option_ids' : 'option_id';
+            $key = $question->acceptsMultipleOptions() ? 'option_ids' : 'option_id';
             $messages = [$key => 'The selected answer does not belong to this question.'];
 
             if ($key === 'option_ids') {
@@ -165,7 +195,7 @@ class QuizAttemptService
             ->sort()
             ->values();
         $sortedSelectedOptionIds = $selectedOptionIds->sort()->values();
-        $isCorrect = $question->question_type === QuizQuestion::TYPE_MULTIPLE_CHOICE
+        $isCorrect = $question->acceptsMultipleOptions()
             ? $sortedSelectedOptionIds->all() === $correctOptionIds->all()
             : (bool) $question->options->firstWhere('id', $selectedOptionIds->first())?->is_correct;
 
@@ -177,6 +207,7 @@ class QuizAttemptService
             [
                 'quiz_option_id' => $selectedOptionIds->first(),
                 'selected_option_ids' => $sortedSelectedOptionIds->all(),
+                'answer_text' => null,
                 'is_correct' => $isCorrect,
                 'points_awarded' => $isCorrect ? (int) $question->points : 0,
             ],
@@ -197,7 +228,7 @@ class QuizAttemptService
 
         return DB::transaction(function () use ($attempt, $quiz): QuizAttempt {
             $questions = $this->publishedQuestions($quiz);
-            $totalPoints = (int) $questions->sum('points');
+            $totalPoints = (int) $questions->filter(fn (QuizQuestion $question): bool => $question->isAutoGradable())->sum('points');
             $score = (int) QuizAnswer::query()
                 ->where('quiz_attempt_id', $attempt->id)
                 ->whereIn('quiz_question_id', $questions->pluck('id'))
@@ -208,9 +239,11 @@ class QuizAttemptService
                 'score' => $score,
                 'total_points' => $totalPoints,
                 'percentage' => $percentage,
-                'status' => $percentage >= $quiz->passing_score
+                'status' => $totalPoints === 0
+                    ? QuizAttempt::STATUS_SUBMITTED
+                    : ($percentage >= $quiz->passing_score
                     ? QuizAttempt::STATUS_PASSED
-                    : QuizAttempt::STATUS_FAILED,
+                    : QuizAttempt::STATUS_FAILED),
                 'submitted_at' => now(),
             ]);
 

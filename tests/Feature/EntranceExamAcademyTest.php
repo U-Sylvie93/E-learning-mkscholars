@@ -1,0 +1,213 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Filament\Resources\EntranceExamInstitutions\EntranceExamInstitutionResource;
+use App\Filament\Resources\EntranceExamPastPapers\EntranceExamPastPaperResource;
+use App\Models\EntranceExamInstitution;
+use App\Models\EntranceExamPastPaper;
+use App\Models\EntranceExamProgram;
+use App\Models\EntranceExamSubject;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+class EntranceExamAcademyTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_admin_can_create_entrance_exam_foundation_records(): void
+    {
+        $admin = $this->user(User::ROLE_ADMIN, 'entrance-admin@mkscholars.test');
+        $this->actingAs($admin);
+
+        $institution = EntranceExamInstitution::create([
+            'name' => 'Rwanda National University',
+            'country' => 'Rwanda',
+            'status' => EntranceExamInstitution::STATUS_ACTIVE,
+        ]);
+        $program = EntranceExamProgram::create([
+            'entrance_exam_institution_id' => $institution->id,
+            'name' => 'Medicine Faculty',
+            'status' => EntranceExamProgram::STATUS_ACTIVE,
+        ]);
+        $subject = EntranceExamSubject::create([
+            'name' => 'Biology',
+            'status' => EntranceExamSubject::STATUS_ACTIVE,
+        ]);
+
+        $this->assertSame('rwanda-national-university', $institution->slug);
+        $this->assertSame($institution->id, $program->institution->id);
+        $this->assertSame('biology', $subject->slug);
+        $this->assertTrue(EntranceExamInstitutionResource::canCreate());
+    }
+
+    public function test_non_admin_cannot_access_filament_management_resources(): void
+    {
+        foreach ([User::ROLE_STUDENT, User::ROLE_INSTRUCTOR, User::ROLE_VIEWER, User::ROLE_CONTENT_EDITOR] as $role) {
+            $this->actingAs($this->user($role, "entrance-{$role}@mkscholars.test"));
+
+            $this->assertFalse(EntranceExamInstitutionResource::canViewAny());
+            $this->assertFalse(EntranceExamPastPaperResource::canCreate());
+        }
+    }
+
+    public function test_past_paper_resource_is_pdf_only(): void
+    {
+        $resource = file_get_contents(app_path('Filament/Resources/EntranceExamPastPapers/EntranceExamPastPaperResource.php'));
+
+        $this->assertStringContainsString("FileUpload::make('paper_file_path')", $resource);
+        $this->assertStringContainsString("->acceptedFileTypes(['application/pdf'])", $resource);
+        $this->assertStringContainsString('->maxSize(20480)', $resource);
+    }
+
+    public function test_academy_index_shows_published_papers_and_filters_by_classification(): void
+    {
+        [$student, $paper, $draftPaper] = $this->paperContext();
+
+        $this->get(route('entrance-exam-academy.index'))
+            ->assertOk()
+            ->assertSee('Entrance Exam Academy')
+            ->assertSee($paper->title)
+            ->assertDontSee($draftPaper->title);
+
+        $this->get(route('entrance-exam-academy.index', [
+            'institution' => $paper->entrance_exam_institution_id,
+            'program' => $paper->entrance_exam_program_id,
+            'subject' => $paper->entrance_exam_subject_id,
+            'year' => $paper->exam_year,
+        ]))
+            ->assertOk()
+            ->assertSee($paper->title);
+    }
+
+    public function test_paper_detail_has_metadata_and_no_raw_storage_path_or_download_button(): void
+    {
+        [, $paper] = $this->paperContext();
+
+        $this->get(route('entrance-exam-academy.papers.show', $paper))
+            ->assertOk()
+            ->assertSee($paper->title)
+            ->assertSee($paper->institution->name)
+            ->assertSee($paper->program->name)
+            ->assertSee($paper->subject->name)
+            ->assertSee('Read Paper')
+            ->assertDontSee($paper->paper_file_path, false)
+            ->assertDontSee('Download');
+    }
+
+    public function test_pdf_viewer_requires_login_and_does_not_render_download_button(): void
+    {
+        [$student, $paper] = $this->paperContext();
+
+        $this->get(route('entrance-exam-academy.papers.view', $paper))
+            ->assertRedirect(route('login'));
+
+        $this->actingAs($student)
+            ->get(route('entrance-exam-academy.papers.view', $paper))
+            ->assertOk()
+            ->assertSee('data-testid="entrance-exam-pdf-viewer"', false)
+            ->assertSee(route('entrance-exam-academy.papers.inline', $paper), false)
+            ->assertSee('Read-only viewing reduces easy downloading')
+            ->assertDontSee($paper->paper_file_path, false)
+            ->assertDontSee('Download');
+    }
+
+    public function test_authenticated_user_can_view_published_pdf_inline(): void
+    {
+        Storage::fake('public');
+        [$student, $paper] = $this->paperContext();
+        Storage::disk('public')->put($paper->paper_file_path, '%PDF-1.4 entrance paper');
+
+        $this->actingAs($student)
+            ->get(route('entrance-exam-academy.papers.inline', $paper))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf')
+            ->assertHeader('Content-Disposition', 'inline; filename="'.$paper->slug.'.pdf"');
+    }
+
+    public function test_draft_paper_detail_and_pdf_cannot_be_viewed_by_changing_url(): void
+    {
+        [$student, , $draftPaper] = $this->paperContext();
+
+        $this->get(route('entrance-exam-academy.papers.show', $draftPaper))->assertNotFound();
+
+        $this->actingAs($student)
+            ->get(route('entrance-exam-academy.papers.inline', $draftPaper))
+            ->assertNotFound();
+    }
+
+    public function test_inline_route_rejects_missing_or_non_pdf_files_without_exposing_paths(): void
+    {
+        Storage::fake('public');
+        [$student, $paper] = $this->paperContext();
+        $paper->update([
+            'paper_file_path' => 'entrance-exam/past-papers/not-a-pdf.txt',
+            'paper_file_mime' => 'text/plain',
+        ]);
+        Storage::disk('public')->put($paper->paper_file_path, 'not pdf');
+
+        $this->actingAs($student)
+            ->get(route('entrance-exam-academy.papers.inline', $paper))
+            ->assertNotFound();
+    }
+
+    private function paperContext(): array
+    {
+        Storage::fake('public');
+        $student = $this->user(User::ROLE_STUDENT, 'entrance-student-'.str()->random(6).'@mkscholars.test');
+        $admin = $this->user(User::ROLE_ADMIN, 'entrance-uploader-'.str()->random(6).'@mkscholars.test');
+        $institution = EntranceExamInstitution::create([
+            'name' => 'Entrance Test University',
+            'country' => 'Rwanda',
+            'status' => EntranceExamInstitution::STATUS_ACTIVE,
+        ]);
+        $program = EntranceExamProgram::create([
+            'entrance_exam_institution_id' => $institution->id,
+            'name' => 'Engineering Faculty',
+            'status' => EntranceExamProgram::STATUS_ACTIVE,
+        ]);
+        $subject = EntranceExamSubject::create([
+            'name' => 'Mathematics',
+            'status' => EntranceExamSubject::STATUS_ACTIVE,
+        ]);
+        Storage::disk('public')->put('entrance-exam/past-papers/math-2025.pdf', '%PDF-1.4');
+        $paper = EntranceExamPastPaper::create([
+            'entrance_exam_institution_id' => $institution->id,
+            'entrance_exam_program_id' => $program->id,
+            'entrance_exam_subject_id' => $subject->id,
+            'title' => 'Mathematics Entrance Paper 2025',
+            'description' => 'Preparation paper.',
+            'exam_year' => 2025,
+            'exam_type' => 'National entrance',
+            'paper_file_path' => 'entrance-exam/past-papers/math-2025.pdf',
+            'paper_file_disk' => 'public',
+            'paper_file_mime' => 'application/pdf',
+            'status' => EntranceExamPastPaper::STATUS_PUBLISHED,
+            'uploaded_by' => $admin->id,
+        ]);
+        $draftPaper = EntranceExamPastPaper::create([
+            'title' => 'Draft Hidden Paper',
+            'paper_file_path' => 'entrance-exam/past-papers/draft.pdf',
+            'paper_file_disk' => 'public',
+            'paper_file_mime' => 'application/pdf',
+            'status' => EntranceExamPastPaper::STATUS_DRAFT,
+            'uploaded_by' => $admin->id,
+        ]);
+
+        return [$student, $paper, $draftPaper];
+    }
+
+    private function user(string $role, string $email): User
+    {
+        return User::create([
+            'name' => str($role)->headline().' User',
+            'email' => $email,
+            'password' => 'password',
+            'role' => $role,
+            'approval_status' => User::APPROVAL_APPROVED,
+            'approved_at' => now(),
+        ]);
+    }
+}

@@ -119,7 +119,11 @@ class AssignmentResource extends Resource
                             ->options([
                                 AssignmentQuestion::TYPE_TEXT => 'Short text',
                                 AssignmentQuestion::TYPE_TEXTAREA => 'Long answer',
+                                AssignmentQuestion::TYPE_SINGLE_CHOICE => 'Single choice',
+                                AssignmentQuestion::TYPE_MULTIPLE_CHOICE => 'Multiple choice',
+                                AssignmentQuestion::TYPE_TRUE_FALSE => 'True / false',
                             ])
+                            ->helperText('Objective questions need options; text questions do not show option boxes.')
                             ->default(AssignmentQuestion::TYPE_TEXTAREA),
                         TextInput::make('points')
                             ->numeric()

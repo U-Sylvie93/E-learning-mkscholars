@@ -50,17 +50,22 @@ class QuizQuestionResource extends Resource
                 Textarea::make('question_text')
                     ->label('Question text')
                     ->placeholder('Write the question exactly as students should see it.')
-                    ->helperText('Add answer options separately under Quiz Options.')
+                    ->helperText('Add answer options separately only for single-choice, multiple-choice, and true/false questions.')
                     ->required()
                     ->rows(4)
                     ->columnSpanFull(),
                 Select::make('question_type')
                     ->label('Question type')
-                    ->helperText('Multiple choice and true/false are automatically graded from the correct option.')
+                    ->helperText('Option-based questions are automatically graded. Text answers are saved for review and are not auto-scored.')
                     ->required()
                     ->options([
+                        QuizQuestion::TYPE_SINGLE_CHOICE => 'Single choice',
                         QuizQuestion::TYPE_MULTIPLE_CHOICE => 'Multiple choice',
                         QuizQuestion::TYPE_TRUE_FALSE => 'True / false',
+                        QuizQuestion::TYPE_SHORT_ANSWER => 'Short answer',
+                        QuizQuestion::TYPE_LONG_ANSWER => 'Long answer',
+                        QuizQuestion::TYPE_TEXT => 'Text',
+                        QuizQuestion::TYPE_ESSAY => 'Essay',
                     ])
                     ->default(QuizQuestion::TYPE_MULTIPLE_CHOICE),
                 TextInput::make('points')
@@ -121,8 +126,13 @@ class QuizQuestionResource extends Resource
                     ->preload(),
                 SelectFilter::make('question_type')
                     ->options([
+                        QuizQuestion::TYPE_SINGLE_CHOICE => 'Single choice',
                         QuizQuestion::TYPE_MULTIPLE_CHOICE => 'Multiple choice',
                         QuizQuestion::TYPE_TRUE_FALSE => 'True / false',
+                        QuizQuestion::TYPE_SHORT_ANSWER => 'Short answer',
+                        QuizQuestion::TYPE_LONG_ANSWER => 'Long answer',
+                        QuizQuestion::TYPE_TEXT => 'Text',
+                        QuizQuestion::TYPE_ESSAY => 'Essay',
                     ]),
                 SelectFilter::make('status')
                     ->options([
@@ -150,5 +160,4 @@ class QuizQuestionResource extends Resource
         ];
     }
 }
-
 

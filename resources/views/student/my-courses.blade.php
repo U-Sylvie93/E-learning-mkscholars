@@ -35,13 +35,14 @@
                         @php
                             $completion = $item['completion'];
                             $certificate = $item['certificate'];
+                            $offersCertificate = $item['course']->offersCertificate();
                             $completed = (bool) $completion->completed_at || $completion->is_eligible_for_certificate;
                             $certificateLabel = match ($certificate?->status) {
                                 \App\Models\Certificate::STATUS_PENDING => 'Certificate Pending Approval',
                                 \App\Models\Certificate::STATUS_ISSUED => 'Certificate Issued',
                                 \App\Models\Certificate::STATUS_REJECTED => 'Certificate Rejected',
                                 \App\Models\Certificate::STATUS_REVOKED => 'Certificate Revoked',
-                                default => $completed ? 'Certificate Not Requested/Not Available' : null,
+                                default => $offersCertificate && $completed ? 'Certificate Not Requested/Not Available' : null,
                             };
                             $certificateTone = match ($certificate?->status) {
                                 \App\Models\Certificate::STATUS_ISSUED => 'success',
@@ -59,12 +60,18 @@
                             :action-variant="$completed ? 'secondary' : 'primary'"
                         >
                             <x-slot:meta>
-                                <x-badge tone="blue">{{ $item['course']->level }}</x-badge>
+                                @if ($item['course']->level)
+                                    <x-badge tone="blue">{{ $item['course']->level }}</x-badge>
+                                @endif
                                 <x-badge :tone="$completed ? 'success' : 'green'">{{ $completed ? 'Completed' : $item['access_label'] }}</x-badge>
                                 <x-badge tone="gray">{{ $item['course']->instructor?->name ?? 'MK Scholars' }}</x-badge>
-                                <x-badge :tone="$completion->is_eligible_for_certificate ? 'success' : 'gray'">
-                                    {{ $completion->is_eligible_for_certificate ? 'Certificate eligible' : $completion->lesson_percentage.'% lessons' }}
-                                </x-badge>
+                                @if ($offersCertificate)
+                                    <x-badge :tone="$completion->is_eligible_for_certificate ? 'success' : 'gray'">
+                                        {{ $completion->is_eligible_for_certificate ? 'Certificate eligible' : $completion->lesson_percentage.'% lessons' }}
+                                    </x-badge>
+                                @else
+                                    <x-badge tone="gray">{{ $completion->lesson_percentage }}% lessons</x-badge>
+                                @endif
                                 @if ($certificateLabel)
                                     <x-badge :tone="$certificateTone">{{ $certificateLabel }}</x-badge>
                                 @endif
