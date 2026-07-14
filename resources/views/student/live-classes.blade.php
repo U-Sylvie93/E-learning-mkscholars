@@ -32,7 +32,6 @@
                         <x-card class="flex h-full flex-col">
                             <div class="flex flex-wrap items-center gap-2">
                                 <x-badge :tone="$liveClass->displayStatusTone()">{{ $liveClass->displayStatus() }}</x-badge>
-                                <x-badge tone="gray">{{ str_replace('_', ' ', $liveClass->status) }}</x-badge>
                                 <x-badge tone="blue">{{ str_replace('_', ' ', $liveClass->platform) }}</x-badge>
                                 @if ($attendance)
                                     <x-badge tone="gold">{{ $attendance->status }}</x-badge>

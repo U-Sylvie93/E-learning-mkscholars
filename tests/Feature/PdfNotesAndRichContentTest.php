@@ -78,6 +78,8 @@ class PdfNotesAndRichContentTest extends TestCase
             ->assertOk()
             ->assertSee('data-testid="lesson-pdf-viewer"', false)
             ->assertSee(route('student.lesson-materials.view', $activity), false)
+            ->assertDontSee('PDF opens inline for reading')
+            ->assertDontSee('Browser controls may still allow downloads')
             ->assertDontSee('/storage/lesson-materials/notes.pdf', false);
     }
 

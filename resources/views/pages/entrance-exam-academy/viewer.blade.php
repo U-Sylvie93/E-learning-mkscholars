@@ -32,8 +32,6 @@
                         <p class="-rotate-12 select-none text-center text-4xl font-black uppercase tracking-wide text-mk-navy sm:text-6xl">{{ $watermark }}</p>
                     </div>
                 </div>
-
-                <p class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-mk-navy">Read-only viewing reduces easy downloading, but it cannot fully prevent screenshots, screen recording, browser inspection, or external capture.</p>
             </div>
         </div>
     </section>

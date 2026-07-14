@@ -579,3 +579,15 @@ Migration added:
 - `2026_07_14_433000_create_entrance_exam_academy_tables.php`
 
 Online timed entrance exam practice, scoring, and attempts are intentionally deferred. Manual migration, tests, asset build, route inspection, admin upload checks, public filter checks, authenticated PDF viewer checks, and mobile checks remain required.
+
+### Phase 43G: Entrance Exam Payment Gate, PDF Warning Cleanup, Toolbar, and Live Timing Hotfix
+
+Added per-paper manual payment access for Entrance Exam Academy past papers. Published paper detail pages now show Login to Read, Pay Now, Payment Pending, Pay Again, or Read Paper based on the current student's payment state, and the protected viewer/inline PDF routes require an approved entrance exam paper payment before serving the file. Student payment screens, admin payment management, and payment notifications now understand entrance exam paper payments through the existing manual payment flow.
+
+Removed the user-facing read-only/download limitation warnings from entrance exam and lesson PDF viewer screens while keeping protected inline routes and hidden raw storage paths. The instructor Full Course Overview toolbar now uses clearer compact controls with labels/tooltips for formatting, links, tables, images, undo, and redo. Live class displays now use time-derived status consistently, keep currently live classes visible on the instructor dashboard by querying through `ends_at`, and parse instructor-submitted class times with the app timezone.
+
+Migration added:
+
+- `2026_07_14_434000_add_entrance_exam_paper_to_payments_table.php`
+
+Manual migration, tests, asset build, route inspection, entrance exam payment checks, student/admin payment checks, instructor toolbar browser checks, and live-class timing checks remain required.

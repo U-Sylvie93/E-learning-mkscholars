@@ -8,6 +8,7 @@ use App\Models\EntranceExamInstitution;
 use App\Models\EntranceExamPastPaper;
 use App\Models\EntranceExamProgram;
 use App\Models\EntranceExamSubject;
+use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -97,7 +98,58 @@ class EntranceExamAcademyTest extends TestCase
             ->assertDontSee('Download');
     }
 
-    public function test_pdf_viewer_requires_login_and_does_not_render_download_button(): void
+    public function test_paper_detail_shows_payment_state_actions(): void
+    {
+        [$student, $paper] = $this->paperContext();
+
+        $this->get(route('entrance-exam-academy.papers.show', $paper))
+            ->assertOk()
+            ->assertSee('Login to Read');
+
+        $this->actingAs($student)
+            ->get(route('entrance-exam-academy.papers.show', $paper))
+            ->assertOk()
+            ->assertSee('Pay Now');
+
+        $pending = $this->payment($student, $paper, Payment::STATUS_SUBMITTED);
+
+        $this->actingAs($student)
+            ->get(route('entrance-exam-academy.papers.show', $paper))
+            ->assertOk()
+            ->assertSee('Payment Pending');
+
+        $pending->update(['status' => Payment::STATUS_REJECTED]);
+
+        $this->actingAs($student)
+            ->get(route('entrance-exam-academy.papers.show', $paper))
+            ->assertOk()
+            ->assertSee('Pay Again');
+
+        $pending->update(['status' => Payment::STATUS_APPROVED]);
+
+        $this->actingAs($student)
+            ->get(route('entrance-exam-academy.papers.show', $paper))
+            ->assertOk()
+            ->assertSee('Read Paper');
+    }
+
+    public function test_pay_now_reuses_existing_pending_payment(): void
+    {
+        [$student, $paper] = $this->paperContext();
+        $payment = $this->payment($student, $paper, Payment::STATUS_PENDING);
+
+        $this->actingAs($student)
+            ->post(route('entrance-exam-academy.papers.pay', $paper))
+            ->assertRedirect(route('student.payments.show', $payment));
+
+        $this->assertSame(1, Payment::query()
+            ->where('user_id', $student->id)
+            ->where('purpose', Payment::PURPOSE_ENTRANCE_EXAM)
+            ->where('entrance_exam_past_paper_id', $paper->id)
+            ->count());
+    }
+
+    public function test_pdf_viewer_requires_login_and_approved_payment_without_warning_text_or_download_button(): void
     {
         [$student, $paper] = $this->paperContext();
 
@@ -106,19 +158,28 @@ class EntranceExamAcademyTest extends TestCase
 
         $this->actingAs($student)
             ->get(route('entrance-exam-academy.papers.view', $paper))
+            ->assertRedirect(route('entrance-exam-academy.papers.show', $paper))
+            ->assertSessionHasErrors('payment');
+
+        $this->payment($student, $paper, Payment::STATUS_APPROVED);
+
+        $this->actingAs($student)
+            ->get(route('entrance-exam-academy.papers.view', $paper))
             ->assertOk()
             ->assertSee('data-testid="entrance-exam-pdf-viewer"', false)
             ->assertSee(route('entrance-exam-academy.papers.inline', $paper), false)
-            ->assertSee('Read-only viewing reduces easy downloading')
+            ->assertDontSee('Read-only viewing reduces easy downloading')
+            ->assertDontSee('screen recording')
             ->assertDontSee($paper->paper_file_path, false)
             ->assertDontSee('Download');
     }
 
-    public function test_authenticated_user_can_view_published_pdf_inline(): void
+    public function test_approved_paid_user_can_view_published_pdf_inline(): void
     {
         Storage::fake('public');
         [$student, $paper] = $this->paperContext();
         Storage::disk('public')->put($paper->paper_file_path, '%PDF-1.4 entrance paper');
+        $this->payment($student, $paper, Payment::STATUS_APPROVED);
 
         $this->actingAs($student)
             ->get(route('entrance-exam-academy.papers.inline', $paper))
@@ -130,6 +191,7 @@ class EntranceExamAcademyTest extends TestCase
     public function test_draft_paper_detail_and_pdf_cannot_be_viewed_by_changing_url(): void
     {
         [$student, , $draftPaper] = $this->paperContext();
+        $this->payment($student, $draftPaper, Payment::STATUS_APPROVED);
 
         $this->get(route('entrance-exam-academy.papers.show', $draftPaper))->assertNotFound();
 
@@ -142,6 +204,7 @@ class EntranceExamAcademyTest extends TestCase
     {
         Storage::fake('public');
         [$student, $paper] = $this->paperContext();
+        $this->payment($student, $paper, Payment::STATUS_APPROVED);
         $paper->update([
             'paper_file_path' => 'entrance-exam/past-papers/not-a-pdf.txt',
             'paper_file_mime' => 'text/plain',
@@ -197,6 +260,21 @@ class EntranceExamAcademyTest extends TestCase
         ]);
 
         return [$student, $paper, $draftPaper];
+    }
+
+    private function payment(User $student, EntranceExamPastPaper $paper, string $status): Payment
+    {
+        return Payment::create([
+            'user_id' => $student->id,
+            'entrance_exam_past_paper_id' => $paper->id,
+            'amount' => 5000,
+            'currency' => 'RWF',
+            'purpose' => Payment::PURPOSE_ENTRANCE_EXAM,
+            'provider' => Payment::PROVIDER_MANUAL,
+            'status' => $status,
+            'submitted_at' => in_array($status, [Payment::STATUS_SUBMITTED, Payment::STATUS_APPROVED, Payment::STATUS_REJECTED], true) ? now() : null,
+            'reviewed_at' => in_array($status, [Payment::STATUS_APPROVED, Payment::STATUS_REJECTED], true) ? now() : null,
+        ]);
     }
 
     private function user(string $role, string $email): User

@@ -19,6 +19,7 @@ class Payment extends Model
 
     public const PURPOSE_COURSE = 'course';
     public const PURPOSE_SUBSCRIPTION = 'subscription';
+    public const PURPOSE_ENTRANCE_EXAM = 'entrance_exam';
     public const PURPOSE_OTHER = 'other';
 
     public const STATUS_PENDING = 'pending';
@@ -30,6 +31,7 @@ class Payment extends Model
     protected $fillable = [
         'user_id',
         'course_id',
+        'entrance_exam_past_paper_id',
         'payment_method_id',
         'amount',
         'currency',
@@ -154,6 +156,21 @@ class Payment extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function entranceExamPastPaper(): BelongsTo
+    {
+        return $this->belongsTo(EntranceExamPastPaper::class, 'entrance_exam_past_paper_id');
+    }
+
+    public function payableTitle(): string
+    {
+        return match ($this->purpose) {
+            self::PURPOSE_SUBSCRIPTION => $this->subscription?->subscriptionPlan?->name ?? 'Subscription payment',
+            self::PURPOSE_ENTRANCE_EXAM => $this->entranceExamPastPaper?->title ?? 'Entrance exam past paper',
+            self::PURPOSE_COURSE => $this->course?->title ?? 'Course payment',
+            default => 'Manual payment',
+        };
     }
 
     public function paymentMethod(): BelongsTo

@@ -36,6 +36,7 @@ class PaymentResource extends Resource
         return $schema->components([
             Placeholder::make('student')->content(fn (?Payment $record): string => $record?->user?->name ?? 'Student'),
             Placeholder::make('course')->content(fn (?Payment $record): string => $record?->course?->title ?? 'N/A'),
+            Placeholder::make('entrance_exam_paper')->content(fn (?Payment $record): string => $record?->entranceExamPastPaper?->title ?? 'N/A'),
             Placeholder::make('subscription')->content(fn (?Payment $record): string => $record?->subscription?->subscriptionPlan?->name ?? 'N/A'),
             Placeholder::make('provider')->content(fn (?Payment $record): string => $record?->providerLabel() ?? 'Manual'),
             Placeholder::make('provider_reference')->content(fn (?Payment $record): string => $record?->provider_reference ?: 'N/A'),
@@ -46,6 +47,7 @@ class PaymentResource extends Resource
             Select::make('purpose')->required()->options([
                 Payment::PURPOSE_COURSE => 'Course',
                 Payment::PURPOSE_SUBSCRIPTION => 'Subscription',
+                Payment::PURPOSE_ENTRANCE_EXAM => 'Entrance Exam Paper',
                 Payment::PURPOSE_OTHER => 'Other',
             ]),
             Select::make('status')->required()->options(self::statusOptions()),
@@ -72,6 +74,7 @@ class PaymentResource extends Resource
             ->columns([
                 TextColumn::make('user.name')->label('Student')->searchable()->sortable(),
                 TextColumn::make('course.title')->label('Course')->searchable()->sortable()->placeholder('N/A'),
+                TextColumn::make('entranceExamPastPaper.title')->label('Entrance paper')->searchable()->sortable()->placeholder('N/A'),
                 TextColumn::make('subscription.subscriptionPlan.name')->label('Subscription')->searchable()->placeholder('N/A'),
                 TextColumn::make('purpose')->badge()->sortable(),
                 TextColumn::make('provider')
@@ -93,6 +96,7 @@ class PaymentResource extends Resource
                 SelectFilter::make('purpose')->options([
                     Payment::PURPOSE_COURSE => 'Course',
                     Payment::PURPOSE_SUBSCRIPTION => 'Subscription',
+                    Payment::PURPOSE_ENTRANCE_EXAM => 'Entrance Exam Paper',
                     Payment::PURPOSE_OTHER => 'Other',
                 ]),
                 SelectFilter::make('provider')->options(self::providerOptions()),

@@ -50,7 +50,6 @@
                                 <div class="min-w-0">
                                     <div class="flex flex-wrap items-center gap-2">
                                         <x-badge :tone="$liveClass->displayStatusTone()">{{ $liveClass->displayStatus() }}</x-badge>
-                                        <x-badge tone="gray">{{ str_replace('_', ' ', $liveClass->status) }}</x-badge>
                                         <x-badge tone="blue">{{ str_replace('_', ' ', $liveClass->platform) }}</x-badge>
                                     </div>
                                     <h2 class="mt-4 break-words text-2xl font-extrabold text-mk-navy">{{ $liveClass->title }}</h2>

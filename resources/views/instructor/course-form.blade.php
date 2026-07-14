@@ -186,16 +186,20 @@
                         Full course overview
                         <div class="mt-2 overflow-hidden rounded-lg border border-slate-200 bg-white focus-within:border-mk-gold focus-within:ring-2 focus-within:ring-mk-gold/30">
                             <div class="flex flex-wrap gap-1 border-b border-slate-100 bg-slate-50 p-2" data-markdown-toolbar="course-overview-input">
-                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black text-mk-navy hover:bg-white" data-prefix="# ">H1</button>
-                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black text-mk-navy hover:bg-white" data-prefix="## ">H2</button>
-                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black text-mk-navy hover:bg-white" data-wrap="**">B</button>
-                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black italic text-mk-navy hover:bg-white" data-wrap="*">I</button>
-                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black text-mk-navy hover:bg-white" data-prefix="- ">List</button>
-                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black text-mk-navy hover:bg-white" data-insert="| Topic | Detail |\n| --- | --- |\n| Example | Description |\n">Table</button>
-                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black text-mk-navy hover:bg-white" data-wrap="`">Code</button>
-                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black text-mk-navy hover:bg-white" data-insert="```\ncode block\n```\n">Block</button>
-                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black text-mk-navy hover:bg-white" data-insert="[Link text](https://example.com)">Link</button>
-                                <button type="button" class="rounded-md px-2 py-1 text-xs font-black text-mk-navy hover:bg-white" data-insert="![Image alt](https://example.com/image.jpg)">Image</button>
+                                @php($toolClass = 'inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-slate-200 bg-white px-2 text-xs font-black text-mk-navy shadow-sm transition hover:border-mk-gold hover:bg-mk-goldSoft')
+                                <button type="button" class="{{ $toolClass }}" title="Bold" aria-label="Bold" data-wrap="**">B</button>
+                                <button type="button" class="{{ $toolClass }} italic" title="Italic" aria-label="Italic" data-wrap="*">I</button>
+                                <button type="button" class="{{ $toolClass }} line-through" title="Strikethrough" aria-label="Strikethrough" data-wrap="~~">S</button>
+                                <button type="button" class="{{ $toolClass }}" title="Link" aria-label="Link" data-insert="[Link text](https://example.com)">Link</button>
+                                <button type="button" class="{{ $toolClass }}" title="Heading" aria-label="Heading" data-prefix="## ">H</button>
+                                <button type="button" class="{{ $toolClass }}" title="Quote" aria-label="Quote" data-prefix="> ">Quote</button>
+                                <button type="button" class="{{ $toolClass }}" title="Inline code" aria-label="Inline code" data-wrap="`">&lt;/&gt;</button>
+                                <button type="button" class="{{ $toolClass }}" title="Bulleted list" aria-label="Bulleted list" data-prefix="- ">UL</button>
+                                <button type="button" class="{{ $toolClass }}" title="Numbered list" aria-label="Numbered list" data-prefix="1. ">OL</button>
+                                <button type="button" class="{{ $toolClass }}" title="Table" aria-label="Table" data-insert="| Topic | Detail |\n| --- | --- |\n| Example | Description |\n">Table</button>
+                                <button type="button" class="{{ $toolClass }}" title="Image" aria-label="Image" data-insert="![Image alt](https://example.com/image.jpg)">Img</button>
+                                <button type="button" class="{{ $toolClass }}" title="Undo" aria-label="Undo" data-action="undo">Undo</button>
+                                <button type="button" class="{{ $toolClass }}" title="Redo" aria-label="Redo" data-action="redo">Redo</button>
                             </div>
                             <textarea id="course-overview-input" name="full_description" rows="10" class="w-full border-0 px-3 py-2 text-sm leading-6 focus:outline-none focus:ring-0" placeholder="# What students will learn&#10;&#10;Describe the course, projects, lessons, and support students receive.">{{ old('full_description', $course->full_description) }}</textarea>
                         </div>
@@ -302,6 +306,12 @@
 
                     toolbar.querySelectorAll('button').forEach((button) => {
                         button.addEventListener('click', () => {
+                            if (button.dataset.action === 'undo' || button.dataset.action === 'redo') {
+                                target.focus();
+                                document.execCommand(button.dataset.action);
+                                return;
+                            }
+
                             const start = target.selectionStart;
                             const end = target.selectionEnd;
                             const selected = target.value.slice(start, end);

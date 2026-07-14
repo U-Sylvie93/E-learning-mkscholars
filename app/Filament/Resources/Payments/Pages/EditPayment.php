@@ -33,9 +33,7 @@ class EditPayment extends EditRecord
             return;
         }
 
-        $label = $this->record->purpose === Payment::PURPOSE_SUBSCRIPTION
-            ? ($this->record->subscription?->subscriptionPlan?->name ?? 'your subscription')
-            : ($this->record->course?->title ?? 'your course');
+        $label = $this->record->payableTitle();
         $isSubscription = $this->record->purpose === Payment::PURPOSE_SUBSCRIPTION;
 
         app(AppNotificationService::class)->createForUser($this->record->user_id, [

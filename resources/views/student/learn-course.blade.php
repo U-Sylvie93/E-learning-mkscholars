@@ -225,7 +225,6 @@
                                             class="h-[70vh] min-h-[420px] w-full"
                                         ></iframe>
                                     </div>
-                                    <p class="mt-2 text-xs font-semibold text-slate-500">PDF opens inline for reading. Browser controls may still allow downloads or printing.</p>
                                 @elseif ($activity->hasUploadedResource() && $activity->isImageResource() && \Illuminate\Support\Facades\Storage::disk($activity->resourceDisk())->exists($activity->resource_path))
                                     <img src="{{ \Illuminate\Support\Facades\Storage::disk($activity->resourceDisk())->url($activity->resource_path) }}" alt="{{ $activity->title }}" class="mt-3 h-auto max-w-full rounded-lg border border-slate-200 shadow-sm">
                                 @elseif ($activity->hasUploadedResource())
@@ -257,7 +256,6 @@
                             <div class="rounded-mk-md border border-slate-100 bg-slate-50 p-3">
                                 <div class="flex flex-wrap items-center gap-2">
                                     <x-badge :tone="$liveClass->displayStatusTone()">{{ $liveClass->displayStatus() }}</x-badge>
-                                    <x-status-badge :status="$liveClass->status" />
                                     <x-badge tone="blue">{{ str_replace('_', ' ', $liveClass->platform) }}</x-badge>
                                 </div>
                                 <p class="mt-2 text-sm font-bold text-mk-navy">{{ $liveClass->title }}</p>

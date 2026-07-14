@@ -426,14 +426,58 @@ Route::get('/entrance-exam-academy/papers/{paper:slug}', function (EntranceExamP
     abort_unless($paper->isPublished(), 404);
 
     $paper->load(['institution', 'program', 'subject']);
+    $user = Auth::user();
+    $payment = $user ? Payment::query()
+        ->where('user_id', $user->id)
+        ->where('purpose', Payment::PURPOSE_ENTRANCE_EXAM)
+        ->where('entrance_exam_past_paper_id', $paper->id)
+        ->whereIn('status', [Payment::STATUS_PENDING, Payment::STATUS_SUBMITTED, Payment::STATUS_APPROVED, Payment::STATUS_REJECTED])
+        ->latest()
+        ->first() : null;
 
     return view('pages.entrance-exam-academy.show', [
         'paper' => $paper,
+        'payment' => $payment,
+        'hasAccess' => $payment?->status === Payment::STATUS_APPROVED,
     ]);
 })->name('entrance-exam-academy.papers.show');
 
+Route::post('/entrance-exam-academy/papers/{paper:slug}/pay', function (EntranceExamPastPaper $paper) {
+    abort_unless($paper->isPublished(), 404);
+
+    $user = Auth::user();
+    $payment = Payment::query()
+        ->where('user_id', $user->id)
+        ->where('purpose', Payment::PURPOSE_ENTRANCE_EXAM)
+        ->where('entrance_exam_past_paper_id', $paper->id)
+        ->whereIn('status', [Payment::STATUS_PENDING, Payment::STATUS_SUBMITTED, Payment::STATUS_REJECTED])
+        ->latest()
+        ->first();
+
+    $payment ??= app(PaymentProviderManager::class)
+        ->driver(Payment::PROVIDER_MANUAL)
+        ->createPendingPayment([
+            'user_id' => $user->id,
+            'entrance_exam_past_paper_id' => $paper->id,
+            'amount' => config('mkscholars.entrance_exam.paper_price_amount', 5000),
+            'currency' => config('mkscholars.entrance_exam.currency', 'RWF'),
+            'purpose' => Payment::PURPOSE_ENTRANCE_EXAM,
+        ]);
+
+    return redirect()->route('student.payments.show', $payment);
+})->middleware('role:'.User::ROLE_STUDENT)->name('entrance-exam-academy.papers.pay');
+
 Route::get('/entrance-exam-academy/papers/{paper:slug}/view', function (EntranceExamPastPaper $paper) {
     abort_unless($paper->isPublished(), 404);
+    if (! Payment::query()
+        ->where('user_id', Auth::id())
+        ->where('purpose', Payment::PURPOSE_ENTRANCE_EXAM)
+        ->where('entrance_exam_past_paper_id', $paper->id)
+        ->where('status', Payment::STATUS_APPROVED)
+        ->exists()) {
+        return redirect()->route('entrance-exam-academy.papers.show', $paper)
+            ->withErrors(['payment' => 'Please complete payment to read this paper.']);
+    }
 
     $paper->load(['institution', 'program', 'subject']);
 
@@ -441,10 +485,19 @@ Route::get('/entrance-exam-academy/papers/{paper:slug}/view', function (Entrance
         'paper' => $paper,
         'watermark' => Auth::user()?->email ?: 'MK Scholars',
     ]);
-})->middleware('auth')->name('entrance-exam-academy.papers.view');
+})->middleware('role:'.User::ROLE_STUDENT)->name('entrance-exam-academy.papers.view');
 
 Route::get('/entrance-exam-academy/papers/{paper:slug}/inline', function (EntranceExamPastPaper $paper) {
     abort_unless($paper->isPublished(), 404);
+    if (! Payment::query()
+        ->where('user_id', Auth::id())
+        ->where('purpose', Payment::PURPOSE_ENTRANCE_EXAM)
+        ->where('entrance_exam_past_paper_id', $paper->id)
+        ->where('status', Payment::STATUS_APPROVED)
+        ->exists()) {
+        return redirect()->route('entrance-exam-academy.papers.show', $paper)
+            ->withErrors(['payment' => 'Please complete payment to read this paper.']);
+    }
     abort_unless($paper->hasPdfFile(), 404);
 
     $disk = Storage::disk($paper->paperFileDisk());
@@ -455,7 +508,7 @@ Route::get('/entrance-exam-academy/papers/{paper:slug}/inline', function (Entran
         'Content-Disposition' => 'inline; filename="'.Str::slug($paper->title ?: 'entrance-exam-paper').'.pdf"',
         'X-Content-Type-Options' => 'nosniff',
     ]);
-})->middleware('auth')->name('entrance-exam-academy.papers.inline');
+})->middleware('role:'.User::ROLE_STUDENT)->name('entrance-exam-academy.papers.inline');
 
 Route::middleware('guest')->group(function (): void {
     Route::view('/login', 'auth.login')->name('login');
@@ -1184,7 +1237,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
         return view('student.payments', [
             'payments' => Payment::query()
-                ->with(['course.academy', 'paymentMethod', 'subscription.subscriptionPlan'])
+                ->with(['course.academy', 'entranceExamPastPaper', 'paymentMethod', 'subscription.subscriptionPlan'])
                 ->where('user_id', $user->id)
                 ->latest()
                 ->get(),
@@ -1201,7 +1254,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         abort_unless($payment->user_id === $user->id, 403);
 
         return view('student.payment-show', [
-            'payment' => $payment->load(['course.academy', 'paymentMethod', 'reviewer', 'subscription.subscriptionPlan.courses']),
+            'payment' => $payment->load(['course.academy', 'entranceExamPastPaper', 'paymentMethod', 'reviewer', 'subscription.subscriptionPlan.courses']),
             'paymentMethods' => PaymentMethod::query()
                 ->where('status', PaymentMethod::STATUS_ACTIVE)
                 ->orderBy('name')
@@ -1230,7 +1283,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
         app(AppNotificationService::class)->createForRole(User::ROLE_ADMIN, [
             'title' => $payment->purpose === Payment::PURPOSE_SUBSCRIPTION ? 'Subscription payment proof submitted' : 'Payment proof submitted',
-            'message' => $user->name.' submitted payment proof for '.($payment->purpose === Payment::PURPOSE_SUBSCRIPTION ? ($payment->subscription?->subscriptionPlan?->name ?? 'a subscription') : ($payment->course?->title ?? 'a course')).'.',
+            'message' => $user->name.' submitted payment proof for '.$payment->payableTitle().'.',
             'type' => AppNotification::TYPE_REMINDER,
             'category' => AppNotification::CATEGORY_PAYMENT,
             'action_url' => '/admin/payments',
@@ -2443,7 +2496,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
     $validateInstructorLiveClass = function (Request $request, User $instructor) use ($instructorCourseIds): array {
         $courseIds = $instructorCourseIds($instructor)->all();
 
-        return $request->validate([
+        $validated = $request->validate([
             'course_id' => ['required', 'integer', Rule::in($courseIds)],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],
@@ -2454,6 +2507,11 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'status' => ['required', Rule::in(LiveClass::STATUSES)],
             'recording_url' => ['nullable', 'url', 'max:255'],
         ]);
+
+        $validated['starts_at'] = \Carbon\Carbon::parse($validated['starts_at'], config('app.timezone'));
+        $validated['ends_at'] = \Carbon\Carbon::parse($validated['ends_at'], config('app.timezone'));
+
+        return $validated;
     };
 
     Route::get('/instructor/dashboard', function () use ($instructorCoursesQuery, $instructorCourseIds, $instructorLiveClassesForCourse) {
@@ -2498,7 +2556,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
                 ->with(['course', 'module.course', 'lesson.module.course'])
                 ->where('instructor_id', $user->id)
                 ->whereIn('status', [LiveClass::STATUS_SCHEDULED, LiveClass::STATUS_LIVE])
-                ->where('starts_at', '>=', now())
+                ->where('ends_at', '>=', now())
                 ->orderBy('starts_at')
                 ->take(5)
                 ->get(),

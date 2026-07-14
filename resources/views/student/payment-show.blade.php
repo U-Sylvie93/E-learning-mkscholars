@@ -1,7 +1,5 @@
 @php
-    $paymentTitle = $payment->purpose === \App\Models\Payment::PURPOSE_SUBSCRIPTION
-        ? ($payment->subscription?->subscriptionPlan?->name ?? 'Subscription payment')
-        : ($payment->course?->title ?? 'Course payment');
+    $paymentTitle = $payment->payableTitle();
     $canUpload = in_array($payment->status, [
         \App\Models\Payment::STATUS_PENDING,
         \App\Models\Payment::STATUS_SUBMITTED,
@@ -20,7 +18,7 @@
             <x-section-header
                 eyebrow="Manual payment"
                 :title="$paymentTitle"
-                :description="$payment->purpose === \App\Models\Payment::PURPOSE_SUBSCRIPTION ? 'Upload payment proof so an MK Scholars admin can review and activate your subscription.' : 'Upload your payment proof so an MK Scholars admin can review and activate course access.'"
+                :description="$payment->purpose === \App\Models\Payment::PURPOSE_SUBSCRIPTION ? 'Upload payment proof so an MK Scholars admin can review and activate your subscription.' : ($payment->purpose === \App\Models\Payment::PURPOSE_ENTRANCE_EXAM ? 'Upload your payment proof so an MK Scholars admin can review and unlock this entrance exam paper.' : 'Upload your payment proof so an MK Scholars admin can review and activate course access.')"
             />
             <x-badge :tone="$statusTone">{{ str_replace('_', ' ', $payment->status) }}</x-badge>
         </div>
@@ -40,7 +38,7 @@
                             <p class="mt-2 font-bold text-mk-navy">{{ $payment->providerLabel() }}</p>
                         </div>
                         <div>
-                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Course</p>
+                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">{{ $payment->purpose === \App\Models\Payment::PURPOSE_ENTRANCE_EXAM ? 'Past Paper' : ($payment->purpose === \App\Models\Payment::PURPOSE_SUBSCRIPTION ? 'Subscription' : 'Course') }}</p>
                             <p class="mt-2 font-bold text-mk-navy">{{ $paymentTitle }}</p>
                         </div>
                     </div>
@@ -104,10 +102,12 @@
                         <x-badge :tone="$payment->status === \App\Models\Payment::STATUS_APPROVED ? 'green' : 'gray'">Reviewed</x-badge>
                         <h2 class="mt-4 text-xl font-bold text-mk-navy">{{ $payment->status === \App\Models\Payment::STATUS_APPROVED ? 'Payment approved' : 'Payment closed' }}</h2>
                         <p class="mt-3 text-sm leading-6 text-slate-600">
-                            {{ $payment->status === \App\Models\Payment::STATUS_APPROVED ? ($payment->purpose === \App\Models\Payment::PURPOSE_SUBSCRIPTION ? 'Your subscription is active. Open subscriptions to view included courses.' : 'Your course access is active. Continue learning when you are ready.') : 'This payment is no longer accepting proof uploads.' }}
+                            {{ $payment->status === \App\Models\Payment::STATUS_APPROVED ? ($payment->purpose === \App\Models\Payment::PURPOSE_SUBSCRIPTION ? 'Your subscription is active. Open subscriptions to view included courses.' : ($payment->purpose === \App\Models\Payment::PURPOSE_ENTRANCE_EXAM ? 'Your entrance exam paper access is active.' : 'Your course access is active. Continue learning when you are ready.')) : 'This payment is no longer accepting proof uploads.' }}
                         </p>
                         @if ($payment->course && $payment->status === \App\Models\Payment::STATUS_APPROVED)
                             <x-button :href="route('student.courses.learn', $payment->course)" class="mt-6">Continue Learning</x-button>
+                        @elseif ($payment->purpose === \App\Models\Payment::PURPOSE_ENTRANCE_EXAM && $payment->entranceExamPastPaper)
+                            <x-button :href="route('entrance-exam-academy.papers.show', $payment->entranceExamPastPaper)" class="mt-6">Open Past Paper</x-button>
                         @elseif ($payment->purpose === \App\Models\Payment::PURPOSE_SUBSCRIPTION && $payment->subscription)
                             <x-button :href="route('student.subscriptions.show', $payment->subscription)" class="mt-6">View Subscription</x-button>
                         @endif
@@ -139,7 +139,7 @@
                 <x-card>
                     <x-badge tone="gold">Next step</x-badge>
                     <p class="mt-4 text-sm leading-6 text-slate-600">
-                        {{ $payment->purpose === \App\Models\Payment::PURPOSE_SUBSCRIPTION ? 'After your proof is approved, MK Scholars activates your subscription and included course access.' : 'After your proof is approved, MK Scholars automatically activates your course enrollment.' }}
+                        {{ $payment->purpose === \App\Models\Payment::PURPOSE_SUBSCRIPTION ? 'After your proof is approved, MK Scholars activates your subscription and included course access.' : ($payment->purpose === \App\Models\Payment::PURPOSE_ENTRANCE_EXAM ? 'After your proof is approved, MK Scholars unlocks this entrance exam past paper.' : 'After your proof is approved, MK Scholars automatically activates your course enrollment.') }}
                     </p>
                     <x-button :href="route('student.payments')" variant="secondary" size="sm" class="mt-5">Back to Payments</x-button>
                 </x-card>

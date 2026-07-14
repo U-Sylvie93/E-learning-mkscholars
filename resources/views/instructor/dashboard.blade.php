@@ -128,7 +128,7 @@
             <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 @forelse ($upcomingLiveClasses as $liveClass)
                     <div class="rounded-mk-md border border-slate-100 bg-slate-50 p-4">
-                        <x-status-badge :status="$liveClass->status" />
+                        <x-badge :tone="$liveClass->displayStatusTone()">{{ $liveClass->displayStatus() }}</x-badge>
                         <p class="mt-2 font-bold text-mk-navy">{{ $liveClass->title }}</p>
                         <p class="mt-0.5 text-sm text-slate-600">{{ $liveClass->associatedCourse()?->title ?? 'MK Scholars' }}</p>
                         <p class="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ $liveClass->starts_at?->format('M j, Y g:i A') ?? 'To be scheduled' }}</p>

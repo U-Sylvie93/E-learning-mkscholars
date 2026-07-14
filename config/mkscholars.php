@@ -9,6 +9,11 @@ return [
         'enabled' => env('MK_EMAIL_NOTIFICATIONS_ENABLED', false),
     ],
 
+    'entrance_exam' => [
+        'paper_price_amount' => env('MK_ENTRANCE_EXAM_PAPER_PRICE_AMOUNT', 5000),
+        'currency' => env('MK_ENTRANCE_EXAM_CURRENCY', 'RWF'),
+    ],
+
     // SWAP IMAGES: replace each 'image' URL below with your own uploaded photo.
     // These are free Unsplash placeholders sized for the card aspect ratio.
     'academies' => [
@@ -108,5 +113,4 @@ return [
         ],
     ],
 ];
-
 

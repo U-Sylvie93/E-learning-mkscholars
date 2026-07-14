@@ -19,11 +19,28 @@
                     @if ($paper->description)
                         <p class="mt-4 text-sm leading-7 text-slate-600">{{ $paper->description }}</p>
                     @endif
+                    @if ($errors->has('payment'))
+                        <div class="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">{{ $errors->first('payment') }}</div>
+                    @endif
 
-                    <div class="mt-6">
-                        <x-button :href="route('entrance-exam-academy.papers.view', $paper)" size="lg">Read Paper</x-button>
+                    <div class="mt-6 flex flex-wrap gap-3">
+                        @guest
+                            <x-button :href="route('login')" size="lg">Login to Read</x-button>
+                        @else
+                            @if ($hasAccess)
+                                <x-button :href="route('entrance-exam-academy.papers.view', $paper)" size="lg">Read Paper</x-button>
+                            @elseif ($payment && in_array($payment->status, [\App\Models\Payment::STATUS_PENDING, \App\Models\Payment::STATUS_SUBMITTED], true))
+                                <x-button :href="route('student.payments.show', $payment)" size="lg" variant="secondary">Payment Pending</x-button>
+                            @elseif ($payment && $payment->status === \App\Models\Payment::STATUS_REJECTED)
+                                <x-button :href="route('student.payments.show', $payment)" size="lg">Pay Again</x-button>
+                            @else
+                                <form method="POST" action="{{ route('entrance-exam-academy.papers.pay', $paper) }}">
+                                    @csrf
+                                    <x-button type="submit" size="lg">Pay Now</x-button>
+                                </form>
+                            @endif
+                        @endguest
                     </div>
-                    <p class="mt-4 text-xs font-semibold leading-5 text-slate-500">No direct download button is provided. The protected viewer opens the PDF in the browser for authenticated users.</p>
                 </x-card>
 
                 <x-card>
@@ -37,8 +54,6 @@
                     </dl>
                 </x-card>
             </div>
-
-            <p class="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-mk-navy">Read-only viewing reduces easy downloading, but it cannot fully prevent screenshots, screen recording, browser inspection, or external capture.</p>
         </div>
     </section>
 </x-layouts.app>

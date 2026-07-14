@@ -1258,3 +1258,23 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Raw storage paths are not exposed.
 - Read-only limitation is documented.
 - UI is mobile responsive.
+
+## Phase 43G Hotfix QA
+
+- Entrance Exam Academy paper detail requires a student login before payment/access actions.
+- Unpaid students see Pay Now for published entrance exam papers.
+- Pay Now creates or reuses one pending manual entrance exam paper payment for the current student.
+- Pending/submitted entrance exam paper payments show Payment Pending and do not unlock the PDF.
+- Rejected entrance exam paper payments show Pay Again and still do not unlock the PDF.
+- Approved entrance exam paper payments unlock Read Paper and the protected inline PDF route.
+- Students cannot view another user's entrance exam paper payment or unlock access with another user's payment.
+- Draft/unpublished entrance exam papers remain hidden even if a payment exists.
+- Student payment pages and admin payment management show entrance exam paper payment context.
+- User-facing read-only/download warning messages are not shown on entrance exam or lesson PDF viewer pages.
+- Protected PDF routes still avoid raw storage paths and direct download buttons.
+- Instructor Full Course Overview toolbar shows clear controls for bold, italic, strikethrough, link, heading, quote, code, lists, table, image, undo, and redo.
+- Toolbar buttons remain compact and usable on mobile widths.
+- Live classes show Live Now when current time is between start and end, even if stored status is scheduled.
+- Instructor dashboard includes currently live classes by checking `ends_at >= now()`.
+- Student and instructor live class cards do not show conflicting raw persisted status badges beside smart timing status.
+- Live class create/update parsing uses the app timezone for submitted start/end values.

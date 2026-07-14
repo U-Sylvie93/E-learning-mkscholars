@@ -42,7 +42,7 @@ class LiveClassSmartButtonTest extends TestCase
 
         $this->actingAs($student)
             ->post(route('student.live-classes.join', $liveClass))
-            ->assertSessionHasErrors(['live_class' => 'This class has been cancelled.']);
+            ->assertSessionHasErrors(['live_class' => 'Class has not started yet.']);
     }
 
     public function test_live_class_can_be_joined_at_exact_start_and_end_time(): void
@@ -197,7 +197,7 @@ class LiveClassSmartButtonTest extends TestCase
 
         $this->actingAs($student)
             ->post(route('student.live-classes.join', $liveClass))
-            ->assertSessionHasErrors(['live_class' => 'Class has not started yet.']);
+            ->assertSessionHasErrors(['live_class' => 'This class has been cancelled.']);
     }
 
     public function test_guest_and_student_without_access_cannot_use_live_class_routes(): void

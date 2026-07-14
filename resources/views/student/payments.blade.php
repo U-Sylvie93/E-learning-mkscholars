@@ -41,10 +41,10 @@
                                             <x-badge tone="gray">{{ number_format((float) $payment->amount, 0) }} {{ $payment->currency }}</x-badge>
                                         </div>
                                         <h2 class="mt-4 text-xl font-bold text-mk-navy">
-                                            {{ $payment->purpose === \App\Models\Payment::PURPOSE_SUBSCRIPTION ? ($payment->subscription?->subscriptionPlan?->name ?? 'Subscription payment') : ($payment->course?->title ?? 'Course payment') }}
+                                            {{ $payment->payableTitle() }}
                                         </h2>
                                         <p class="mt-2 text-sm font-semibold text-mk-gold">
-                                            {{ $payment->purpose === \App\Models\Payment::PURPOSE_SUBSCRIPTION ? 'Subscription plan' : ($payment->course?->academy?->name ?? 'MK Scholars') }}
+                                            {{ $payment->purpose === \App\Models\Payment::PURPOSE_SUBSCRIPTION ? 'Subscription plan' : ($payment->purpose === \App\Models\Payment::PURPOSE_ENTRANCE_EXAM ? 'Entrance Exam Academy' : ($payment->course?->academy?->name ?? 'MK Scholars')) }}
                                         </p>
                                         <p class="mt-3 text-sm leading-6 text-slate-600">
                                             {{ $payment->paymentMethod?->name ?? 'No method selected yet' }}
@@ -81,4 +81,3 @@
         </div>
     </section>
 </x-dashboard-layout>
-

@@ -35,6 +35,25 @@ class InstructorCourseFormPolishTest extends TestCase
             ->assertDontSee('Duration <span class="text-red-600"', false);
     }
 
+    public function test_instructor_course_form_shows_clear_overview_toolbar_controls(): void
+    {
+        $instructor = $this->instructor('overview-toolbar');
+        $this->academy('overview-toolbar');
+
+        $this->actingAs($instructor)
+            ->get(route('instructor.courses.create'))
+            ->assertOk()
+            ->assertSee('data-markdown-toolbar="course-overview-input"', false)
+            ->assertSee('aria-label="Bold"', false)
+            ->assertSee('aria-label="Strikethrough"', false)
+            ->assertSee('aria-label="Table"', false)
+            ->assertSee('aria-label="Image"', false)
+            ->assertSee('aria-label="Undo"', false)
+            ->assertSee('aria-label="Redo"', false)
+            ->assertSee('data-action="undo"', false)
+            ->assertSee('data-action="redo"', false);
+    }
+
     public function test_instructor_can_create_course_without_level_duration_and_slug_is_generated(): void
     {
         $instructor = $this->instructor('optional-fields');

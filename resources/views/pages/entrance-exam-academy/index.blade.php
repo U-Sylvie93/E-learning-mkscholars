@@ -81,7 +81,6 @@
                 <div class="mt-8">{{ $papers->links() }}</div>
             @endif
 
-            <p class="mt-8 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-mk-navy">Read-only viewing reduces easy downloading, but it cannot fully prevent screenshots, screen recording, browser inspection, or external capture.</p>
         </div>
     </section>
 </x-layouts.app>
