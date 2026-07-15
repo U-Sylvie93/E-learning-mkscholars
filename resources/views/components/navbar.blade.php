@@ -4,7 +4,7 @@
         ['label' => 'About', 'route' => 'about'],
         ['label' => 'Academies', 'route' => 'academies'],
         ['label' => 'Courses', 'route' => 'courses'],
-        ['label' => 'Entrance Exam Academy', 'route' => 'entrance-exam-academy.index'],
+        ['label' => 'Entrance Exam', 'route' => 'entrance-exam-academy.index'],
         ['label' => 'Contact', 'route' => 'contact'],
     ];
 @endphp
