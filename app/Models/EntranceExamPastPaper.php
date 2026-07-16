@@ -145,7 +145,7 @@ class EntranceExamPastPaper extends Model
         ];
     }
 
-    private static function uniqueSlug(string $value, ?int $ignoreId = null): string
+    private static function uniqueSlug(?string $value, ?int $ignoreId = null): string
     {
         $base = Str::slug($value) ?: 'past-paper';
         $slug = $base;

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Academy;
 use App\Models\Course;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CourseRichContentTest extends TestCase
@@ -102,6 +103,35 @@ MARKDOWN,
             ->assertSee('A normal escaped course summary.')
             ->assertDontSee('<h1>Private Rich Heading</h1>', false)
             ->assertDontSee('mk-rich-content', false);
+    }
+
+    public function test_public_course_detail_uses_course_image_for_social_share_meta(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('courses/share-course.webp', 'fake image');
+
+        $academy = Academy::factory()->create([
+            'name' => 'Share Academy',
+            'slug' => 'share-academy',
+            'status' => Academy::STATUS_PUBLISHED,
+        ]);
+
+        $course = Course::factory()->create([
+            'academy_id' => $academy->id,
+            'title' => 'Share Image Course',
+            'slug' => 'share-image-course',
+            'short_description' => 'Shared course description.',
+            'status' => Course::STATUS_PUBLISHED,
+            'featured_image_path' => 'courses/share-course.webp',
+        ]);
+
+        $imageUrl = asset('storage/courses/share-course.webp');
+
+        $this->get(route('courses.show', $course->slug))
+            ->assertOk()
+            ->assertSee('property="og:image" content="'.$imageUrl.'"', false)
+            ->assertSee('name="twitter:image" content="'.$imageUrl.'"', false)
+            ->assertSee('property="og:description" content="Shared course description."', false);
     }
 
     public function test_course_detail_handles_missing_overview_and_cover_image(): void

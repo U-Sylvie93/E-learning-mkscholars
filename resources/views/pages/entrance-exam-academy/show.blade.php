@@ -26,7 +26,7 @@
 
                     <div class="mt-6 flex flex-wrap gap-3">
                         @guest
-                            <x-button :href="route('login')" size="lg">Login to Read</x-button>
+                            <x-button :href="route('register')" size="lg">Register to Continue</x-button>
                         @else
                             @if ($hasAccess)
                                 <x-button :href="route('entrance-exam-academy.papers.view', $paper)" size="lg">Read Paper</x-button>

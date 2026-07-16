@@ -6,7 +6,7 @@
     $academyIcon = $course['academy_icon'] ?? \App\Models\Academy::ICON_BOOK_OPEN;
 @endphp
 
-<x-layouts.app :title="$course['title']">
+<x-layouts.app :title="$course['title']" :description="$course['short_description'] ?? 'MK Scholars course details.'" :image="$course['image'] ?? null">
     <section class="bg-white py-16">
         <div class="mk-container grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
             <div>
@@ -325,6 +325,5 @@
         </div>
     </section>
 </x-layouts.app>
-
 
 

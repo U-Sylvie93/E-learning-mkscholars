@@ -41,7 +41,6 @@ class EntranceExamSubjectResource extends Resource
     {
         return $schema->components([
             TextInput::make('name')
-                ->required()
                 ->maxLength(255)
                 ->live(onBlur: true)
                 ->afterStateUpdated(fn (string $operation, $state, $set) => $operation === 'create' ? $set('slug', Str::slug($state)) : null),

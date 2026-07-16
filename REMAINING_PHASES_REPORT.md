@@ -582,7 +582,7 @@ Online timed entrance exam practice, scoring, and attempts are intentionally def
 
 ### Phase 43G: Entrance Exam Payment Gate, PDF Warning Cleanup, Toolbar, and Live Timing Hotfix
 
-Added per-paper manual payment access for Entrance Exam Academy past papers. Published paper detail pages now show Login to Read, Pay Now, Payment Pending, Pay Again, or Read Paper based on the current student's payment state, and the protected viewer/inline PDF routes require an approved entrance exam paper payment before serving the file. Student payment screens, admin payment management, and payment notifications now understand entrance exam paper payments through the existing manual payment flow.
+Added per-paper manual payment access for Entrance Exam Academy past papers. Published paper detail pages now show Register to Continue for guests, Pay Now, Payment Pending, Pay Again, or Read Paper based on the current student's payment state, and the protected viewer/inline PDF routes require an approved entrance exam paper payment before serving the file. Student payment screens, admin payment management, and payment notifications now understand entrance exam paper payments through the existing manual payment flow.
 
 Removed the user-facing read-only/download limitation warnings from entrance exam and lesson PDF viewer screens while keeping protected inline routes and hidden raw storage paths. The instructor Full Course Overview toolbar now uses clearer compact controls with labels/tooltips for formatting, links, tables, images, undo, and redo. Live class displays now use time-derived status consistently, keep currently live classes visible on the instructor dashboard by querying through `ends_at`, and parse instructor-submitted class times with the app timezone.
 
@@ -603,3 +603,17 @@ Migration added:
 - `2026_07_15_430000_add_price_fields_to_entrance_exam_past_papers_table.php`
 
 Manual migration, tests, asset build, route inspection, instructor editor browser checks, live class link checks, and free/paid entrance exam paper payment checks remain required.
+
+### Phase 43I: Student UI, Entrance Exam Controls, Social Share Images, and Admin Required Stars
+
+Updated entrance exam student-facing copy so guests see Register to Continue instead of Login to Read, and added protected viewer controls for dark mode plus zoom in, zoom out, and reset zoom. The student dashboard navigation now includes Entrance Exam, and the mobile dashboard menu is constrained to the viewport with an internal scroll area so Settings, Back to Site, and Logout remain reachable on phones.
+
+Public layout metadata now includes Open Graph and Twitter card tags. Course detail pages pass the course cover image and short description into the layout so shared course links can show the correct image on WhatsApp and social platforms, with the MK Scholars logo as the fallback image.
+
+Admin Entrance Exam Institution, Program, Subject, and Past Paper title/name fields no longer use Filament required markers. Their database columns are made nullable and model slug generation now tolerates blank values by falling back to safe generic slugs.
+
+Migration added:
+
+- `2026_07_16_430000_make_entrance_exam_admin_names_nullable.php`
+
+Manual migration, tests, asset build, route inspection, phone-menu checks, entrance exam viewer control checks, social-share metadata checks, and admin entrance exam form checks remain required.

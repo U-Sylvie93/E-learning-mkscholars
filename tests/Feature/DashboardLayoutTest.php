@@ -99,9 +99,26 @@ class DashboardLayoutTest extends TestCase
             ->assertSee('Payments')
             ->assertSee('Documents')
             ->assertSee('Live Classes')
+            ->assertSee('Entrance Exam')
+            ->assertSee(route('entrance-exam-academy.index'), false)
             ->assertDontSee('Mentorship')
             ->assertDontSee('Subscriptions')
             ->assertDontSee('Opportunities');
+    }
+
+    public function test_mobile_dashboard_menu_is_scrollable_and_keeps_account_actions(): void
+    {
+        $student = $this->approvedUser(User::ROLE_STUDENT, 'student-mobile-menu@mkscholars.test');
+
+        $this->actingAs($student)
+            ->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertSee('data-testid="dashboard-mobile-drawer"', false)
+            ->assertSee('max-h-[calc(100vh-5rem)]', false)
+            ->assertSee('overflow-y-auto', false)
+            ->assertSee('Settings')
+            ->assertSee('Back to Site')
+            ->assertSee('Logout');
     }
 
     public function test_student_dashboard_uses_responsive_card_grid_markers(): void

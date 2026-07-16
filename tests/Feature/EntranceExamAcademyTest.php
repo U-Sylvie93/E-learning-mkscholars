@@ -56,12 +56,24 @@ class EntranceExamAcademyTest extends TestCase
 
     public function test_past_paper_resource_is_pdf_only(): void
     {
-        $resource = file_get_contents(app_path('Filament/Resources/EntranceExamPastPapers/EntranceExamPastPaperResource.php'));
+        $resource = str_replace("\r\n", "\n", file_get_contents(app_path('Filament/Resources/EntranceExamPastPapers/EntranceExamPastPaperResource.php')));
 
         $this->assertStringContainsString("FileUpload::make('paper_file_path')", $resource);
         $this->assertStringContainsString("->acceptedFileTypes(['application/pdf'])", $resource);
         $this->assertStringContainsString('->maxSize(20480)', $resource);
         $this->assertStringContainsString("TextInput::make('price_amount')", $resource);
+        $this->assertStringNotContainsString("TextInput::make('title')\n                ->required()", $resource);
+    }
+
+    public function test_entrance_exam_admin_name_fields_are_not_required(): void
+    {
+        $institutionResource = str_replace("\r\n", "\n", file_get_contents(app_path('Filament/Resources/EntranceExamInstitutions/EntranceExamInstitutionResource.php')));
+        $programResource = str_replace("\r\n", "\n", file_get_contents(app_path('Filament/Resources/EntranceExamPrograms/EntranceExamProgramResource.php')));
+        $subjectResource = str_replace("\r\n", "\n", file_get_contents(app_path('Filament/Resources/EntranceExamSubjects/EntranceExamSubjectResource.php')));
+
+        $this->assertStringNotContainsString("TextInput::make('name')\n                ->required()", $institutionResource);
+        $this->assertStringNotContainsString("TextInput::make('name')\n                ->required()", $programResource);
+        $this->assertStringNotContainsString("TextInput::make('name')\n                ->required()", $subjectResource);
     }
 
     public function test_academy_index_shows_published_papers_and_filters_by_classification(): void
@@ -96,7 +108,8 @@ class EntranceExamAcademyTest extends TestCase
             ->assertSee($paper->program->name)
             ->assertSee($paper->subject->name)
             ->assertSee('5,000 RWF')
-            ->assertSee('Login to Read')
+            ->assertSee('Register to Continue')
+            ->assertDontSee('Login to Read')
             ->assertDontSee($paper->paper_file_path, false)
             ->assertDontSee('Download');
     }
@@ -107,7 +120,8 @@ class EntranceExamAcademyTest extends TestCase
 
         $this->get(route('entrance-exam-academy.papers.show', $paper))
             ->assertOk()
-            ->assertSee('Login to Read');
+            ->assertSee('Register to Continue')
+            ->assertDontSee('Login to Read');
 
         $this->actingAs($student)
             ->get(route('entrance-exam-academy.papers.show', $paper))
@@ -214,6 +228,10 @@ class EntranceExamAcademyTest extends TestCase
             ->assertOk()
             ->assertSee('data-testid="entrance-exam-pdf-viewer"', false)
             ->assertSee(route('entrance-exam-academy.papers.inline', $paper), false)
+            ->assertSee('data-pdf-dark', false)
+            ->assertSee('data-pdf-zoom-in', false)
+            ->assertSee('data-pdf-zoom-out', false)
+            ->assertSee('data-pdf-zoom-reset', false)
             ->assertDontSee('Read-only viewing reduces easy downloading')
             ->assertDontSee('screen recording')
             ->assertDontSee($paper->paper_file_path, false)

@@ -18,6 +18,7 @@
             ['label' => 'Payments', 'route' => 'student.payments', 'icon' => 'payments'],
             ['label' => 'Documents', 'route' => 'student.documents', 'icon' => 'documents'],
             ['label' => 'Live Classes', 'route' => 'student.live-classes', 'icon' => 'live'],
+            ['label' => 'Entrance Exam', 'route' => 'entrance-exam-academy.index', 'icon' => 'courses'],
             ['label' => 'Notifications', 'route' => 'student.notifications', 'icon' => 'notifications'],
             ['label' => 'Settings', 'route' => 'student.settings', 'icon' => 'settings'],
         ],
@@ -224,11 +225,11 @@
                                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/></svg>
                                     Menu
                                 </summary>
-                                <div class="absolute left-0 top-12 z-40 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+                                <div class="absolute left-0 top-12 z-40 flex max-h-[calc(100vh-5rem)] w-80 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
                                     <div class="mb-3 border-b border-slate-100 pb-3">
                                         <x-brand-logo size="sm" />
                                     </div>
-                                    <nav class="grid gap-1" aria-label="Mobile {{ $roleLabel }} navigation">
+                                    <nav class="grid min-h-0 gap-1 overflow-y-auto pr-1" aria-label="Mobile {{ $roleLabel }} navigation">
                                         @foreach ($navItems as $item)
                                             @php($isActive = request()->routeIs($item['route']) || request()->routeIs($item['route'].'.*'))
                                             <a
@@ -249,7 +250,7 @@
                                             </a>
                                         @endforeach
                                     </nav>
-                                    <div class="mt-3 border-t border-slate-100 pt-3">
+                                    <div class="mt-3 shrink-0 border-t border-slate-100 pt-3">
                                         <a href="{{ route('home') }}" data-testid="dashboard-back-to-site-mobile" class="mb-2 block w-full rounded-xl border border-slate-200 px-3 py-2 text-left text-sm font-bold text-mk-navy transition hover:border-mk-gold hover:bg-mk-goldSoft">Back to Site</a>
                                         <form method="POST" action="{{ route('logout') }}">
                                             @csrf

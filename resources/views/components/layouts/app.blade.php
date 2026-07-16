@@ -1,7 +1,13 @@
 @props([
     'title' => null,
     'description' => 'MK Scholars is a premium e-learning platform for academies, courses, student support, and progress tracking.',
+    'image' => null,
 ])
+
+@php
+    $shareTitle = ($title ? $title.' | ' : '').config('app.name', 'MK Scholars');
+    $shareImage = $image ?: asset('images/mk-scholars-logo.webp');
+@endphp
 
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -11,7 +17,16 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="description" content="{{ $description }}">
 
-        <title>{{ $title ? $title.' | ' : '' }}{{ config('app.name', 'MK Scholars') }}</title>
+        <title>{{ $shareTitle }}</title>
+        <meta property="og:title" content="{{ $shareTitle }}">
+        <meta property="og:description" content="{{ $description }}">
+        <meta property="og:image" content="{{ $shareImage }}">
+        <meta property="og:url" content="{{ url()->current() }}">
+        <meta property="og:type" content="website">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="{{ $shareTitle }}">
+        <meta name="twitter:description" content="{{ $description }}">
+        <meta name="twitter:image" content="{{ $shareImage }}">
         <link rel="icon" type="image/webp" href="{{ asset('favicon.webp') }}">
         <link rel="apple-touch-icon" href="{{ asset('images/mk-scholars-logo.webp') }}">
 
@@ -36,5 +51,4 @@
         @livewireScripts
     </body>
 </html>
-
 

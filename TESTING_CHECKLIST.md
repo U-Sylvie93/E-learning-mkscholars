@@ -1298,3 +1298,21 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Pay Now uses admin-set paper price.
 - Entrance exam payment does not duplicate pending records.
 - Approved payment unlocks paper viewer.
+
+## Phase 43I Student UI, Entrance Exam Controls, Social Share, Admin Required Stars QA
+
+- Entrance exam paper detail shows Register to Continue for guests instead of Login to Read.
+- Entrance exam protected viewer shows dark mode, zoom in, zoom out, and reset zoom controls.
+- Entrance exam viewer controls do not expose raw storage paths or direct download buttons.
+- Student dashboard sidebar includes Entrance Exam as a student feature.
+- Student mobile dashboard menu scrolls within the viewport and keeps Settings, Back to Site, and Logout reachable.
+- Course detail pages include Open Graph and Twitter image metadata.
+- Shared course links use the course cover image when available.
+- Shared pages fall back to the MK Scholars logo when no course image exists.
+- Admin Entrance Exam Institution name field does not show a required red star.
+- Admin Entrance Exam Program name field does not show a required red star.
+- Admin Entrance Exam Subject name field does not show a required red star.
+- Admin Entrance Exam Past Paper title field does not show a required red star.
+- Entrance exam name/title fields can be left blank without breaking slug generation.
+- Live class buttons remain simple: Join Class appears when meeting URL exists and class is not cancelled.
+- Live class buttons remain simple: Watch Recording appears when recording URL exists and class is not cancelled.
