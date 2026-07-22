@@ -17,8 +17,8 @@
                         <x-badge :tone="$paper->isFree() ? 'green' : 'gold'">{{ $paper->priceLabel() }}</x-badge>
                     </div>
                     <h1 class="mt-4 text-3xl font-black tracking-normal text-mk-navy sm:text-4xl">{{ $paper->title }}</h1>
-                    @if ($paper->description)
-                        <p class="mt-4 text-sm leading-7 text-slate-600">{{ $paper->description }}</p>
+                    @if (filled($renderedDescription))
+                        <div class="mk-rich-content mt-4">{!! $renderedDescription !!}</div>
                     @endif
                     @if (filled($renderedInstructions))
                         <div class="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-5">

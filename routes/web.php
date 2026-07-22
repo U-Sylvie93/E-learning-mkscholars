@@ -439,6 +439,7 @@ Route::get('/entrance-exam-academy/papers/{paper:slug}', function (EntranceExamP
         'paper' => $paper,
         'payment' => $payment,
         'hasAccess' => $paper->isFree() || $payment?->status === Payment::STATUS_APPROVED,
+        'renderedDescription' => CourseContentRenderer::render($paper->description),
         'renderedInstructions' => CourseContentRenderer::render($paper->instructions),
     ]);
 })->name('entrance-exam-academy.papers.show');
@@ -488,6 +489,7 @@ Route::get('/entrance-exam-academy/papers/{paper:slug}/view', function (Entrance
 
     return view('pages.entrance-exam-academy.viewer', [
         'paper' => $paper,
+        'renderedDescription' => CourseContentRenderer::render($paper->description),
         'renderedInstructions' => CourseContentRenderer::render($paper->instructions),
         'viewerKind' => $paper->viewerKind(),
     ]);

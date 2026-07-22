@@ -38,6 +38,12 @@
                     </div>
                 </div>
 
+                @if (filled($renderedDescription))
+                    <div class="border-b border-slate-200 p-4 sm:p-6">
+                        <div class="mk-rich-content">{!! $renderedDescription !!}</div>
+                    </div>
+                @endif
+
                 @if (filled($renderedInstructions))
                     <div class="border-b border-slate-200 p-4 sm:p-6">
                         <h2 class="text-xl font-extrabold text-mk-navy">Instructions</h2>

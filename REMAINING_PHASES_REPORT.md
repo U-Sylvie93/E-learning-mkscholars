@@ -633,3 +633,11 @@ Package dependency added:
 - `pdfjs-dist` for the local in-page PDF renderer.
 
 Manual migration, npm install, asset build, tests, route inspection, mobile PDF viewer checks, image viewer checks, Office preview/no-preview checks, and paid/free entrance exam access checks remain required.
+
+### Phase 43K.1: Entrance Exam Viewer Hotfix
+
+Tightened the Entrance Exam Academy viewer/detail rendering so both paper descriptions and paper instructions use the existing sanitized course content renderer. This prevents Markdown headings, lists, tables, code blocks, images, and links from appearing as raw text on student-facing pages while still stripping unsafe HTML.
+
+The protected viewer behavior remains focused on the uploaded paper file: PDF papers render from the main uploaded file without requiring a separate preview, images render inline through the same protected route, and Office files only use a PDF preview when one exists. Office files without a preview continue to show the no-preview message without exposing direct storage paths or download links.
+
+No migration was added. Manual tests, asset build, route inspection, mobile viewer checks, image viewer checks, Office preview/no-preview checks, and paid/free entrance exam access checks remain required.

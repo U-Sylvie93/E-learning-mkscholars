@@ -1334,6 +1334,19 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Approved paid user can view paid paper files.
 - Free paper can be viewed by authenticated users.
 - Admin can upload PDF papers.
+
+## Phase 43K.1 Entrance Exam Viewer Hotfix QA
+
+- Entrance exam paper descriptions render through the safe rich content renderer instead of showing raw Markdown.
+- Entrance exam paper instructions render through the safe rich content renderer on both detail and viewer pages.
+- Unsafe HTML in paper descriptions/instructions is stripped before public display.
+- Published PDF past papers render from the main uploaded paper file through the protected inline route without needing a preview file.
+- Published PNG, JPG, JPEG, and WEBP paper files render inline through the protected route.
+- Office files render the optional PDF preview when present.
+- Office files without a PDF preview show `Preview is not available for this file yet.` without exposing the original file path.
+- The protected inline route still requires login, published paper status, and free access or approved payment.
+- The viewer does not show a watermark, direct download button, raw storage path, iframe, or object embed.
+- Mobile viewer content remains readable with vertical scrolling and stable controls.
 - Admin can upload image papers if implemented.
 - Admin can upload DOC/DOCX/PPT/PPTX if implemented.
 - Office files without PDF preview do not expose direct download links.

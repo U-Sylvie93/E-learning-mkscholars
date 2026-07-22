@@ -110,6 +110,7 @@ class EntranceExamAcademyTest extends TestCase
     {
         [, $paper] = $this->paperContext();
         $paper->update([
+            'description' => "## What to expect\n\nUse the formulas table before starting.",
             'instructions' => "## Read first\n\n- Bring a calculator\n- Answer all questions",
         ]);
 
@@ -121,6 +122,8 @@ class EntranceExamAcademyTest extends TestCase
             ->assertSee($paper->subject->name)
             ->assertSee('5,000 RWF')
             ->assertSee('Register to Continue')
+            ->assertSee('<h2>What to expect</h2>', false)
+            ->assertDontSee('## What to expect')
             ->assertSee('<h2>Read first</h2>', false)
             ->assertSee('<li>Bring a calculator</li>', false)
             ->assertDontSee('Login to Read')
@@ -132,16 +135,19 @@ class EntranceExamAcademyTest extends TestCase
     {
         [, $paper] = $this->paperContext();
         $paper->update([
+            'description' => "## Paper overview\n\n| Format | Value |\n| --- | --- |\n| Pages | 3 |\n\n<script>alert('no')</script>",
             'instructions' => "# Paper instructions\n\n| Section | Time |\n| --- | --- |\n| Math | 60 min |\n\n```php\necho 'focus';\n```\n\n![Alt text](https://example.com/paper.png)\n\n<script>alert('no')</script>",
         ]);
 
         $this->get(route('entrance-exam-academy.papers.show', $paper))
             ->assertOk()
             ->assertSee('mk-rich-content', false)
+            ->assertSee('<h2>Paper overview</h2>', false)
             ->assertSee('<h1>Paper instructions</h1>', false)
             ->assertSee('mk-rich-table', false)
             ->assertSee('<code>', false)
             ->assertSee('<img src="https://example.com/paper.png"', false)
+            ->assertDontSee('## Paper overview')
             ->assertDontSee('<script>', false);
     }
 
@@ -253,6 +259,10 @@ class EntranceExamAcademyTest extends TestCase
             ->assertSessionHasErrors('payment');
 
         $this->payment($student, $paper, Payment::STATUS_APPROVED);
+        $paper->update([
+            'description' => "## Viewer overview\n\nRead each page carefully.",
+            'instructions' => "## Viewer instructions\n\n- No skipped sections",
+        ]);
 
         $this->actingAs($student)
             ->get(route('entrance-exam-academy.papers.view', $paper))
@@ -264,6 +274,9 @@ class EntranceExamAcademyTest extends TestCase
             ->assertSee('data-pdf-zoom-in', false)
             ->assertSee('data-pdf-zoom-out', false)
             ->assertSee('data-pdf-zoom-reset', false)
+            ->assertSee('<h2>Viewer overview</h2>', false)
+            ->assertSee('<h2>Viewer instructions</h2>', false)
+            ->assertDontSee('## Viewer overview')
             ->assertDontSee('iframe', false)
             ->assertDontSee('object', false)
             ->assertDontSee('MK Scholars watermark')
