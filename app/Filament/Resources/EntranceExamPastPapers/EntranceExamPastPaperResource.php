@@ -92,8 +92,8 @@ class EntranceExamPastPaperResource extends Resource
                 ->default(EntranceExamPastPaper::STATUS_DRAFT),
             Toggle::make('is_featured')->default(false),
             FileUpload::make('paper_file_path')
-                ->label('Past paper file')
-                ->helperText('PDF, image, Word, or PowerPoint. Office files need a PDF preview before students can read them in-page.')
+                ->label('Past Paper File')
+                ->helperText('Upload PDF, image, Word, or PowerPoint file. PDF and image files can be previewed in the reader.')
                 ->disk('public')
                 ->directory('entrance-exam/past-papers')
                 ->acceptedFileTypes([
@@ -108,14 +108,6 @@ class EntranceExamPastPaperResource extends Resource
                 ])
                 ->maxSize(20480)
                 ->required()
-                ->columnSpanFull(),
-            FileUpload::make('preview_file_path')
-                ->label('PDF preview for Office files')
-                ->helperText('Optional. Upload a PDF version when the original file is DOC, DOCX, PPT, or PPTX.')
-                ->disk('public')
-                ->directory('entrance-exam/past-paper-previews')
-                ->acceptedFileTypes(['application/pdf'])
-                ->maxSize(20480)
                 ->columnSpanFull(),
             Textarea::make('description')->rows(4)->columnSpanFull(),
             MarkdownEditor::make('instructions')

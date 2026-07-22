@@ -507,10 +507,10 @@ Route::get('/entrance-exam-academy/papers/{paper:slug}/inline', function (Entran
             ->withErrors(['payment' => 'Please complete payment to read this paper.']);
     }
     $viewerKind = $paper->viewerKind();
-    abort_unless(in_array($viewerKind, ['pdf', 'pdf-preview', 'image'], true), 404);
+    abort_unless(in_array($viewerKind, ['pdf', 'image'], true), 404);
 
-    $filePath = $viewerKind === 'pdf-preview' ? $paper->preview_file_path : $paper->paper_file_path;
-    $disk = Storage::disk($viewerKind === 'pdf-preview' ? $paper->previewFileDisk() : $paper->paperFileDisk());
+    $filePath = $paper->paper_file_path;
+    $disk = Storage::disk($paper->paperFileDisk());
     abort_unless(filled($filePath) && $disk->exists($filePath), 404);
 
     $mime = $paper->viewerMime();

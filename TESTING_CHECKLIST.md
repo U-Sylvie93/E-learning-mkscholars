@@ -1342,12 +1342,24 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Unsafe HTML in paper descriptions/instructions is stripped before public display.
 - Published PDF past papers render from the main uploaded paper file through the protected inline route without needing a preview file.
 - Published PNG, JPG, JPEG, and WEBP paper files render inline through the protected route.
-- Office files render the optional PDF preview when present.
-- Office files without a PDF preview show `Preview is not available for this file yet.` without exposing the original file path.
+- Office files show `Preview is not available for this file type yet.` without exposing the original file path.
 - The protected inline route still requires login, published paper status, and free access or approved payment.
 - The viewer does not show a watermark, direct download button, raw storage path, iframe, or object embed.
 - Mobile viewer content remains readable with vertical scrolling and stable controls.
 - Admin can upload image papers if implemented.
 - Admin can upload DOC/DOCX/PPT/PPTX if implemented.
-- Office files without PDF preview do not expose direct download links.
+- Office files do not expose direct download links.
+
+## Phase 43K.2 Entrance Exam Single File Upload QA
+
+- Admin Entrance Exam Past Paper form has only one file upload field.
+- Preview upload field is removed from admin form.
+- Admin can upload PDF, image, Word, and PowerPoint files through the same field.
+- PDF paper renders from the main uploaded file.
+- Image paper renders from the main uploaded file.
+- PDF/image papers do not show preview unavailable message.
+- Office files show preview unavailable message when no browser preview is available.
+- Viewer does not show direct download button.
+- Protected file route does not expose raw storage path.
+- Paid/free access rules still work.
 - UI remains mobile responsive.

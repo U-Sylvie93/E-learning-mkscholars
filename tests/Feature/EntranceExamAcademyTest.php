@@ -67,7 +67,11 @@ class EntranceExamAcademyTest extends TestCase
         $this->assertStringContainsString("'application/vnd.openxmlformats-officedocument.wordprocessingml.document'", $resource);
         $this->assertStringContainsString("'application/vnd.ms-powerpoint'", $resource);
         $this->assertStringContainsString("'application/vnd.openxmlformats-officedocument.presentationml.presentation'", $resource);
-        $this->assertStringContainsString("FileUpload::make('preview_file_path')", $resource);
+        $this->assertSame(1, substr_count($resource, 'FileUpload::make('));
+        $this->assertStringContainsString("->label('Past Paper File')", $resource);
+        $this->assertStringContainsString('Upload PDF, image, Word, or PowerPoint file. PDF and image files can be previewed in the reader.', $resource);
+        $this->assertStringNotContainsString("FileUpload::make('preview_file_path')", $resource);
+        $this->assertStringNotContainsString('PDF preview for Office files', $resource);
         $this->assertStringContainsString("MarkdownEditor::make('instructions')", $resource);
         $this->assertStringContainsString('->maxSize(20480)', $resource);
         $this->assertStringContainsString("TextInput::make('price_amount')", $resource);
@@ -276,6 +280,7 @@ class EntranceExamAcademyTest extends TestCase
             ->assertSee('data-pdf-zoom-reset', false)
             ->assertSee('<h2>Viewer overview</h2>', false)
             ->assertSee('<h2>Viewer instructions</h2>', false)
+            ->assertDontSee('Preview is not available', false)
             ->assertDontSee('## Viewer overview')
             ->assertDontSee('iframe', false)
             ->assertDontSee('object', false)
@@ -301,6 +306,21 @@ class EntranceExamAcademyTest extends TestCase
             ->assertHeader('Content-Disposition', 'inline; filename="'.$paper->slug.'.pdf"');
     }
 
+    public function test_protected_inline_file_route_blocks_guest_and_unpaid_student(): void
+    {
+        Storage::fake('public');
+        [$student, $paper] = $this->paperContext();
+        Storage::disk('public')->put($paper->paper_file_path, '%PDF-1.4 entrance paper');
+
+        $this->get(route('entrance-exam-academy.papers.inline', $paper))
+            ->assertRedirect(route('login'));
+
+        $this->actingAs($student)
+            ->get(route('entrance-exam-academy.papers.inline', $paper))
+            ->assertRedirect(route('entrance-exam-academy.papers.show', $paper))
+            ->assertSessionHasErrors('payment');
+    }
+
     public function test_authenticated_paid_user_can_view_image_inline(): void
     {
         Storage::fake('public');
@@ -317,6 +337,7 @@ class EntranceExamAcademyTest extends TestCase
             ->assertOk()
             ->assertSee('data-file-kind="image"', false)
             ->assertSee('<img src="'.route('entrance-exam-academy.papers.inline', $paper).'"', false)
+            ->assertDontSee('Preview is not available', false)
             ->assertDontSee('Download');
 
         $this->actingAs($student)
@@ -339,7 +360,7 @@ class EntranceExamAcademyTest extends TestCase
         $this->actingAs($student)
             ->get(route('entrance-exam-academy.papers.view', $paper))
             ->assertOk()
-            ->assertSee('Preview is not available for this file yet.')
+            ->assertSee('Preview is not available for this file type yet.')
             ->assertDontSee(route('entrance-exam-academy.papers.inline', $paper), false)
             ->assertDontSee($paper->paper_file_path, false)
             ->assertDontSee('Download');
@@ -347,34 +368,6 @@ class EntranceExamAcademyTest extends TestCase
         $this->actingAs($student)
             ->get(route('entrance-exam-academy.papers.inline', $paper))
             ->assertNotFound();
-    }
-
-    public function test_office_file_with_pdf_preview_uses_protected_inline_preview(): void
-    {
-        Storage::fake('public');
-        [$student, $paper] = $this->paperContext();
-        $paper->update([
-            'paper_file_path' => 'entrance-exam/past-papers/math-2025.pptx',
-            'paper_file_mime' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-            'preview_file_path' => 'entrance-exam/past-paper-previews/math-2025.pdf',
-            'preview_file_disk' => 'public',
-            'preview_file_mime' => 'application/pdf',
-        ]);
-        Storage::disk('public')->put($paper->paper_file_path, 'fake pptx');
-        Storage::disk('public')->put($paper->preview_file_path, '%PDF-1.4 preview');
-        $this->payment($student, $paper, Payment::STATUS_APPROVED);
-
-        $this->actingAs($student)
-            ->get(route('entrance-exam-academy.papers.view', $paper))
-            ->assertOk()
-            ->assertSee('data-file-kind="pdf-preview"', false)
-            ->assertDontSee($paper->paper_file_path, false)
-            ->assertDontSee($paper->preview_file_path, false);
-
-        $this->actingAs($student)
-            ->get(route('entrance-exam-academy.papers.inline', $paper))
-            ->assertOk()
-            ->assertHeader('Content-Type', 'application/pdf');
     }
 
     public function test_draft_paper_detail_and_pdf_cannot_be_viewed_by_changing_url(): void

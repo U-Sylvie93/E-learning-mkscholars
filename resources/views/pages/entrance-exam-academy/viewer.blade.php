@@ -56,11 +56,11 @@
                     data-testid="entrance-exam-pdf-viewer"
                     data-paper-viewer
                     data-file-kind="{{ $viewerKind }}"
-                    @if (in_array($viewerKind, ['pdf', 'pdf-preview', 'image'], true))
+                    @if (in_array($viewerKind, ['pdf', 'image'], true))
                         data-file-url="{{ route('entrance-exam-academy.papers.inline', $paper) }}"
                     @endif
                 >
-                    @if (in_array($viewerKind, ['pdf', 'pdf-preview'], true))
+                    @if ($viewerKind === 'pdf')
                         <div class="mx-auto flex w-full max-w-5xl flex-col gap-4" data-pdf-pages>
                             <div class="rounded-lg border border-slate-200 bg-white p-5 text-center text-sm font-semibold text-slate-600" data-pdf-loading>Preparing paper...</div>
                         </div>
@@ -70,8 +70,8 @@
                         </div>
                     @else
                         <div class="mx-auto max-w-2xl rounded-lg border border-slate-200 bg-white p-6 text-center shadow-sm">
-                            <h2 class="text-xl font-extrabold text-mk-navy">Preview is not available for this file yet.</h2>
-                            <p class="mt-3 text-sm leading-6 text-slate-600">This paper is protected, but an in-page preview has not been uploaded for this Office document.</p>
+                            <h2 class="text-xl font-extrabold text-mk-navy">Preview is not available for this file type yet.</h2>
+                            <p class="mt-3 text-sm leading-6 text-slate-600">This paper is protected, but Word and PowerPoint files are not displayed in the reader yet.</p>
                         </div>
                     @endif
                 </div>

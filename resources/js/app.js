@@ -76,7 +76,7 @@ if (document.readyState === 'loading') {
 const initEntranceExamViewer = () => {
     const viewer = document.querySelector('[data-paper-viewer]');
 
-    if (!viewer || !['pdf', 'pdf-preview'].includes(viewer.dataset.fileKind || '')) {
+    if (!viewer || viewer.dataset.fileKind !== 'pdf') {
         return;
     }
 
@@ -162,7 +162,7 @@ const initEntranceExamViewer = () => {
             setStatus('Preview unavailable');
             const message = document.createElement('div');
             message.className = 'rounded-lg border border-amber-200 bg-amber-50 p-5 text-center text-sm font-semibold text-amber-900';
-            message.textContent = 'Preview is not available for this file yet.';
+            message.textContent = 'Preview is not available for this file type yet.';
             pagesContainer.appendChild(message);
         }
     };

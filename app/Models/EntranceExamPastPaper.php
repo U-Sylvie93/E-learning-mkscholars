@@ -35,9 +35,6 @@ class EntranceExamPastPaper extends Model
         'paper_file_path',
         'paper_file_disk',
         'paper_file_mime',
-        'preview_file_path',
-        'preview_file_disk',
-        'preview_file_mime',
         'price_amount',
         'currency',
         'page_count',
@@ -66,7 +63,6 @@ class EntranceExamPastPaper extends Model
             }
 
             $paper->paper_file_disk ??= 'public';
-            $paper->preview_file_disk ??= 'public';
             $paper->currency ??= 'RWF';
             $paper->status ??= self::STATUS_DRAFT;
 
@@ -75,14 +71,6 @@ class EntranceExamPastPaper extends Model
 
                 if ($disk->exists($paper->paper_file_path)) {
                     $paper->paper_file_mime = $disk->mimeType($paper->paper_file_path);
-                }
-            }
-
-            if (blank($paper->preview_file_mime) && filled($paper->preview_file_path)) {
-                $disk = Storage::disk($paper->previewFileDisk());
-
-                if ($disk->exists($paper->preview_file_path)) {
-                    $paper->preview_file_mime = $disk->mimeType($paper->preview_file_path);
                 }
             }
         });
@@ -122,14 +110,29 @@ class EntranceExamPastPaper extends Model
         return $this->paper_file_disk ?: 'public';
     }
 
+    public function hasPaperFile(): bool
+    {
+        return filled($this->paper_file_path);
+    }
+
     public function hasPdfFile(): bool
     {
         return $this->isPdfFile($this->paper_file_path, $this->paper_file_mime);
     }
 
+    public function isPdf(): bool
+    {
+        return $this->hasPdfFile();
+    }
+
     public function hasImageFile(): bool
     {
         return $this->isImageFile($this->paper_file_path, $this->paper_file_mime);
+    }
+
+    public function isImage(): bool
+    {
+        return $this->hasImageFile();
     }
 
     public function hasOfficeFile(): bool
@@ -149,14 +152,14 @@ class EntranceExamPastPaper extends Model
             ], true);
     }
 
-    public function hasPreviewPdf(): bool
+    public function isOfficeDocument(): bool
     {
-        return $this->isPdfFile($this->preview_file_path, $this->preview_file_mime);
+        return $this->hasOfficeFile();
     }
 
-    public function previewFileDisk(): string
+    public function canPreviewInline(): bool
     {
-        return $this->preview_file_disk ?: 'public';
+        return $this->hasPdfFile() || $this->hasImageFile();
     }
 
     public function viewerKind(): string
@@ -164,7 +167,6 @@ class EntranceExamPastPaper extends Model
         return match (true) {
             $this->hasPdfFile() => 'pdf',
             $this->hasImageFile() => 'image',
-            $this->hasOfficeFile() && $this->hasPreviewPdf() => 'pdf-preview',
             $this->hasOfficeFile() => 'office',
             default => 'unsupported',
         };
@@ -174,7 +176,6 @@ class EntranceExamPastPaper extends Model
     {
         return match ($this->viewerKind()) {
             'pdf' => 'application/pdf',
-            'pdf-preview' => 'application/pdf',
             'image' => $this->paper_file_mime ?: $this->imageMimeFromExtension($this->paper_file_path),
             default => null,
         };

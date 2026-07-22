@@ -620,9 +620,9 @@ Manual migration, tests, asset build, route inspection, phone-menu checks, entra
 
 ### Phase 43K: Entrance Exam Mobile Viewer, Rich Instructions, and File Types
 
-Reworked Entrance Exam Academy past paper viewing so the student page no longer relies on a native browser PDF iframe. PDFs and Office PDF previews now render through a local PDF.js-powered page renderer with dark mode, zoom controls, mobile-width page fitting, and vertical scrolling through all pages. The old past-paper watermark overlay was removed, and the viewer continues to avoid download buttons and raw storage paths.
+Reworked Entrance Exam Academy past paper viewing so the student page no longer relies on a native browser PDF iframe. PDFs now render through a local PDF.js-powered page renderer with dark mode, zoom controls, mobile-width page fitting, and vertical scrolling through all pages. The old past-paper watermark overlay was removed, and the viewer continues to avoid download buttons and raw storage paths.
 
-Past papers now support rich Markdown instructions/content rendered with the existing sanitized course content renderer before the paper on detail and viewer pages. Admins can upload PDF, PNG, JPG, JPEG, WEBP, DOC, DOCX, PPT, and PPTX files. Images render inline through the protected route. Office files remain protected and show a no-preview message unless an admin uploads an optional PDF preview.
+Past papers now support rich Markdown instructions/content rendered with the existing sanitized course content renderer before the paper on detail and viewer pages. Admins can upload PDF, PNG, JPG, JPEG, WEBP, DOC, DOCX, PPT, and PPTX files. Images render inline through the protected route. Office files remain protected and show a no-preview message.
 
 Migration added:
 
@@ -632,12 +632,20 @@ Package dependency added:
 
 - `pdfjs-dist` for the local in-page PDF renderer.
 
-Manual migration, npm install, asset build, tests, route inspection, mobile PDF viewer checks, image viewer checks, Office preview/no-preview checks, and paid/free entrance exam access checks remain required.
+Manual migration, npm install, asset build, tests, route inspection, mobile PDF viewer checks, image viewer checks, Office no-preview checks, and paid/free entrance exam access checks remain required.
 
 ### Phase 43K.1: Entrance Exam Viewer Hotfix
 
 Tightened the Entrance Exam Academy viewer/detail rendering so both paper descriptions and paper instructions use the existing sanitized course content renderer. This prevents Markdown headings, lists, tables, code blocks, images, and links from appearing as raw text on student-facing pages while still stripping unsafe HTML.
 
-The protected viewer behavior remains focused on the uploaded paper file: PDF papers render from the main uploaded file without requiring a separate preview, images render inline through the same protected route, and Office files only use a PDF preview when one exists. Office files without a preview continue to show the no-preview message without exposing direct storage paths or download links.
+The protected viewer behavior remains focused on the uploaded paper file: PDF papers render from the main uploaded file without requiring a separate preview, images render inline through the same protected route, and Office files show the no-preview message without exposing direct storage paths or download links.
 
-No migration was added. Manual tests, asset build, route inspection, mobile viewer checks, image viewer checks, Office preview/no-preview checks, and paid/free entrance exam access checks remain required.
+No migration was added. Manual tests, asset build, route inspection, mobile viewer checks, image viewer checks, Office no-preview checks, and paid/free entrance exam access checks remain required.
+
+### Phase 43K.2: Entrance Exam Single File Upload Only
+
+Removed the separate Entrance Exam Past Paper preview upload from the Filament admin form. Admins now use one `Past Paper File` field for PDF, image, Word, and PowerPoint uploads, with helper text explaining that PDF and image files can be previewed in the reader.
+
+The main uploaded paper file is now the sole viewer source. PDFs render directly through the protected inline route and local PDF.js reader, images render inline through the same protected route, and Word/PowerPoint files show `Preview is not available for this file type yet.` without exposing storage paths or direct download links. Legacy preview database columns may remain if already present, but they are not used by the admin form or viewer.
+
+No migration was added. Manual tests, asset build, route inspection, single-upload admin form checks, PDF/image viewer checks, Office no-preview checks, and paid/free entrance exam access checks remain required.
