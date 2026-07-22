@@ -509,7 +509,7 @@ Route::get('/entrance-exam-academy/papers/{paper:slug}/inline', function (Entran
     $viewerKind = $paper->viewerKind();
     abort_unless(in_array($viewerKind, ['pdf', 'image'], true), 404);
 
-    $filePath = $paper->paper_file_path;
+    $filePath = $paper->paperFilePath();
     $disk = Storage::disk($paper->paperFileDisk());
     abort_unless(filled($filePath) && $disk->exists($filePath), 404);
 
@@ -521,7 +521,7 @@ Route::get('/entrance-exam-academy/papers/{paper:slug}/inline', function (Entran
         'image/png' => 'png',
         'image/jpeg' => 'jpg',
         'image/webp' => 'webp',
-        default => 'file',
+        default => $paper->paperFileExtension() ?: 'file',
     };
 
     return response()->file($disk->path($filePath), [

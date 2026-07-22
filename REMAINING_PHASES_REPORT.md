@@ -649,3 +649,11 @@ Removed the separate Entrance Exam Past Paper preview upload from the Filament a
 The main uploaded paper file is now the sole viewer source. PDFs render directly through the protected inline route and local PDF.js reader, images render inline through the same protected route, and Word/PowerPoint files show `Preview is not available for this file type yet.` without exposing storage paths or direct download links. Legacy preview database columns may remain if already present, but they are not used by the admin form or viewer.
 
 No migration was added. Manual tests, asset build, route inspection, single-upload admin form checks, PDF/image viewer checks, Office no-preview checks, and paid/free entrance exam access checks remain required.
+
+### Phase 43K.3: Entrance Exam PDF Detection and Viewer Rendering
+
+Hardened Entrance Exam Past Paper file detection around the main uploaded file columns: `paper_file_path`, `paper_file_disk`, and `paper_file_mime`. The model now normalizes missing or `application/octet-stream` MIME values from the paper file extension, including uppercase `.PDF`, so PDF/image viewer decisions no longer depend on perfect upload MIME metadata.
+
+The protected inline route continues to serve only the main uploaded paper file for PDFs and images with inline headers. Word and PowerPoint files remain protected and show the preview-unavailable message without exposing raw storage paths or direct download links. No preview upload field was reintroduced.
+
+No migration was added. Manual tests, asset build, route inspection, PDF detection checks for missing/octet-stream/uppercase MIME cases, image viewer checks, Office no-preview checks, and paid/free entrance exam access checks remain required.

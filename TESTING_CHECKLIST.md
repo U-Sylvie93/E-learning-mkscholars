@@ -1362,4 +1362,17 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Viewer does not show direct download button.
 - Protected file route does not expose raw storage path.
 - Paid/free access rules still work.
+
+## Phase 43K.3 Entrance Exam PDF Detection QA
+
+- Uploaded PDF renders even when MIME is missing.
+- Uploaded PDF renders even when MIME is `application/octet-stream`.
+- Uploaded PDF renders even when extension is uppercase `.PDF`.
+- Viewer uses the main uploaded file, not preview file.
+- PDF viewer does not show preview unavailable message.
+- Protected file route returns inline PDF headers.
+- Image files render inline.
+- Office files show preview unavailable message.
+- Paid/free access rules remain protected.
+- Raw storage path is not exposed.
 - UI remains mobile responsive.

@@ -110,41 +110,80 @@ class EntranceExamPastPaper extends Model
         return $this->paper_file_disk ?: 'public';
     }
 
+    public function paperFilePath(): ?string
+    {
+        return $this->paper_file_path;
+    }
+
+    public function paperFileExtension(): ?string
+    {
+        $path = $this->paperFilePath();
+
+        if (blank($path)) {
+            return null;
+        }
+
+        return strtolower(pathinfo($path, PATHINFO_EXTENSION)) ?: null;
+    }
+
+    public function normalizedPaperMime(): ?string
+    {
+        $mime = strtolower(trim((string) $this->paper_file_mime));
+
+        if (filled($mime) && $mime !== 'application/octet-stream') {
+            return $mime;
+        }
+
+        return match ($this->paperFileExtension()) {
+            'pdf' => 'application/pdf',
+            'png' => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'webp' => 'image/webp',
+            'doc' => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'ppt' => 'application/vnd.ms-powerpoint',
+            'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            default => $mime ?: null,
+        };
+    }
+
     public function hasPaperFile(): bool
     {
-        return filled($this->paper_file_path);
+        return filled($this->paperFilePath());
     }
 
     public function hasPdfFile(): bool
     {
-        return $this->isPdfFile($this->paper_file_path, $this->paper_file_mime);
+        return $this->isPdf();
     }
 
     public function isPdf(): bool
     {
-        return $this->hasPdfFile();
+        return $this->paperFileExtension() === 'pdf'
+            || $this->normalizedPaperMime() === 'application/pdf';
     }
 
     public function hasImageFile(): bool
     {
-        return $this->isImageFile($this->paper_file_path, $this->paper_file_mime);
+        return $this->isImage();
     }
 
     public function isImage(): bool
     {
-        return $this->hasImageFile();
+        return in_array($this->paperFileExtension(), ['png', 'jpg', 'jpeg', 'webp'], true)
+            || str_starts_with((string) $this->normalizedPaperMime(), 'image/');
     }
 
     public function hasOfficeFile(): bool
     {
-        if (blank($this->paper_file_path)) {
+        if (! $this->hasPaperFile()) {
             return false;
         }
 
-        $extension = str($this->paper_file_path)->afterLast('.')->lower()->toString();
+        $extension = $this->paperFileExtension();
 
         return in_array($extension, ['doc', 'docx', 'ppt', 'pptx'], true)
-            || in_array($this->paper_file_mime, [
+            || in_array($this->normalizedPaperMime(), [
                 'application/msword',
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                 'application/vnd.ms-powerpoint',
@@ -159,15 +198,15 @@ class EntranceExamPastPaper extends Model
 
     public function canPreviewInline(): bool
     {
-        return $this->hasPdfFile() || $this->hasImageFile();
+        return $this->isPdf() || $this->isImage();
     }
 
     public function viewerKind(): string
     {
         return match (true) {
-            $this->hasPdfFile() => 'pdf',
-            $this->hasImageFile() => 'image',
-            $this->hasOfficeFile() => 'office',
+            $this->isPdf() => 'pdf',
+            $this->isImage() => 'image',
+            $this->isOfficeDocument() => 'office',
             default => 'unsupported',
         };
     }
@@ -176,7 +215,7 @@ class EntranceExamPastPaper extends Model
     {
         return match ($this->viewerKind()) {
             'pdf' => 'application/pdf',
-            'image' => $this->paper_file_mime ?: $this->imageMimeFromExtension($this->paper_file_path),
+            'image' => $this->normalizedPaperMime(),
             default => null,
         };
     }
@@ -220,35 +259,4 @@ class EntranceExamPastPaper extends Model
         return $slug;
     }
 
-    private function isPdfFile(?string $path, ?string $mime): bool
-    {
-        if (blank($path)) {
-            return false;
-        }
-
-        return $mime === 'application/pdf' || str($path)->lower()->endsWith('.pdf');
-    }
-
-    private function isImageFile(?string $path, ?string $mime): bool
-    {
-        if (blank($path)) {
-            return false;
-        }
-
-        if (in_array($mime, ['image/png', 'image/jpeg', 'image/webp'], true)) {
-            return true;
-        }
-
-        return str($path)->lower()->endsWith(['.png', '.jpg', '.jpeg', '.webp']);
-    }
-
-    private function imageMimeFromExtension(?string $path): ?string
-    {
-        return match (str($path)->afterLast('.')->lower()->toString()) {
-            'png' => 'image/png',
-            'jpg', 'jpeg' => 'image/jpeg',
-            'webp' => 'image/webp',
-            default => null,
-        };
-    }
 }

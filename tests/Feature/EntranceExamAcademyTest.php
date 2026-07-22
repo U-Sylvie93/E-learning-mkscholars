@@ -306,6 +306,74 @@ class EntranceExamAcademyTest extends TestCase
             ->assertHeader('Content-Disposition', 'inline; filename="'.$paper->slug.'.pdf"');
     }
 
+    public function test_pdf_with_null_mime_still_renders_from_main_uploaded_file(): void
+    {
+        Storage::fake('public');
+        [$student, $paper] = $this->paperContext();
+        Storage::disk('public')->put($paper->paper_file_path, '%PDF-1.4 entrance paper');
+        EntranceExamPastPaper::withoutEvents(fn () => $paper->forceFill(['paper_file_mime' => null])->save());
+        $this->payment($student, $paper, Payment::STATUS_APPROVED);
+
+        $this->actingAs($student)
+            ->get(route('entrance-exam-academy.papers.view', $paper))
+            ->assertOk()
+            ->assertSee('data-file-kind="pdf"', false)
+            ->assertSee(route('entrance-exam-academy.papers.inline', $paper), false)
+            ->assertDontSee('Preview is not available', false)
+            ->assertDontSee($paper->paper_file_path, false);
+
+        $this->actingAs($student)
+            ->get(route('entrance-exam-academy.papers.inline', $paper))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf')
+            ->assertHeader('Content-Disposition', 'inline; filename="'.$paper->slug.'.pdf"');
+    }
+
+    public function test_pdf_with_octet_stream_mime_still_renders_from_main_uploaded_file(): void
+    {
+        Storage::fake('public');
+        [$student, $paper] = $this->paperContext();
+        $paper->update(['paper_file_mime' => 'application/octet-stream']);
+        Storage::disk('public')->put($paper->paper_file_path, '%PDF-1.4 entrance paper');
+        $this->payment($student, $paper, Payment::STATUS_APPROVED);
+
+        $this->actingAs($student)
+            ->get(route('entrance-exam-academy.papers.view', $paper))
+            ->assertOk()
+            ->assertSee('data-file-kind="pdf"', false)
+            ->assertSee(route('entrance-exam-academy.papers.inline', $paper), false)
+            ->assertDontSee('Preview is not available', false);
+
+        $this->actingAs($student)
+            ->get(route('entrance-exam-academy.papers.inline', $paper))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+    }
+
+    public function test_pdf_with_uppercase_extension_still_renders_from_main_uploaded_file(): void
+    {
+        Storage::fake('public');
+        [$student, $paper] = $this->paperContext();
+        $paper->update([
+            'paper_file_path' => 'entrance-exam/past-papers/math-2025.PDF',
+            'paper_file_mime' => 'application/octet-stream',
+        ]);
+        Storage::disk('public')->put($paper->paper_file_path, '%PDF-1.4 entrance paper');
+        $this->payment($student, $paper, Payment::STATUS_APPROVED);
+
+        $this->actingAs($student)
+            ->get(route('entrance-exam-academy.papers.view', $paper))
+            ->assertOk()
+            ->assertSee('data-file-kind="pdf"', false)
+            ->assertSee(route('entrance-exam-academy.papers.inline', $paper), false)
+            ->assertDontSee('Preview is not available', false);
+
+        $this->actingAs($student)
+            ->get(route('entrance-exam-academy.papers.inline', $paper))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+    }
+
     public function test_protected_inline_file_route_blocks_guest_and_unpaid_student(): void
     {
         Storage::fake('public');
