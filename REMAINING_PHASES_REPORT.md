@@ -617,3 +617,19 @@ Migration added:
 - `2026_07_16_430000_make_entrance_exam_admin_names_nullable.php`
 
 Manual migration, tests, asset build, route inspection, phone-menu checks, entrance exam viewer control checks, social-share metadata checks, and admin entrance exam form checks remain required.
+
+### Phase 43K: Entrance Exam Mobile Viewer, Rich Instructions, and File Types
+
+Reworked Entrance Exam Academy past paper viewing so the student page no longer relies on a native browser PDF iframe. PDFs and Office PDF previews now render through a local PDF.js-powered page renderer with dark mode, zoom controls, mobile-width page fitting, and vertical scrolling through all pages. The old past-paper watermark overlay was removed, and the viewer continues to avoid download buttons and raw storage paths.
+
+Past papers now support rich Markdown instructions/content rendered with the existing sanitized course content renderer before the paper on detail and viewer pages. Admins can upload PDF, PNG, JPG, JPEG, WEBP, DOC, DOCX, PPT, and PPTX files. Images render inline through the protected route. Office files remain protected and show a no-preview message unless an admin uploads an optional PDF preview.
+
+Migration added:
+
+- `2026_07_23_430100_add_viewer_content_fields_to_entrance_exam_past_papers_table.php`
+
+Package dependency added:
+
+- `pdfjs-dist` for the local in-page PDF renderer.
+
+Manual migration, npm install, asset build, tests, route inspection, mobile PDF viewer checks, image viewer checks, Office preview/no-preview checks, and paid/free entrance exam access checks remain required.

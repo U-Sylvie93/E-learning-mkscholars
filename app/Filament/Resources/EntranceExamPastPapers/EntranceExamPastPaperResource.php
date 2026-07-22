@@ -12,6 +12,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -91,16 +92,50 @@ class EntranceExamPastPaperResource extends Resource
                 ->default(EntranceExamPastPaper::STATUS_DRAFT),
             Toggle::make('is_featured')->default(false),
             FileUpload::make('paper_file_path')
-                ->label('Past paper PDF')
-                ->helperText('PDF only. Max 20MB.')
+                ->label('Past paper file')
+                ->helperText('PDF, image, Word, or PowerPoint. Office files need a PDF preview before students can read them in-page.')
                 ->disk('public')
                 ->directory('entrance-exam/past-papers')
-                ->acceptedFileTypes(['application/pdf'])
+                ->acceptedFileTypes([
+                    'application/pdf',
+                    'image/png',
+                    'image/jpeg',
+                    'image/webp',
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'application/vnd.ms-powerpoint',
+                    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                ])
                 ->maxSize(20480)
                 ->required()
-                ->openable()
+                ->columnSpanFull(),
+            FileUpload::make('preview_file_path')
+                ->label('PDF preview for Office files')
+                ->helperText('Optional. Upload a PDF version when the original file is DOC, DOCX, PPT, or PPTX.')
+                ->disk('public')
+                ->directory('entrance-exam/past-paper-previews')
+                ->acceptedFileTypes(['application/pdf'])
+                ->maxSize(20480)
                 ->columnSpanFull(),
             Textarea::make('description')->rows(4)->columnSpanFull(),
+            MarkdownEditor::make('instructions')
+                ->label('Student instructions / content before paper')
+                ->helperText('Use Markdown for headings, lists, links, images, code blocks, and tables. Unsafe HTML is stripped before public display.')
+                ->toolbarButtons([
+                    'heading',
+                    'bold',
+                    'italic',
+                    'strike',
+                    'link',
+                    'bulletList',
+                    'orderedList',
+                    'codeBlock',
+                    'blockquote',
+                    'table',
+                    'undo',
+                    'redo',
+                ])
+                ->columnSpanFull(),
             TextInput::make('page_count')->numeric()->minValue(1),
         ]);
     }

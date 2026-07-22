@@ -168,4 +168,59 @@
     .mk-rich-table tbody tr:nth-child(even) {
         @apply bg-slate-50;
     }
+
+    .mk-paper-viewer {
+        @apply overflow-x-hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .mk-pdf-page {
+        @apply mx-auto w-full overflow-x-auto rounded-lg border border-slate-200 bg-white p-2 shadow-sm;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .mk-pdf-page canvas {
+        @apply mx-auto block h-auto max-w-none bg-white;
+    }
+
+    .mk-pdf-page figcaption {
+        @apply mt-2 text-center text-xs font-bold uppercase tracking-wide text-slate-500;
+    }
+
+    .mk-paper-viewer-dark {
+        @apply border-slate-800 bg-slate-950 text-slate-100;
+    }
+
+    .mk-paper-viewer-dark [data-paper-viewer-toolbar] {
+        @apply border-slate-800 bg-slate-950/95;
+    }
+
+    .mk-paper-viewer-dark h1,
+    .mk-paper-viewer-dark h2,
+    .mk-paper-viewer-dark .mk-rich-content h1,
+    .mk-paper-viewer-dark .mk-rich-content h2,
+    .mk-paper-viewer-dark .mk-rich-content h3,
+    .mk-paper-viewer-dark .mk-rich-content h4 {
+        @apply text-white;
+    }
+
+    .mk-paper-viewer-dark p,
+    .mk-paper-viewer-dark .mk-rich-content,
+    .mk-paper-viewer-dark .mk-rich-content p,
+    .mk-paper-viewer-dark .mk-rich-content td {
+        @apply text-slate-200;
+    }
+
+    .mk-paper-viewer-dark .mk-paper-viewer {
+        @apply bg-slate-900;
+    }
+
+    .mk-paper-viewer-dark .mk-pdf-page {
+        @apply border-slate-700 bg-slate-800;
+    }
+
+    .mk-paper-viewer-dark .mk-pdf-page canvas,
+    .mk-paper-viewer-dark .mk-paper-viewer img {
+        filter: invert(1) hue-rotate(180deg);
+    }
 }

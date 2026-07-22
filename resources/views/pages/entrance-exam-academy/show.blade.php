@@ -20,6 +20,12 @@
                     @if ($paper->description)
                         <p class="mt-4 text-sm leading-7 text-slate-600">{{ $paper->description }}</p>
                     @endif
+                    @if (filled($renderedInstructions))
+                        <div class="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-5">
+                            <h2 class="text-xl font-extrabold text-mk-navy">Before you read</h2>
+                            <div class="mk-rich-content mt-4">{!! $renderedInstructions !!}</div>
+                        </div>
+                    @endif
                     @if ($errors->has('payment'))
                         <div class="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">{{ $errors->first('payment') }}</div>
                     @endif

@@ -439,6 +439,7 @@ Route::get('/entrance-exam-academy/papers/{paper:slug}', function (EntranceExamP
         'paper' => $paper,
         'payment' => $payment,
         'hasAccess' => $paper->isFree() || $payment?->status === Payment::STATUS_APPROVED,
+        'renderedInstructions' => CourseContentRenderer::render($paper->instructions),
     ]);
 })->name('entrance-exam-academy.papers.show');
 
@@ -487,7 +488,8 @@ Route::get('/entrance-exam-academy/papers/{paper:slug}/view', function (Entrance
 
     return view('pages.entrance-exam-academy.viewer', [
         'paper' => $paper,
-        'watermark' => Auth::user()?->email ?: 'MK Scholars',
+        'renderedInstructions' => CourseContentRenderer::render($paper->instructions),
+        'viewerKind' => $paper->viewerKind(),
     ]);
 })->middleware('role:'.User::ROLE_STUDENT)->name('entrance-exam-academy.papers.view');
 
@@ -502,14 +504,27 @@ Route::get('/entrance-exam-academy/papers/{paper:slug}/inline', function (Entran
         return redirect()->route('entrance-exam-academy.papers.show', $paper)
             ->withErrors(['payment' => 'Please complete payment to read this paper.']);
     }
-    abort_unless($paper->hasPdfFile(), 404);
+    $viewerKind = $paper->viewerKind();
+    abort_unless(in_array($viewerKind, ['pdf', 'pdf-preview', 'image'], true), 404);
 
-    $disk = Storage::disk($paper->paperFileDisk());
-    abort_unless($disk->exists($paper->paper_file_path), 404);
+    $filePath = $viewerKind === 'pdf-preview' ? $paper->preview_file_path : $paper->paper_file_path;
+    $disk = Storage::disk($viewerKind === 'pdf-preview' ? $paper->previewFileDisk() : $paper->paperFileDisk());
+    abort_unless(filled($filePath) && $disk->exists($filePath), 404);
 
-    return response()->file($disk->path($paper->paper_file_path), [
-        'Content-Type' => 'application/pdf',
-        'Content-Disposition' => 'inline; filename="'.Str::slug($paper->title ?: 'entrance-exam-paper').'.pdf"',
+    $mime = $paper->viewerMime();
+    abort_unless($mime, 404);
+
+    $extension = match ($mime) {
+        'application/pdf' => 'pdf',
+        'image/png' => 'png',
+        'image/jpeg' => 'jpg',
+        'image/webp' => 'webp',
+        default => 'file',
+    };
+
+    return response()->file($disk->path($filePath), [
+        'Content-Type' => $mime,
+        'Content-Disposition' => 'inline; filename="'.Str::slug($paper->title ?: 'entrance-exam-paper').'.'.$extension.'"',
         'X-Content-Type-Options' => 'nosniff',
     ]);
 })->middleware('role:'.User::ROLE_STUDENT)->name('entrance-exam-academy.papers.inline');

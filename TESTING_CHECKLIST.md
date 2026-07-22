@@ -1316,3 +1316,25 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Entrance exam name/title fields can be left blank without breaking slug generation.
 - Live class buttons remain simple: Join Class appears when meeting URL exists and class is not cancelled.
 - Live class buttons remain simple: Watch Recording appears when recording URL exists and class is not cancelled.
+
+## Phase 43K Entrance Exam Mobile Viewer and Rich Instructions QA
+
+- Admin can add rich instructions/content to entrance exam past papers.
+- Rich instructions support headings, lists, tables, links, images, and code-style content where supported.
+- Paper detail page shows instructions before paper access.
+- Mobile viewer opens inside the page instead of forcing download where supported.
+- PDF is served through protected inline route.
+- PDF viewer has dark mode and zoom controls.
+- Mobile viewer allows reading the full paper/pages.
+- Past paper watermark is removed.
+- Viewer does not show a download button.
+- Raw storage paths are not exposed.
+- Guest cannot view protected paper files.
+- Unpaid user cannot view paid paper files.
+- Approved paid user can view paid paper files.
+- Free paper can be viewed by authenticated users.
+- Admin can upload PDF papers.
+- Admin can upload image papers if implemented.
+- Admin can upload DOC/DOCX/PPT/PPTX if implemented.
+- Office files without PDF preview do not expose direct download links.
+- UI remains mobile responsive.
