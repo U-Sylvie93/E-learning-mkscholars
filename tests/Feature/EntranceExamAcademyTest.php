@@ -78,6 +78,15 @@ class EntranceExamAcademyTest extends TestCase
         $this->assertStringNotContainsString("TextInput::make('title')\n                ->required()", $resource);
     }
 
+    public function test_public_htaccess_maps_pdf_worker_mjs_to_javascript_mime(): void
+    {
+        $htaccess = str_replace("\r\n", "\n", file_get_contents(public_path('.htaccess')));
+
+        $this->assertStringContainsString('<IfModule mod_mime.c>', $htaccess);
+        $this->assertStringContainsString('AddType application/javascript .mjs', $htaccess);
+        $this->assertStringContainsString('AddType application/javascript .js', $htaccess);
+    }
+
     public function test_entrance_exam_admin_name_fields_are_not_required(): void
     {
         $institutionResource = str_replace("\r\n", "\n", file_get_contents(app_path('Filament/Resources/EntranceExamInstitutions/EntranceExamInstitutionResource.php')));

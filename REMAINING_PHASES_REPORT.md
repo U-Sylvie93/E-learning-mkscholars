@@ -665,3 +665,11 @@ Made the Entrance Exam viewer pass the protected main paper route to PDF.js expl
 The protected inline route now reads the same main paper helpers, so PDFs and images are served from the uploaded paper file only. Word and PowerPoint files continue to show the preview-unavailable message and are not exposed as direct downloads. No preview upload field was reintroduced, and no migration was added.
 
 Manual tests, asset build, route inspection, PDF Network-tab checks for the protected route request, image viewer checks, Office no-preview checks, and paid/free entrance exam access checks remain required.
+
+### Phase 43K.5: Entrance Exam PDF Viewer Route and Worker MIME
+
+Added hosting MIME configuration for PDF.js worker assets so Hostinger/LiteSpeed can serve `.mjs` files as `application/javascript` instead of `text/plain`. This supports the existing local PDF.js worker emitted by Vite without using an external CDN.
+
+The Entrance Exam viewer continues to pass the protected main paper route to PDF.js through `data-pdf-url`, and the protected inline route continues to serve PDFs and images from the main uploaded paper file with inline headers while preserving paid/free access checks. Word and PowerPoint files remain protected and show the preview-unavailable message without direct downloads.
+
+No migration was added. Manual tests, asset build, route inspection, PDF Network-tab checks for both the protected paper file request and JavaScript worker MIME, image viewer checks, Office no-preview checks, and paid/free entrance exam access checks remain required.

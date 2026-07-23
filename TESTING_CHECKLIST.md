@@ -1389,4 +1389,19 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - No raw storage path is exposed.
 - No direct download button is shown.
 - Paid/free access rules remain protected.
+
+## Phase 43K.5 Entrance Exam PDF Viewer and Worker MIME QA
+
+- PDF viewer page requests the protected paper file route.
+- PDF.js receives the protected PDF URL.
+- Uploaded PDFs render from the main uploaded file.
+- PDFs do not show preview unavailable message.
+- PDFs render even when MIME is missing or octet-stream.
+- Uppercase `.PDF` files render.
+- PDF worker `.mjs` is served as JavaScript MIME through hosting config.
+- Images render inline.
+- Office files show preview unavailable.
+- No direct download button appears.
+- Raw storage paths are not exposed.
+- Paid/free access rules remain protected.
 - UI remains mobile responsive.
