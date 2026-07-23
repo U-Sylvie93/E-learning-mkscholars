@@ -56,15 +56,18 @@
                     data-testid="entrance-exam-pdf-viewer"
                     data-paper-viewer
                     data-file-kind="{{ $viewerKind }}"
-                    @if (in_array($viewerKind, ['pdf', 'image'], true))
+                    @if ($paper->isPdfPaper())
+                        data-pdf-url="{{ route('entrance-exam-academy.papers.inline', $paper) }}"
+                        data-file-url="{{ route('entrance-exam-academy.papers.inline', $paper) }}"
+                    @elseif ($paper->isImagePaper())
                         data-file-url="{{ route('entrance-exam-academy.papers.inline', $paper) }}"
                     @endif
                 >
-                    @if ($viewerKind === 'pdf')
+                    @if ($paper->isPdfPaper())
                         <div class="mx-auto flex w-full max-w-5xl flex-col gap-4" data-pdf-pages>
                             <div class="rounded-lg border border-slate-200 bg-white p-5 text-center text-sm font-semibold text-slate-600" data-pdf-loading>Preparing paper...</div>
                         </div>
-                    @elseif ($viewerKind === 'image')
+                    @elseif ($paper->isImagePaper())
                         <div class="mx-auto w-full max-w-5xl">
                             <img src="{{ route('entrance-exam-academy.papers.inline', $paper) }}" alt="{{ $paper->title }}" class="h-auto w-full rounded-lg border border-slate-200 bg-white object-contain shadow-sm">
                         </div>
@@ -75,6 +78,12 @@
                         </div>
                     @endif
                 </div>
+                @if (app()->environment('local'))
+                    {{-- paper path: {{ $paper->mainPaperPath() }} --}}
+                    {{-- paper mime: {{ $paper->mainPaperMime() }} --}}
+                    {{-- paper ext: {{ $paper->mainPaperExtension() }} --}}
+                    {{-- can preview: {{ $paper->canPreviewInline() ? 'yes' : 'no' }} --}}
+                @endif
             </div>
         </div>
     </section>

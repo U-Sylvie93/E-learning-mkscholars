@@ -1375,4 +1375,18 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Office files show preview unavailable message.
 - Paid/free access rules remain protected.
 - Raw storage path is not exposed.
+
+## Phase 43K.4 Entrance Exam PDF Viewer Rendering QA
+
+- Uploaded PDF viewer page requests the protected paper file route.
+- PDF.js receives the protected PDF URL.
+- PDF files render from the main uploaded file.
+- PDF files do not show preview unavailable message.
+- PDF files render even when MIME is missing or octet-stream.
+- Uppercase `.PDF` files render.
+- Image files render inline.
+- Office files show preview unavailable.
+- No raw storage path is exposed.
+- No direct download button is shown.
+- Paid/free access rules remain protected.
 - UI remains mobile responsive.

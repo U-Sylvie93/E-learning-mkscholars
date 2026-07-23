@@ -509,8 +509,8 @@ Route::get('/entrance-exam-academy/papers/{paper:slug}/inline', function (Entran
     $viewerKind = $paper->viewerKind();
     abort_unless(in_array($viewerKind, ['pdf', 'image'], true), 404);
 
-    $filePath = $paper->paperFilePath();
-    $disk = Storage::disk($paper->paperFileDisk());
+    $filePath = $paper->mainPaperPath();
+    $disk = Storage::disk($paper->mainPaperDisk());
     abort_unless(filled($filePath) && $disk->exists($filePath), 404);
 
     $mime = $paper->viewerMime();

@@ -272,6 +272,7 @@ class EntranceExamAcademyTest extends TestCase
             ->get(route('entrance-exam-academy.papers.view', $paper))
             ->assertOk()
             ->assertSee('data-testid="entrance-exam-pdf-viewer"', false)
+            ->assertSee('data-pdf-url="'.route('entrance-exam-academy.papers.inline', $paper).'"', false)
             ->assertSee(route('entrance-exam-academy.papers.inline', $paper), false)
             ->assertSee('data-file-kind="pdf"', false)
             ->assertSee('data-pdf-dark', false)
@@ -318,6 +319,7 @@ class EntranceExamAcademyTest extends TestCase
             ->get(route('entrance-exam-academy.papers.view', $paper))
             ->assertOk()
             ->assertSee('data-file-kind="pdf"', false)
+            ->assertSee('data-pdf-url="'.route('entrance-exam-academy.papers.inline', $paper).'"', false)
             ->assertSee(route('entrance-exam-academy.papers.inline', $paper), false)
             ->assertDontSee('Preview is not available', false)
             ->assertDontSee($paper->paper_file_path, false);
@@ -341,6 +343,7 @@ class EntranceExamAcademyTest extends TestCase
             ->get(route('entrance-exam-academy.papers.view', $paper))
             ->assertOk()
             ->assertSee('data-file-kind="pdf"', false)
+            ->assertSee('data-pdf-url="'.route('entrance-exam-academy.papers.inline', $paper).'"', false)
             ->assertSee(route('entrance-exam-academy.papers.inline', $paper), false)
             ->assertDontSee('Preview is not available', false);
 
@@ -365,6 +368,7 @@ class EntranceExamAcademyTest extends TestCase
             ->get(route('entrance-exam-academy.papers.view', $paper))
             ->assertOk()
             ->assertSee('data-file-kind="pdf"', false)
+            ->assertSee('data-pdf-url="'.route('entrance-exam-academy.papers.inline', $paper).'"', false)
             ->assertSee(route('entrance-exam-academy.papers.inline', $paper), false)
             ->assertDontSee('Preview is not available', false);
 
@@ -404,6 +408,7 @@ class EntranceExamAcademyTest extends TestCase
             ->get(route('entrance-exam-academy.papers.view', $paper))
             ->assertOk()
             ->assertSee('data-file-kind="image"', false)
+            ->assertSee('data-file-url="'.route('entrance-exam-academy.papers.inline', $paper).'"', false)
             ->assertSee('<img src="'.route('entrance-exam-academy.papers.inline', $paper).'"', false)
             ->assertDontSee('Preview is not available', false)
             ->assertDontSee('Download');

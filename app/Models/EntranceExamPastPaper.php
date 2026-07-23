@@ -107,17 +107,48 @@ class EntranceExamPastPaper extends Model
 
     public function paperFileDisk(): string
     {
-        return $this->paper_file_disk ?: 'public';
+        return $this->mainPaperDisk();
     }
 
     public function paperFilePath(): ?string
     {
-        return $this->paper_file_path;
+        return $this->mainPaperPath();
+    }
+
+    public function mainPaperPath(): ?string
+    {
+        foreach (['paper_file_path', 'file_path', 'document_path', 'paper_path'] as $key) {
+            $value = $this->getAttribute($key);
+
+            if (is_string($value) && trim($value) !== '') {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
+    public function mainPaperDisk(): string
+    {
+        foreach (['paper_file_disk', 'disk', 'paper_disk', 'file_disk'] as $key) {
+            $value = $this->getAttribute($key);
+
+            if (is_string($value) && trim($value) !== '') {
+                return $value;
+            }
+        }
+
+        return 'public';
     }
 
     public function paperFileExtension(): ?string
     {
-        $path = $this->paperFilePath();
+        return $this->mainPaperExtension();
+    }
+
+    public function mainPaperExtension(): ?string
+    {
+        $path = $this->mainPaperPath();
 
         if (blank($path)) {
             return null;
@@ -128,13 +159,27 @@ class EntranceExamPastPaper extends Model
 
     public function normalizedPaperMime(): ?string
     {
-        $mime = strtolower(trim((string) $this->paper_file_mime));
+        return $this->mainPaperMime();
+    }
+
+    public function mainPaperMime(): ?string
+    {
+        $mime = null;
+
+        foreach (['paper_file_mime', 'mime', 'mime_type', 'paper_mime', 'file_mime', 'resource_mime'] as $key) {
+            $value = strtolower(trim((string) $this->getAttribute($key)));
+
+            if ($value !== '') {
+                $mime = $value;
+                break;
+            }
+        }
 
         if (filled($mime) && $mime !== 'application/octet-stream') {
             return $mime;
         }
 
-        return match ($this->paperFileExtension()) {
+        return match ($this->mainPaperExtension()) {
             'pdf' => 'application/pdf',
             'png' => 'image/png',
             'jpg', 'jpeg' => 'image/jpeg',
@@ -159,8 +204,13 @@ class EntranceExamPastPaper extends Model
 
     public function isPdf(): bool
     {
-        return $this->paperFileExtension() === 'pdf'
-            || $this->normalizedPaperMime() === 'application/pdf';
+        return $this->isPdfPaper();
+    }
+
+    public function isPdfPaper(): bool
+    {
+        return $this->mainPaperExtension() === 'pdf'
+            || $this->mainPaperMime() === 'application/pdf';
     }
 
     public function hasImageFile(): bool
@@ -170,8 +220,13 @@ class EntranceExamPastPaper extends Model
 
     public function isImage(): bool
     {
-        return in_array($this->paperFileExtension(), ['png', 'jpg', 'jpeg', 'webp'], true)
-            || str_starts_with((string) $this->normalizedPaperMime(), 'image/');
+        return $this->isImagePaper();
+    }
+
+    public function isImagePaper(): bool
+    {
+        return in_array($this->mainPaperExtension(), ['png', 'jpg', 'jpeg', 'webp'], true)
+            || str_starts_with((string) $this->mainPaperMime(), 'image/');
     }
 
     public function hasOfficeFile(): bool
@@ -193,12 +248,17 @@ class EntranceExamPastPaper extends Model
 
     public function isOfficeDocument(): bool
     {
-        return $this->hasOfficeFile();
+        return $this->isOfficePaper();
+    }
+
+    public function isOfficePaper(): bool
+    {
+        return in_array($this->mainPaperExtension(), ['doc', 'docx', 'ppt', 'pptx'], true);
     }
 
     public function canPreviewInline(): bool
     {
-        return $this->isPdf() || $this->isImage();
+        return $this->isPdfPaper() || $this->isImagePaper();
     }
 
     public function viewerKind(): string

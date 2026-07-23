@@ -83,7 +83,7 @@ const initEntranceExamViewer = () => {
     const shell = document.querySelector('[data-paper-viewer-shell]');
     const pagesContainer = viewer.querySelector('[data-pdf-pages]');
     const status = document.querySelector('[data-pdf-page-status]');
-    const fileUrl = viewer.dataset.fileUrl;
+    const fileUrl = viewer.dataset.pdfUrl || viewer.dataset.fileUrl;
 
     if (!shell || !pagesContainer || !fileUrl) {
         return;

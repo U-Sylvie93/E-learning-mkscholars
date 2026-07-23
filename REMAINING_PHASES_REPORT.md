@@ -657,3 +657,11 @@ Hardened Entrance Exam Past Paper file detection around the main uploaded file c
 The protected inline route continues to serve only the main uploaded paper file for PDFs and images with inline headers. Word and PowerPoint files remain protected and show the preview-unavailable message without exposing raw storage paths or direct download links. No preview upload field was reintroduced.
 
 No migration was added. Manual tests, asset build, route inspection, PDF detection checks for missing/octet-stream/uppercase MIME cases, image viewer checks, Office no-preview checks, and paid/free entrance exam access checks remain required.
+
+### Phase 43K.4: Entrance Exam PDF Viewer Main File URL
+
+Made the Entrance Exam viewer pass the protected main paper route to PDF.js explicitly through `data-pdf-url` whenever the uploaded paper is detected as a PDF. The model now exposes `mainPaperPath()`, `mainPaperDisk()`, `mainPaperExtension()`, and `mainPaperMime()` as the single source of truth for uploaded paper detection, while existing paper-file helper names delegate to those methods.
+
+The protected inline route now reads the same main paper helpers, so PDFs and images are served from the uploaded paper file only. Word and PowerPoint files continue to show the preview-unavailable message and are not exposed as direct downloads. No preview upload field was reintroduced, and no migration was added.
+
+Manual tests, asset build, route inspection, PDF Network-tab checks for the protected route request, image viewer checks, Office no-preview checks, and paid/free entrance exam access checks remain required.
