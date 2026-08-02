@@ -284,54 +284,6 @@
     </section>
 
 
-    <section class="bg-white py-16">
-        <div class="mk-container">
-            <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-                <x-section-header
-                    eyebrow="Student feedback"
-                    title="Course reviews"
-                    description="Published feedback from MK Scholars students who have joined this course."
-                />
-                <div class="rounded-lg border border-slate-100 bg-slate-50 px-5 py-4">
-                    <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Average rating</p>
-                    <p class="mt-1 text-2xl font-extrabold text-mk-navy">
-                        {{ $course['average_rating'] ?? 'New' }}
-                        @if (! empty($course['average_rating']))
-                            <span class="text-sm font-bold text-slate-500">/ 5</span>
-                        @endif
-                    </p>
-                    <p class="mt-1 text-xs font-semibold text-slate-500">{{ $course['reviews_count'] ?? 0 }} published reviews</p>
-                </div>
-            </div>
-
-            <div class="mt-8 grid gap-5 md:grid-cols-2">
-                @forelse (($course['reviews'] ?? []) as $review)
-                    <x-card>
-                        <div class="flex items-start justify-between gap-4">
-                            <div>
-                                <p class="font-bold text-mk-navy">{{ $review['reviewer'] }}</p>
-                                @if (! empty($review['created_at']))
-                                    <p class="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ $review['created_at'] }}</p>
-                                @endif
-                            </div>
-                            <x-badge tone="gold">{{ $review['rating'] }}/5</x-badge>
-                        </div>
-                        @if (! empty($review['comment']))
-                            <p class="mt-4 text-sm leading-7 text-slate-600">{{ $review['comment'] }}</p>
-                        @else
-                            <p class="mt-4 text-sm leading-7 text-slate-600">This student left a rating without a written comment.</p>
-                        @endif
-                    </x-card>
-                @empty
-                    <x-card>
-                        <x-badge tone="gray">No published reviews yet</x-badge>
-                        <p class="mt-4 text-sm leading-6 text-slate-600">Student feedback will appear here after admin moderation.</p>
-                    </x-card>
-                @endforelse
-            </div>
-        </div>
-    </section>
-
     <section class="bg-mk-navy py-16">
         <div class="mk-container flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div>

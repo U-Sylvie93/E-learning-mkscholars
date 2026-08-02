@@ -187,29 +187,29 @@
                     </label>
                     <div class="mt-2 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm focus-within:border-mk-gold focus-within:ring-2 focus-within:ring-mk-gold/30" data-wysiwyg-shell>
                         <div class="flex flex-wrap gap-1 border-b border-slate-200 bg-slate-50 p-2" data-wysiwyg-toolbar>
-                            @php($toolClass = 'inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-slate-200 bg-white px-2 text-slate-700 text-sm font-bold shadow-sm transition hover:border-mk-gold hover:bg-mk-goldSoft hover:text-mk-navy focus:outline-none focus:ring-2 focus:ring-mk-gold/40')
-                            <button type="button" class="{{ $toolClass }}" title="Bold" data-command="bold"><span class="font-black">B</span></button>
-                            <button type="button" class="{{ $toolClass }} italic" title="Italic" data-command="italic">I</button>
-                            <button type="button" class="{{ $toolClass }} line-through" title="Strikethrough" data-command="strikeThrough">S</button>
-                            <button type="button" class="{{ $toolClass }} underline" title="Underline" data-command="underline">U</button>
+                            @php($toolClass = 'inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-mk-gold hover:bg-mk-goldSoft hover:text-mk-navy focus:outline-none focus:ring-2 focus:ring-mk-gold/40')
+                            <button type="button" class="{{ $toolClass }}" title="Bold" aria-label="Bold" data-command="bold"><x-editor-icon name="bold" /></button>
+                            <button type="button" class="{{ $toolClass }}" title="Italic" aria-label="Italic" data-command="italic"><x-editor-icon name="italic" /></button>
+                            <button type="button" class="{{ $toolClass }}" title="Underline" aria-label="Underline" data-command="underline"><x-editor-icon name="underline" /></button>
+                            <button type="button" class="{{ $toolClass }}" title="Strikethrough" aria-label="Strikethrough" data-command="strikeThrough"><x-editor-icon name="strike" /></button>
                             <span class="mx-1 h-6 w-px bg-slate-300"></span>
-                            <button type="button" class="{{ $toolClass }}" title="Heading 1" data-command="formatBlock" data-arg="H1">H1</button>
-                            <button type="button" class="{{ $toolClass }}" title="Heading 2" data-command="formatBlock" data-arg="H2">H2</button>
-                            <button type="button" class="{{ $toolClass }}" title="Heading 3" data-command="formatBlock" data-arg="H3">H3</button>
-                            <button type="button" class="{{ $toolClass }}" title="Paragraph" data-command="formatBlock" data-arg="P">P</button>
+                            <button type="button" class="{{ $toolClass }}" title="Heading 1" aria-label="Heading 1" data-command="formatBlock" data-arg="H1"><x-editor-icon name="h1" /></button>
+                            <button type="button" class="{{ $toolClass }}" title="Heading 2" aria-label="Heading 2" data-command="formatBlock" data-arg="H2"><x-editor-icon name="h2" /></button>
+                            <button type="button" class="{{ $toolClass }}" title="Heading 3" aria-label="Heading 3" data-command="formatBlock" data-arg="H3"><x-editor-icon name="h3" /></button>
+                            <button type="button" class="{{ $toolClass }}" title="Paragraph" aria-label="Paragraph" data-command="formatBlock" data-arg="P"><x-editor-icon name="paragraph" /></button>
                             <span class="mx-1 h-6 w-px bg-slate-300"></span>
-                            <button type="button" class="{{ $toolClass }}" title="Bulleted list" data-command="insertUnorderedList">&bull; List</button>
-                            <button type="button" class="{{ $toolClass }}" title="Numbered list" data-command="insertOrderedList">1. List</button>
-                            <button type="button" class="{{ $toolClass }}" title="Quote" data-command="formatBlock" data-arg="BLOCKQUOTE">&ldquo;&rdquo;</button>
-                            <button type="button" class="{{ $toolClass }}" title="Inline code" data-command="formatBlock" data-arg="PRE">&lt;/&gt;</button>
+                            <button type="button" class="{{ $toolClass }}" title="Bulleted list" aria-label="Bulleted list" data-command="insertUnorderedList"><x-editor-icon name="list" /></button>
+                            <button type="button" class="{{ $toolClass }}" title="Numbered list" aria-label="Numbered list" data-command="insertOrderedList"><x-editor-icon name="numbered-list" /></button>
+                            <button type="button" class="{{ $toolClass }}" title="Quote" aria-label="Quote" data-command="formatBlock" data-arg="BLOCKQUOTE"><x-editor-icon name="quote" /></button>
+                            <button type="button" class="{{ $toolClass }}" title="Code block" aria-label="Code block" data-command="formatBlock" data-arg="PRE"><x-editor-icon name="code" /></button>
                             <span class="mx-1 h-6 w-px bg-slate-300"></span>
-                            <button type="button" class="{{ $toolClass }}" title="Insert link" data-command="createLink">🔗</button>
-                            <button type="button" class="{{ $toolClass }}" title="Insert image URL" data-command="insertImage">🖼️</button>
-                            <button type="button" class="{{ $toolClass }}" title="Insert table" data-action="table">▦</button>
-                            <button type="button" class="{{ $toolClass }}" title="Clear formatting" data-command="removeFormat">✕</button>
+                            <button type="button" class="{{ $toolClass }}" title="Insert link" aria-label="Insert link" data-command="createLink"><x-editor-icon name="link" /></button>
+                            <button type="button" class="{{ $toolClass }}" title="Insert image URL" aria-label="Insert image" data-command="insertImage"><x-editor-icon name="image" /></button>
+                            <button type="button" class="{{ $toolClass }}" title="Insert table" aria-label="Insert table" data-action="table"><x-editor-icon name="table" /></button>
+                            <button type="button" class="{{ $toolClass }}" title="Clear formatting" aria-label="Clear formatting" data-command="removeFormat"><x-editor-icon name="eraser" /></button>
                             <span class="mx-1 h-6 w-px bg-slate-300"></span>
-                            <button type="button" class="{{ $toolClass }}" title="Undo" data-command="undo">↶</button>
-                            <button type="button" class="{{ $toolClass }}" title="Redo" data-command="redo">↷</button>
+                            <button type="button" class="{{ $toolClass }}" title="Undo" aria-label="Undo" data-command="undo"><x-editor-icon name="undo" /></button>
+                            <button type="button" class="{{ $toolClass }}" title="Redo" aria-label="Redo" data-command="redo"><x-editor-icon name="redo" /></button>
                         </div>
                         <div id="course-overview-editor"
                              class="mk-wysiwyg-editor min-h-[240px] px-4 py-3 text-sm leading-7 text-slate-800 focus:outline-none"

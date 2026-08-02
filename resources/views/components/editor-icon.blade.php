@@ -18,6 +18,12 @@
         'image' => '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="1.5"/><path d="m21 15-5-5L5 19"/>',
         'undo' => '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/>',
         'redo' => '<path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/>',
+        'underline' => '<path d="M6 4v7a6 6 0 0 0 12 0V4"/><path d="M4 20h16"/>',
+        'paragraph' => '<path d="M13 4v16"/><path d="M17 4v16"/><path d="M9 4h9"/><path d="M9 4a5 5 0 0 0 0 10h4"/>',
+        'h1' => '<path d="M4 6v12"/><path d="M12 6v12"/><path d="M4 12h8"/><path d="M17 10l2-1v9"/>',
+        'h2' => '<path d="M4 6v12"/><path d="M12 6v12"/><path d="M4 12h8"/><path d="M17 10a2 2 0 1 1 4 0c0 1.5-4 3-4 6h4"/>',
+        'h3' => '<path d="M4 6v12"/><path d="M12 6v12"/><path d="M4 12h8"/><path d="M17 10a2 2 0 1 1 3 1.6a2 2 0 1 1-3 1.4"/>',
+        'eraser' => '<path d="m7 21-4-4a2 2 0 0 1 0-2.8L14 3.2a2 2 0 0 1 2.8 0l4 4a2 2 0 0 1 0 2.8L11 20"/><path d="M22 21H7"/><path d="m5 12 6 6"/>',
     ];
 @endphp
 
