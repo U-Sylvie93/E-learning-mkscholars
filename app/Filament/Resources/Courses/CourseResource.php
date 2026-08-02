@@ -115,7 +115,17 @@ class CourseResource extends Resource
                 TextInput::make('price_amount')
                     ->numeric()
                     ->minValue(0)
-                    ->label('Price amount'),
+                    ->label('Price amount (legacy / single tier)'),
+                TextInput::make('price_basic')
+                    ->numeric()
+                    ->minValue(0)
+                    ->label('Basic tier price')
+                    ->helperText('Standard access tier. Shown as "Basic" to students.'),
+                TextInput::make('price_premium')
+                    ->numeric()
+                    ->minValue(0)
+                    ->label('Premium tier price')
+                    ->helperText('Optional higher tier. Leave blank for single-price courses.'),
                 TextInput::make('currency')
                     ->required()
                     ->default('RWF')

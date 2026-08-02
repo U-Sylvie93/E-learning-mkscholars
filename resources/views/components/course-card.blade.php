@@ -9,8 +9,9 @@
 <x-card class="group flex h-full flex-col overflow-hidden rounded-[1.75rem] border-slate-200 bg-white p-0 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-soft" data-testid="course-card">
     <div class="relative aspect-[16/10] overflow-hidden bg-mk-navy">
         @if ($image)
-            <img class="h-full w-full object-cover transition duration-500 group-hover:scale-105" src="{{ $image }}" alt="{{ $course['title'] }}">
-            <div class="absolute inset-0 bg-gradient-to-t from-mk-navy/82 via-mk-navy/16 to-transparent"></div>
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,196,12,0.30),transparent_34%),linear-gradient(135deg,#073653_0%,#0e4a72_56%,#102a3a_100%)]"></div>
+            <img class="absolute inset-0 h-full w-full object-contain transition duration-500 group-hover:scale-105" src="{{ $image }}" alt="{{ $course['title'] }}">
+            <div class="absolute inset-0 bg-gradient-to-t from-mk-navy/70 via-transparent to-transparent"></div>
         @else
             <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,196,12,0.30),transparent_34%),linear-gradient(135deg,#073653_0%,#0e4a72_56%,#102a3a_100%)]"></div>
             <div class="absolute inset-0 opacity-20 [background-image:linear-gradient(135deg,rgba(255,255,255,.18)_1px,transparent_1px)] [background-size:18px_18px]"></div>

@@ -182,29 +182,66 @@
                         Short description <span class="text-red-600" aria-hidden="true">*</span>
                         <textarea name="short_description" rows="3" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" required>{{ old('short_description', $course->short_description) }}</textarea>
                     </label>
-                    <label class="block text-sm font-bold text-mk-navy">
+                    <label class="block text-sm font-bold text-mk-navy" for="course-overview-editor">
                         Full course overview
-                        <div class="mt-2 overflow-hidden rounded-lg border border-slate-700 bg-slate-950 shadow-sm focus-within:border-mk-gold focus-within:ring-2 focus-within:ring-mk-gold/30">
-                            <div class="flex flex-wrap gap-1 border-b border-slate-800 bg-slate-900 p-2" data-markdown-toolbar="course-overview-input">
-                                @php($toolClass = 'inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-700 bg-slate-950 text-slate-200 shadow-sm transition hover:border-mk-gold hover:bg-slate-800 hover:text-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/40')
-                                <button type="button" class="{{ $toolClass }}" title="Bold" aria-label="Bold" data-wrap="**"><x-editor-icon name="bold" /></button>
-                                <button type="button" class="{{ $toolClass }}" title="Italic" aria-label="Italic" data-wrap="*"><x-editor-icon name="italic" /></button>
-                                <button type="button" class="{{ $toolClass }}" title="Strikethrough" aria-label="Strikethrough" data-wrap="~~"><x-editor-icon name="strike" /></button>
-                                <button type="button" class="{{ $toolClass }}" title="Link" aria-label="Link" data-insert="[Link text](https://example.com)"><x-editor-icon name="link" /></button>
-                                <button type="button" class="{{ $toolClass }}" title="Heading" aria-label="Heading" data-prefix="## "><x-editor-icon name="heading" /></button>
-                                <button type="button" class="{{ $toolClass }}" title="Quote" aria-label="Quote" data-prefix="> "><x-editor-icon name="quote" /></button>
-                                <button type="button" class="{{ $toolClass }}" title="Inline code" aria-label="Inline code" data-wrap="`"><x-editor-icon name="code" /></button>
-                                <button type="button" class="{{ $toolClass }}" title="Bulleted list" aria-label="Bulleted list" data-prefix="- "><x-editor-icon name="list" /></button>
-                                <button type="button" class="{{ $toolClass }}" title="Numbered list" aria-label="Numbered list" data-prefix="1. "><x-editor-icon name="numbered-list" /></button>
-                                <button type="button" class="{{ $toolClass }}" title="Table" aria-label="Table" data-insert="| Topic | Detail |\n| --- | --- |\n| Example | Description |\n"><x-editor-icon name="table" /></button>
-                                <button type="button" class="{{ $toolClass }}" title="Image" aria-label="Image" data-insert="![Image alt](https://example.com/image.jpg)"><x-editor-icon name="image" /></button>
-                                <button type="button" class="{{ $toolClass }}" title="Undo" aria-label="Undo" data-action="undo"><x-editor-icon name="undo" /></button>
-                                <button type="button" class="{{ $toolClass }}" title="Redo" aria-label="Redo" data-action="redo"><x-editor-icon name="redo" /></button>
-                            </div>
-                            <textarea id="course-overview-input" name="full_description" rows="10" class="w-full border-0 bg-slate-950 px-4 py-3 font-mono text-sm leading-6 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-0" placeholder="# What students will learn&#10;&#10;Describe the course, projects, lessons, and support students receive.">{{ old('full_description', $course->full_description) }}</textarea>
-                        </div>
-                        <span class="mt-1 block text-xs font-semibold text-slate-500">Supports the same Markdown storage path as admin: headings, lists, tables, links, images, inline code, and code blocks render through the safe course content renderer.</span>
                     </label>
+                    <div class="mt-2 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm focus-within:border-mk-gold focus-within:ring-2 focus-within:ring-mk-gold/30" data-wysiwyg-shell>
+                        <div class="flex flex-wrap gap-1 border-b border-slate-200 bg-slate-50 p-2" data-wysiwyg-toolbar>
+                            @php($toolClass = 'inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-slate-200 bg-white px-2 text-slate-700 text-sm font-bold shadow-sm transition hover:border-mk-gold hover:bg-mk-goldSoft hover:text-mk-navy focus:outline-none focus:ring-2 focus:ring-mk-gold/40')
+                            <button type="button" class="{{ $toolClass }}" title="Bold" data-command="bold"><span class="font-black">B</span></button>
+                            <button type="button" class="{{ $toolClass }} italic" title="Italic" data-command="italic">I</button>
+                            <button type="button" class="{{ $toolClass }} line-through" title="Strikethrough" data-command="strikeThrough">S</button>
+                            <button type="button" class="{{ $toolClass }} underline" title="Underline" data-command="underline">U</button>
+                            <span class="mx-1 h-6 w-px bg-slate-300"></span>
+                            <button type="button" class="{{ $toolClass }}" title="Heading 1" data-command="formatBlock" data-arg="H1">H1</button>
+                            <button type="button" class="{{ $toolClass }}" title="Heading 2" data-command="formatBlock" data-arg="H2">H2</button>
+                            <button type="button" class="{{ $toolClass }}" title="Heading 3" data-command="formatBlock" data-arg="H3">H3</button>
+                            <button type="button" class="{{ $toolClass }}" title="Paragraph" data-command="formatBlock" data-arg="P">P</button>
+                            <span class="mx-1 h-6 w-px bg-slate-300"></span>
+                            <button type="button" class="{{ $toolClass }}" title="Bulleted list" data-command="insertUnorderedList">&bull; List</button>
+                            <button type="button" class="{{ $toolClass }}" title="Numbered list" data-command="insertOrderedList">1. List</button>
+                            <button type="button" class="{{ $toolClass }}" title="Quote" data-command="formatBlock" data-arg="BLOCKQUOTE">&ldquo;&rdquo;</button>
+                            <button type="button" class="{{ $toolClass }}" title="Inline code" data-command="formatBlock" data-arg="PRE">&lt;/&gt;</button>
+                            <span class="mx-1 h-6 w-px bg-slate-300"></span>
+                            <button type="button" class="{{ $toolClass }}" title="Insert link" data-command="createLink">🔗</button>
+                            <button type="button" class="{{ $toolClass }}" title="Insert image URL" data-command="insertImage">🖼️</button>
+                            <button type="button" class="{{ $toolClass }}" title="Insert table" data-action="table">▦</button>
+                            <button type="button" class="{{ $toolClass }}" title="Clear formatting" data-command="removeFormat">✕</button>
+                            <span class="mx-1 h-6 w-px bg-slate-300"></span>
+                            <button type="button" class="{{ $toolClass }}" title="Undo" data-command="undo">↶</button>
+                            <button type="button" class="{{ $toolClass }}" title="Redo" data-command="redo">↷</button>
+                        </div>
+                        <div id="course-overview-editor"
+                             class="mk-wysiwyg-editor min-h-[240px] px-4 py-3 text-sm leading-7 text-slate-800 focus:outline-none"
+                             contenteditable="true"
+                             data-wysiwyg-editor
+                             data-target="course-overview-input"
+                             data-placeholder="Describe the course, projects, lessons, and support students receive.">{!! old('full_description', $course->full_description) !!}</div>
+                        <textarea id="course-overview-input" name="full_description" class="hidden">{{ old('full_description', $course->full_description) }}</textarea>
+                    </div>
+                    <span class="mt-1 block text-xs font-semibold text-slate-500">Click Bold, lists, or headings to format text. Content is saved as HTML and rendered safely on public pages.</span>
+
+                    <style>
+                        .mk-wysiwyg-editor[contenteditable="true"]:empty::before {
+                            content: attr(data-placeholder);
+                            color: #94a3b8;
+                            pointer-events: none;
+                        }
+                        .mk-wysiwyg-editor h1 { font-size: 1.75rem; font-weight: 800; margin: 0.75rem 0; color: #0b3a5a; }
+                        .mk-wysiwyg-editor h2 { font-size: 1.4rem; font-weight: 800; margin: 0.65rem 0; color: #0b3a5a; }
+                        .mk-wysiwyg-editor h3 { font-size: 1.15rem; font-weight: 700; margin: 0.55rem 0; color: #0b3a5a; }
+                        .mk-wysiwyg-editor p { margin: 0.5rem 0; }
+                        .mk-wysiwyg-editor ul { list-style: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
+                        .mk-wysiwyg-editor ol { list-style: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
+                        .mk-wysiwyg-editor li { margin: 0.25rem 0; }
+                        .mk-wysiwyg-editor blockquote { border-left: 3px solid #FFC40C; padding-left: 0.75rem; color: #475569; margin: 0.5rem 0; }
+                        .mk-wysiwyg-editor pre { background: #f1f5f9; padding: 0.75rem; border-radius: 0.5rem; font-family: ui-monospace, monospace; font-size: 0.85rem; overflow-x: auto; }
+                        .mk-wysiwyg-editor a { color: #0b3a5a; text-decoration: underline; }
+                        .mk-wysiwyg-editor img { max-width: 100%; height: auto; border-radius: 0.5rem; margin: 0.5rem 0; }
+                        .mk-wysiwyg-editor table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; }
+                        .mk-wysiwyg-editor th, .mk-wysiwyg-editor td { border: 1px solid #e2e8f0; padding: 0.5rem; }
+                        .mk-wysiwyg-editor th { background: #f8fafc; font-weight: 700; }
+                    </style>
                 </section>
 
                 <section class="space-y-4">
@@ -249,10 +286,16 @@
                             <span class="mt-1 block text-xs font-semibold text-slate-500">Enable this only when students should see certificate tags and become eligible for certificate preparation after completion.</span>
                         </span>
                     </label>
-                    <div class="grid gap-4 sm:grid-cols-2">
+                    <div class="grid gap-4 sm:grid-cols-3 md:col-span-2">
                         <label class="block text-sm font-bold text-mk-navy">
-                            Price
-                            <input name="price_amount" type="number" min="0" step="0.01" value="{{ old('price_amount', $course->price_amount) }}" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30">
+                            Basic price
+                            <input name="price_basic" type="number" min="0" step="0.01" value="{{ old('price_basic', $course->price_basic) }}" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" placeholder="e.g. 15000">
+                            <span class="mt-1 block text-xs font-semibold text-slate-500">Standard access price. Required when the course is paid.</span>
+                        </label>
+                        <label class="block text-sm font-bold text-mk-navy">
+                            Premium price
+                            <input name="price_premium" type="number" min="0" step="0.01" value="{{ old('price_premium', $course->price_premium) }}" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" placeholder="Optional">
+                            <span class="mt-1 block text-xs font-semibold text-slate-500">Optional higher tier. Leave blank for a single price.</span>
                         </label>
                         <label class="block text-sm font-bold text-mk-navy">
                             Currency
@@ -298,38 +341,70 @@
                     });
                 }
 
-                document.querySelectorAll('[data-markdown-toolbar]').forEach((toolbar) => {
-                    const target = document.getElementById(toolbar.dataset.markdownToolbar);
-                    if (! target) {
+                document.querySelectorAll('[data-wysiwyg-editor]').forEach((editor) => {
+                    const shell = editor.closest('[data-wysiwyg-shell]');
+                    const toolbar = shell?.querySelector('[data-wysiwyg-toolbar]');
+                    const target = document.getElementById(editor.dataset.target);
+                    if (! toolbar || ! target) {
                         return;
                     }
 
+                    const sync = () => {
+                        const html = editor.innerHTML.trim();
+                        target.value = (html === '' || html === '<br>') ? '' : html;
+                    };
+
+                    editor.addEventListener('input', sync);
+                    editor.addEventListener('blur', sync);
+
+                    editor.closest('form')?.addEventListener('submit', sync);
+
                     toolbar.querySelectorAll('button').forEach((button) => {
+                        button.addEventListener('mousedown', (event) => event.preventDefault());
                         button.addEventListener('click', () => {
-                            if (button.dataset.action === 'undo' || button.dataset.action === 'redo') {
-                                target.focus();
-                                document.execCommand(button.dataset.action);
+                            editor.focus();
+
+                            const action = button.dataset.action;
+                            const command = button.dataset.command;
+                            let arg = button.dataset.arg || null;
+
+                            if (action === 'table') {
+                                const rows = parseInt(prompt('Rows?', '3') || '0', 10);
+                                const cols = parseInt(prompt('Columns?', '3') || '0', 10);
+                                if (rows > 0 && cols > 0) {
+                                    let html = '<table><thead><tr>';
+                                    for (let c = 0; c < cols; c += 1) html += '<th>Header ' + (c + 1) + '</th>';
+                                    html += '</tr></thead><tbody>';
+                                    for (let r = 0; r < rows; r += 1) {
+                                        html += '<tr>';
+                                        for (let c = 0; c < cols; c += 1) html += '<td>&nbsp;</td>';
+                                        html += '</tr>';
+                                    }
+                                    html += '</tbody></table><p><br></p>';
+                                    document.execCommand('insertHTML', false, html);
+                                    sync();
+                                }
                                 return;
                             }
 
-                            const start = target.selectionStart;
-                            const end = target.selectionEnd;
-                            const selected = target.value.slice(start, end);
-                            let replacement = button.dataset.insert;
-
-                            if (! replacement) {
-                                if (button.dataset.wrap) {
-                                    replacement = button.dataset.wrap + (selected || 'text') + button.dataset.wrap;
-                                } else {
-                                    replacement = button.dataset.prefix + (selected || 'Text');
-                                }
+                            if (command === 'createLink') {
+                                const url = prompt('Link URL', 'https://');
+                                if (!url) return;
+                                arg = url;
+                            } else if (command === 'insertImage') {
+                                const url = prompt('Image URL', 'https://');
+                                if (!url) return;
+                                arg = url;
                             }
 
-                            replacement = replacement.replace(/\\n/g, '\n');
-                            target.setRangeText(replacement, start, end, 'end');
-                            target.focus();
+                            if (command) {
+                                document.execCommand(command, false, arg);
+                                sync();
+                            }
                         });
                     });
+
+                    sync();
                 });
 
                 document.querySelectorAll('[data-question-type-select]').forEach((select) => {
@@ -396,10 +471,38 @@
                     </form>
                     <div class="mt-6 space-y-3">
                         @forelse ($modules as $module)
-                            <div class="rounded-lg border border-slate-100 bg-slate-50 p-3">
-                                <p class="font-bold text-mk-navy">{{ $module->title }}</p>
-                                <p class="text-xs text-slate-500">{{ $module->lessons->count() }} lessons - {{ $module->status }}</p>
-                            </div>
+                            <details class="rounded-lg border border-slate-100 bg-slate-50 open:bg-white open:shadow-sm">
+                                <summary class="flex cursor-pointer items-center justify-between gap-3 p-3">
+                                    <div>
+                                        <p class="font-bold text-mk-navy">{{ $module->title }}</p>
+                                        <p class="text-xs text-slate-500">{{ $module->lessons->count() }} lessons - {{ $module->status }}</p>
+                                    </div>
+                                    <span class="rounded-md border border-mk-gold px-2 py-1 text-xs font-black text-mk-navy">Edit</span>
+                                </summary>
+                                <form method="POST" action="{{ route('instructor.modules.update', $module) }}" class="space-y-3 border-t border-slate-100 p-3">
+                                    @csrf
+                                    @method('PUT')
+                                    <input name="title" value="{{ $module->title }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Module title" required>
+                                    <input name="slug" value="{{ $module->slug }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Slug">
+                                    <textarea name="summary" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Short summary">{{ $module->summary }}</textarea>
+                                    <div class="grid gap-3 sm:grid-cols-2">
+                                        <input name="sort_order" type="number" min="0" value="{{ $module->sort_order }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Sort order">
+                                        <select name="status" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                                            @foreach (\App\Models\Course::STATUSES as $status)
+                                                <option value="{{ $status }}" @selected($module->status === $status)>{{ str($status)->headline() }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="flex flex-wrap justify-between gap-2">
+                                        <x-button type="submit" size="sm">Save Module</x-button>
+                                    </div>
+                                </form>
+                                <form method="POST" action="{{ route('instructor.modules.destroy', $module) }}" class="border-t border-slate-100 p-3" onsubmit="return confirm('Delete this module and all its lessons?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-xs font-bold text-red-600 hover:underline">Delete module</button>
+                                </form>
+                            </details>
                         @empty
                             <p class="text-sm text-slate-600">No modules yet.</p>
                         @endforelse
@@ -443,6 +546,60 @@
                     </form>
 
                     @if ($lessons->isNotEmpty())
+                        <div class="mt-6 space-y-3">
+                            <p class="text-sm font-bold text-mk-navy">Existing lessons</p>
+                            @foreach ($lessons as $lesson)
+                                <details class="rounded-lg border border-slate-100 bg-slate-50 open:bg-white open:shadow-sm">
+                                    <summary class="flex cursor-pointer items-center justify-between gap-3 p-3">
+                                        <div>
+                                            <p class="font-bold text-mk-navy">{{ $lesson->title }}</p>
+                                            <p class="text-xs text-slate-500">{{ $lesson->module?->title }} - {{ str($lesson->lesson_type)->headline() }} - {{ $lesson->status }}</p>
+                                        </div>
+                                        <span class="rounded-md border border-mk-gold px-2 py-1 text-xs font-black text-mk-navy">Edit</span>
+                                    </summary>
+                                    <form method="POST" action="{{ route('instructor.lessons.update', $lesson) }}" class="space-y-3 border-t border-slate-100 p-3">
+                                        @csrf
+                                        @method('PUT')
+                                        <select name="module_id" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" required>
+                                            @foreach ($modules as $module)
+                                                <option value="{{ $module->id }}" @selected($lesson->module_id === $module->id)>{{ $module->title }}</option>
+                                            @endforeach
+                                        </select>
+                                        <input name="title" value="{{ $lesson->title }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Lesson title" required>
+                                        <input name="slug" value="{{ $lesson->slug }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Slug">
+                                        <div class="grid gap-3 sm:grid-cols-2">
+                                            <select name="lesson_type" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                                                @foreach (['video', 'text', 'quiz', 'assignment', 'live'] as $type)
+                                                    <option value="{{ $type }}" @selected($lesson->lesson_type === $type)>{{ str($type)->headline() }}</option>
+                                                @endforeach
+                                            </select>
+                                            <input name="duration_minutes" type="number" min="0" value="{{ $lesson->duration_minutes }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Minutes">
+                                        </div>
+                                        <input name="video_url" value="{{ $lesson->video_url }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Optional YouTube URL">
+                                        <textarea name="content" rows="4" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Lesson notes/body">{{ $lesson->content }}</textarea>
+                                        <textarea name="summary" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Short summary">{{ $lesson->summary }}</textarea>
+                                        <div class="grid gap-3 sm:grid-cols-3">
+                                            <input name="sort_order" type="number" min="0" value="{{ $lesson->sort_order }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Sort order">
+                                            <select name="status" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                                                @foreach (\App\Models\Course::STATUSES as $status)
+                                                    <option value="{{ $status }}" @selected($lesson->status === $status)>{{ str($status)->headline() }}</option>
+                                                @endforeach
+                                            </select>
+                                            <label class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-mk-navy">
+                                                <input type="checkbox" name="is_free_preview" value="1" @checked($lesson->is_free_preview)> Preview
+                                            </label>
+                                        </div>
+                                        <x-button type="submit" size="sm">Save Lesson</x-button>
+                                    </form>
+                                    <form method="POST" action="{{ route('instructor.lessons.destroy', $lesson) }}" class="border-t border-slate-100 p-3" onsubmit="return confirm('Delete this lesson and its materials?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-xs font-bold text-red-600 hover:underline">Delete lesson</button>
+                                    </form>
+                                </details>
+                            @endforeach
+                        </div>
+
                         <div class="mt-8 rounded-lg border border-slate-100 bg-slate-50 p-4">
                             <p class="text-sm font-bold text-mk-navy">Upload lesson notes/material</p>
                             <p class="mt-1 text-xs font-semibold text-slate-500">Allowed: PDF, images, Word, PowerPoint. Max 10MB.</p>

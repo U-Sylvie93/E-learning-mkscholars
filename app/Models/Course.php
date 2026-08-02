@@ -19,6 +19,10 @@ class Course extends Model
     public const ACCESS_FREE = 'free';
     public const ACCESS_PAID = 'paid';
 
+    public const TIER_BASIC = 'basic';
+    public const TIER_PREMIUM = 'premium';
+    public const TIERS = [self::TIER_BASIC, self::TIER_PREMIUM];
+
     public const STATUSES = [
         self::STATUS_DRAFT,
         self::STATUS_PUBLISHED,
@@ -37,6 +41,8 @@ class Course extends Model
         'price',
         'is_free',
         'price_amount',
+        'price_basic',
+        'price_premium',
         'currency',
         'access_type',
         'offers_certificate',
@@ -52,6 +58,8 @@ class Course extends Model
             'is_free' => 'boolean',
             'offers_certificate' => 'boolean',
             'price_amount' => 'decimal:2',
+            'price_basic' => 'decimal:2',
+            'price_premium' => 'decimal:2',
             'learning_outcomes' => 'array',
         ];
     }
@@ -134,15 +142,46 @@ class Course extends Model
         return ! $this->isFree();
     }
 
-    public function payableAmount(): float
+    public function payableAmount(?string $tier = null): float
     {
-        return (float) ($this->price_amount ?? $this->price ?? 0);
+        if ($tier === self::TIER_BASIC && $this->price_basic !== null) {
+            return (float) $this->price_basic;
+        }
+
+        if ($tier === self::TIER_PREMIUM && $this->price_premium !== null) {
+            return (float) $this->price_premium;
+        }
+
+        if ($this->price_basic !== null && $this->price_premium !== null) {
+            return (float) $this->price_basic;
+        }
+
+        return (float) ($this->price_amount ?? $this->price_basic ?? $this->price ?? 0);
+    }
+
+    public function hasTierPricing(): bool
+    {
+        return ($this->price_basic !== null && (float) $this->price_basic > 0)
+            || ($this->price_premium !== null && (float) $this->price_premium > 0);
     }
 
     public function priceLabel(): string
     {
         if ($this->isFree()) {
             return 'Free';
+        }
+
+        if ($this->hasTierPricing()) {
+            $currency = $this->currency ?: 'RWF';
+            $parts = [];
+            if ($this->price_basic > 0) {
+                $parts[] = 'Basic '.number_format((float) $this->price_basic, 0).' '.$currency;
+            }
+            if ($this->price_premium > 0) {
+                $parts[] = 'Premium '.number_format((float) $this->price_premium, 0).' '.$currency;
+            }
+
+            return implode(' / ', $parts) ?: 'Paid course';
         }
 
         $amount = $this->payableAmount();
@@ -178,6 +217,9 @@ class Course extends Model
             'access_type' => $this->isFree() ? self::ACCESS_FREE : self::ACCESS_PAID,
             'offers_certificate' => $this->offersCertificate(),
             'price_amount' => $this->payableAmount(),
+            'price_basic' => $this->price_basic !== null ? (float) $this->price_basic : null,
+            'price_premium' => $this->price_premium !== null ? (float) $this->price_premium : null,
+            'has_tier_pricing' => $this->hasTierPricing(),
             'currency' => $this->currency ?: 'RWF',
             'summary' => $this->short_description,
             'outcomes' => $this->learning_outcomes ?: [],

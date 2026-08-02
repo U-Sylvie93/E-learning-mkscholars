@@ -4,6 +4,12 @@
     $skills = array_slice($course['outcomes'] ?? ['Focused study habits', 'Portfolio-ready practice', 'Confident communication'], 0, 4);
     $ctaState = $course['cta_state'] ?? 'guest';
     $academyIcon = $course['academy_icon'] ?? \App\Models\Academy::ICON_BOOK_OPEN;
+    $isFree = $course['is_free'] ?? true;
+    $priceAmount = (float) ($course['price_amount'] ?? 0);
+    $priceBasic = $course['price_basic'] ?? null;
+    $pricePremium = $course['price_premium'] ?? null;
+    $showPriceCard = ! $isFree && ($priceAmount > 0 || $priceBasic > 0 || $pricePremium > 0);
+    $currency = $course['currency'] ?? 'RWF';
 @endphp
 
 <x-layouts.app :title="$course['title']" :description="$course['short_description'] ?? 'MK Scholars course details.'" :image="$course['image'] ?? null">
@@ -11,10 +17,10 @@
         <div class="mk-container grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
             <div>
                 <div class="flex flex-wrap gap-2">
-                    @if ($course['level'])
+                    @if (! empty($course['level']))
                         <x-badge tone="blue">{{ $course['level'] }}</x-badge>
                     @endif
-                    @if ($course['duration'])
+                    @if (! empty($course['duration']))
                         <x-badge tone="gray">{{ $course['duration'] }}</x-badge>
                     @endif
                     @if ($course['offers_certificate'] ?? false)
@@ -56,95 +62,139 @@
                 </div>
             </div>
 
-            <div>
+            <div class="space-y-6">
                 <div class="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-mk-navy shadow-soft">
+                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,196,12,0.30),transparent_34%),linear-gradient(135deg,#073653_0%,#0e4a72_56%,#102a3a_100%)]"></div>
                     @if ($image)
-                        <img class="h-80 w-full object-cover sm:h-[440px]" src="{{ $image }}" alt="{{ $course['title'] }}">
-                        <div class="absolute inset-0 bg-gradient-to-t from-mk-navy/70 via-transparent to-transparent"></div>
+                        <img class="relative h-80 w-full object-contain sm:h-[440px]" src="{{ $image }}" alt="{{ $course['title'] }}">
+                        <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-mk-navy/60 via-transparent to-transparent"></div>
                     @else
-                        <div class="flex h-80 w-full items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(255,196,12,0.30),transparent_34%),linear-gradient(135deg,#073653_0%,#0e4a72_56%,#102a3a_100%)] sm:h-[440px]">
+                        <div class="relative flex h-80 w-full items-center justify-center sm:h-[440px]">
                             <span class="flex h-24 w-24 items-center justify-center rounded-[1.75rem] border border-mk-gold/40 bg-white/10 text-mk-gold shadow-soft backdrop-blur">
                                 <x-academy-icon :name="$academyIcon" class="h-12 w-12" />
                             </span>
                         </div>
                     @endif
                 </div>
-                <x-card class="-mt-8 ml-4 mr-4 relative">
-                    <dl class="grid gap-4 sm:grid-cols-2">
-                        <div>
-                            <dt class="text-xs font-bold uppercase tracking-wide text-slate-500">Price</dt>
-                            <dd class="mt-1 font-extrabold text-mk-navy">{{ $course['price'] }}</dd>
-                            <dd class="mt-2"><x-badge :tone="($course['is_free'] ?? true) ? 'green' : 'gold'">{{ ($course['is_free'] ?? true) ? 'Free access' : 'Manual payment' }}</x-badge></dd>
+
+                @if ($showPriceCard)
+                    <x-card class="-mt-14 ml-4 mr-4 relative">
+                        <div class="flex flex-col gap-4">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Enrollment</p>
+                                    <p class="mt-1 text-lg font-extrabold text-mk-navy">Choose your access</p>
+                                </div>
+                                <x-badge tone="gold">Manual payment</x-badge>
+                            </div>
+
+                            @if ($priceBasic > 0 || $pricePremium > 0)
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    @if ($priceBasic > 0)
+                                        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                                            <p class="text-xs font-black uppercase tracking-wide text-slate-500">Basic</p>
+                                            <p class="mt-2 text-2xl font-black text-mk-navy">{{ number_format((float) $priceBasic, 0) }} <span class="text-sm font-bold text-slate-500">{{ $currency }}</span></p>
+                                            @if ($ctaState === 'paid_not_started' && ! empty($course['id']))
+                                                <form method="POST" action="{{ route('courses.enroll', $course['id']) }}" class="mt-3">
+                                                    @csrf
+                                                    <input type="hidden" name="tier" value="basic">
+                                                    <x-button type="submit" size="sm" variant="secondary" class="w-full">Pay Basic</x-button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    @endif
+                                    @if ($pricePremium > 0)
+                                        <div class="rounded-lg border border-mk-gold/40 bg-mk-goldSoft/40 p-4">
+                                            <p class="text-xs font-black uppercase tracking-wide text-mk-navy">Premium</p>
+                                            <p class="mt-2 text-2xl font-black text-mk-navy">{{ number_format((float) $pricePremium, 0) }} <span class="text-sm font-bold text-slate-500">{{ $currency }}</span></p>
+                                            @if ($ctaState === 'paid_not_started' && ! empty($course['id']))
+                                                <form method="POST" action="{{ route('courses.enroll', $course['id']) }}" class="mt-3">
+                                                    @csrf
+                                                    <input type="hidden" name="tier" value="premium">
+                                                    <x-button type="submit" size="sm" class="w-full">Pay Premium</x-button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    @endif
+                                </div>
+                            @else
+                                <div>
+                                    <p class="text-2xl font-black text-mk-navy">{{ $course['price'] }}</p>
+                                    @if ($ctaState === 'paid_not_started' && ! empty($course['id']))
+                                        <form method="POST" action="{{ route('courses.enroll', $course['id']) }}" class="mt-3">
+                                            @csrf
+                                            <x-button type="submit" class="w-full">Pay &amp; Enroll</x-button>
+                                        </form>
+                                    @endif
+                                </div>
+                            @endif
                         </div>
-                        <div>
-                            <dt class="text-xs font-bold uppercase tracking-wide text-slate-500">Academy</dt>
-                            <dd class="mt-1 inline-flex items-center gap-2 font-extrabold text-mk-navy"><x-academy-icon :name="$academyIcon" class="h-4 w-4 text-mk-gold" /> {{ $course['academy'] }}</dd>
-                        </div>
-                    </dl>
-                </x-card>
+                    </x-card>
+                @endif
+
+                @if (($course['level'] ?? null) || ($course['duration'] ?? null) || $lessonsCount)
+                    <x-card>
+                        <p class="text-xs font-bold uppercase tracking-wide text-mk-gold">Course details</p>
+                        <dl class="mt-4 grid gap-4 text-sm">
+                            @if (! empty($course['level']))
+                                <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
+                                    <dt class="font-bold text-slate-500">Level</dt>
+                                    <dd class="font-extrabold text-mk-navy">{{ $course['level'] }}</dd>
+                                </div>
+                            @endif
+                            @if (! empty($course['duration']))
+                                <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
+                                    <dt class="font-bold text-slate-500">Duration</dt>
+                                    <dd class="font-extrabold text-mk-navy">{{ $course['duration'] }}</dd>
+                                </div>
+                            @endif
+                            @if ($lessonsCount)
+                                <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
+                                    <dt class="font-bold text-slate-500">Lessons</dt>
+                                    <dd class="font-extrabold text-mk-navy">{{ $lessonsCount }}</dd>
+                                </div>
+                            @endif
+                            <div class="flex items-center justify-between gap-4">
+                                <dt class="font-bold text-slate-500">Academy</dt>
+                                <dd class="inline-flex items-center gap-2 font-extrabold text-mk-navy"><x-academy-icon :name="$academyIcon" class="h-4 w-4 text-mk-gold" /> {{ $course['academy'] }}</dd>
+                            </div>
+                        </dl>
+                    </x-card>
+                @endif
             </div>
         </div>
     </section>
 
     <section class="py-16">
-        <div class="mk-container grid gap-8 lg:grid-cols-[0.72fr_1.28fr] lg:items-start">
-            <div class="space-y-6">
-                <x-section-header eyebrow="Overview" title="Course overview" description="A guided course experience with clear lessons, practice checkpoints, and outcomes students can explain." />
-                <x-card>
-                    <div class="relative overflow-hidden rounded-lg border border-slate-200 bg-mk-navy">
-                        @if ($image)
-                            <img class="h-52 w-full object-cover" src="{{ $image }}" alt="{{ $course['title'] }} course overview image">
-                        @else
-                            <div class="flex h-52 w-full items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(255,196,12,0.30),transparent_34%),linear-gradient(135deg,#073653_0%,#0e4a72_56%,#102a3a_100%)]">
-                                <x-academy-icon :name="$academyIcon" class="h-10 w-10 text-mk-gold" />
-                            </div>
-                        @endif
-                    </div>
-                    <dl class="mt-5 grid gap-4 text-sm">
-                        <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
-                            <dt class="font-bold text-slate-500">Level</dt>
-                            <dd class="font-extrabold text-mk-navy">{{ $course['level'] }}</dd>
-                        </div>
-                        <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
-                            <dt class="font-bold text-slate-500">Duration</dt>
-                            <dd class="font-extrabold text-mk-navy">{{ $course['duration'] }}</dd>
-                        </div>
-                        <div class="flex items-center justify-between gap-4">
-                            <dt class="font-bold text-slate-500">Lessons</dt>
-                            <dd class="font-extrabold text-mk-navy">{{ $lessonsCount ?: 'Coming soon' }}</dd>
-                        </div>
-                    </dl>
-                </x-card>
-            </div>
+        <div class="mk-container space-y-6">
+            <x-section-header eyebrow="Overview" title="Course overview" description="A guided course experience with clear lessons, practice checkpoints, and outcomes students can explain." />
 
-            <div class="space-y-6">
-                <x-card>
-                    @if (! empty($course['rendered_full_description']))
-                        <div class="mk-rich-content">{!! $course['rendered_full_description'] !!}</div>
-                    @elseif (! empty($course['summary']))
-                        <p class="text-sm leading-7 text-slate-600">{{ $course['summary'] }}</p>
-                    @else
-                        <p class="text-sm leading-7 text-slate-600">The full course overview will be published soon.</p>
-                    @endif
-                </x-card>
+            <x-card>
+                @if (! empty($course['rendered_full_description']))
+                    <div class="mk-rich-content">{!! $course['rendered_full_description'] !!}</div>
+                @elseif (! empty($course['summary']))
+                    <p class="text-sm leading-7 text-slate-600">{{ $course['summary'] }}</p>
+                @else
+                    <p class="text-sm leading-7 text-slate-600">The full course overview will be published soon.</p>
+                @endif
+            </x-card>
 
-                <x-card>
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <p class="text-sm font-bold uppercase tracking-wide text-mk-gold">Outcomes</p>
-                            <h2 class="mt-1 text-2xl font-extrabold text-mk-navy">What you will learn</h2>
-                        </div>
-                        <x-badge tone="blue">Student focused</x-badge>
+            <x-card>
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm font-bold uppercase tracking-wide text-mk-gold">Outcomes</p>
+                        <h2 class="mt-1 text-2xl font-extrabold text-mk-navy">What you will learn</h2>
                     </div>
-                    <div class="mt-6 grid gap-4 md:grid-cols-2">
-                        @forelse (($course['outcomes'] ?? []) as $outcome)
-                            <div class="rounded-lg border border-slate-100 bg-slate-50 p-4 font-bold text-mk-navy">{{ $outcome }}</div>
-                        @empty
-                            <p class="text-sm leading-6 text-slate-600">Learning outcomes will be published soon.</p>
-                        @endforelse
-                    </div>
-                </x-card>
-            </div>
+                    <x-badge tone="blue">Student focused</x-badge>
+                </div>
+                <div class="mt-6 grid gap-4 md:grid-cols-2">
+                    @forelse (($course['outcomes'] ?? []) as $outcome)
+                        <div class="rounded-lg border border-slate-100 bg-slate-50 p-4 font-bold text-mk-navy">{{ $outcome }}</div>
+                    @empty
+                        <p class="text-sm leading-6 text-slate-600">Learning outcomes will be published soon.</p>
+                    @endforelse
+                </div>
+            </x-card>
         </div>
     </section>
 

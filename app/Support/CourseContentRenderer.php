@@ -12,6 +12,14 @@ class CourseContentRenderer
             return '';
         }
 
+        $trimmed = ltrim($content);
+
+        if ($trimmed !== '' && $trimmed[0] === '<') {
+            $html = self::stripUnsafeHtml($content);
+
+            return self::wrapTables($html);
+        }
+
         $converter = new GithubFlavoredMarkdownConverter([
             'html_input' => 'strip',
             'allow_unsafe_links' => false,

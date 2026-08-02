@@ -1171,11 +1171,20 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.documents.destroy');
 
 
-    Route::post('/courses/{course}/enroll', function (Course $course) use ($activeSubscriptionForCourse) {
+    Route::post('/courses/{course}/enroll', function (Request $request, Course $course) use ($activeSubscriptionForCourse) {
         $user = Auth::user();
 
         abort_unless($user?->role === User::ROLE_STUDENT, 403);
         abort_unless($course->status === Course::STATUS_PUBLISHED, 404);
+
+        $tier = $request->input('tier');
+        if (! in_array($tier, Course::TIERS, true)) {
+            $tier = null;
+        }
+
+        if ($course->hasTierPricing() && $tier === null) {
+            $tier = $course->price_basic > 0 ? Course::TIER_BASIC : Course::TIER_PREMIUM;
+        }
 
         if ($course->requiresPayment()) {
             if ($activeSubscriptionForCourse($user, $course)) {
@@ -1231,10 +1240,15 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
                 ->createPendingPayment([
                     'user_id' => $user->id,
                     'course_id' => $course->id,
-                    'amount' => $course->payableAmount(),
+                    'amount' => $course->payableAmount($tier),
                     'currency' => $course->currency ?: 'RWF',
                     'purpose' => Payment::PURPOSE_COURSE,
+                    'tier' => $tier,
                 ]);
+
+            if ($tier && Schema::hasColumn('payments', 'tier') && $payment->tier !== $tier) {
+                $payment->update(['tier' => $tier]);
+            }
 
             return redirect()->route('student.payments.show', $payment);
         }
@@ -2653,6 +2667,8 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'access_type' => ['required', Rule::in([Course::ACCESS_FREE, Course::ACCESS_PAID])],
             'offers_certificate' => ['nullable', 'boolean'],
             'price_amount' => ['nullable', 'numeric', 'min:0'],
+            'price_basic' => ['nullable', 'numeric', 'min:0'],
+            'price_premium' => ['nullable', 'numeric', 'min:0'],
             'currency' => ['nullable', 'string', 'max:8'],
             'status' => ['required', Rule::in(Course::STATUSES)],
             'learning_outcomes' => ['nullable', 'string'],
@@ -2669,6 +2685,9 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $validated['is_free'] = $validated['access_type'] === Course::ACCESS_FREE;
         $validated['offers_certificate'] = (bool) ($validated['offers_certificate'] ?? false);
         $validated['currency'] = $validated['currency'] ?: 'RWF';
+        if (empty($validated['price_amount']) && ! empty($validated['price_basic'])) {
+            $validated['price_amount'] = $validated['price_basic'];
+        }
         $validated['learning_outcomes'] = collect(preg_split('/\r\n|\r|\n/', (string) ($validated['learning_outcomes'] ?? '')))
             ->map(fn ($outcome) => trim($outcome))
             ->filter()
@@ -2722,6 +2741,8 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'access_type' => ['required', Rule::in([Course::ACCESS_FREE, Course::ACCESS_PAID])],
             'offers_certificate' => ['nullable', 'boolean'],
             'price_amount' => ['nullable', 'numeric', 'min:0'],
+            'price_basic' => ['nullable', 'numeric', 'min:0'],
+            'price_premium' => ['nullable', 'numeric', 'min:0'],
             'currency' => ['nullable', 'string', 'max:8'],
             'status' => ['required', Rule::in(Course::STATUSES)],
             'learning_outcomes' => ['nullable', 'string'],
@@ -2741,6 +2762,9 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $validated['is_free'] = $validated['access_type'] === Course::ACCESS_FREE;
         $validated['offers_certificate'] = (bool) ($validated['offers_certificate'] ?? false);
         $validated['currency'] = $validated['currency'] ?: 'RWF';
+        if (empty($validated['price_amount']) && ! empty($validated['price_basic'])) {
+            $validated['price_amount'] = $validated['price_basic'];
+        }
         $validated['learning_outcomes'] = collect(preg_split('/\r\n|\r|\n/', (string) ($validated['learning_outcomes'] ?? '')))
             ->map(fn ($outcome) => trim($outcome))
             ->filter()
@@ -2773,6 +2797,38 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
         return back()->with('status', 'Module added.');
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.modules.store');
+
+    Route::put('/instructor/modules/{module}', function (Request $request, Module $module) use ($abortUnlessInstructorOwnsCourse, $uniqueSlug) {
+        $course = $module->course;
+        $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:255', 'alpha_dash'],
+            'summary' => ['nullable', 'string', 'max:600'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'status' => ['required', Rule::in(Course::STATUSES)],
+        ]);
+
+        $module->update([
+            'title' => $validated['title'],
+            'slug' => $uniqueSlug('modules', $validated['title'], $validated['slug'] ?? null, $module->id),
+            'summary' => $validated['summary'] ?? null,
+            'sort_order' => $validated['sort_order'] ?? 0,
+            'status' => $validated['status'],
+        ]);
+
+        return redirect()->route('instructor.courses.edit', $course)->with('status', 'Module updated.');
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.modules.update');
+
+    Route::delete('/instructor/modules/{module}', function (Module $module) use ($abortUnlessInstructorOwnsCourse) {
+        $course = $module->course;
+        $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
+
+        $module->delete();
+
+        return redirect()->route('instructor.courses.edit', $course)->with('status', 'Module removed.');
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.modules.destroy');
 
     Route::post('/instructor/courses/{course}/lessons', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse, $uniqueSlug) {
         $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
@@ -2809,6 +2865,55 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
         return back()->with('status', 'Lesson added.');
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.lessons.store');
+
+    Route::put('/instructor/lessons/{lesson}', function (Request $request, Lesson $lesson) use ($abortUnlessInstructorOwnsCourse, $uniqueSlug) {
+        $course = $lesson->module?->course;
+        abort_unless($course, 404);
+        $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
+
+        $validated = $request->validate([
+            'module_id' => ['required', 'exists:modules,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:255', 'alpha_dash'],
+            'summary' => ['nullable', 'string', 'max:600'],
+            'lesson_type' => ['required', Rule::in(['video', 'text', 'quiz', 'assignment', 'live'])],
+            'video_url' => ['nullable', 'url', new YouTubeUrl()],
+            'content' => ['nullable', 'string'],
+            'duration_minutes' => ['nullable', 'integer', 'min:0'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'is_free_preview' => ['nullable', 'boolean'],
+            'status' => ['required', Rule::in(Course::STATUSES)],
+        ]);
+
+        $module = Module::query()->where('course_id', $course->id)->whereKey($validated['module_id'])->first();
+        abort_unless($module, 422, 'The selected module does not belong to this course.');
+
+        $lesson->update([
+            'module_id' => $module->id,
+            'title' => $validated['title'],
+            'slug' => $uniqueSlug('lessons', $validated['title'], $validated['slug'] ?? null, $lesson->id),
+            'summary' => $validated['summary'] ?? null,
+            'lesson_type' => $validated['lesson_type'],
+            'video_url' => $validated['video_url'] ?? null,
+            'content' => $validated['content'] ?? null,
+            'duration_minutes' => $validated['duration_minutes'] ?? null,
+            'sort_order' => $validated['sort_order'] ?? 0,
+            'is_free_preview' => (bool) ($validated['is_free_preview'] ?? false),
+            'status' => $validated['status'],
+        ]);
+
+        return redirect()->route('instructor.courses.edit', $course)->with('status', 'Lesson updated.');
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.lessons.update');
+
+    Route::delete('/instructor/lessons/{lesson}', function (Lesson $lesson) use ($abortUnlessInstructorOwnsCourse) {
+        $course = $lesson->module?->course;
+        abort_unless($course, 404);
+        $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
+
+        $lesson->delete();
+
+        return redirect()->route('instructor.courses.edit', $course)->with('status', 'Lesson removed.');
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.lessons.destroy');
 
     Route::post('/instructor/courses/{course}/lesson-materials', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse) {
         $abortUnlessInstructorOwnsCourse(Auth::user(), $course);

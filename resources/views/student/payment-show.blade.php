@@ -32,6 +32,9 @@
                         <div>
                             <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Amount</p>
                             <p class="mt-2 text-2xl font-extrabold text-mk-navy">{{ number_format((float) $payment->amount, 0) }} {{ $payment->currency }}</p>
+                            @if ($payment->tier ?? false)
+                                <p class="mt-1 text-xs font-black uppercase tracking-wide text-mk-gold">{{ ucfirst($payment->tier) }} tier</p>
+                            @endif
                         </div>
                         <div>
                             <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Provider</p>

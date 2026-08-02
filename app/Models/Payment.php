@@ -36,6 +36,7 @@ class Payment extends Model
         'amount',
         'currency',
         'purpose',
+        'tier',
         'provider',
         'provider_reference',
         'provider_status',
@@ -73,16 +74,22 @@ class Payment extends Model
             }
 
             if ($payment->status === self::STATUS_APPROVED && $payment->purpose === self::PURPOSE_COURSE && $payment->course_id) {
+                $enrollmentData = [
+                    'status' => Enrollment::STATUS_ACTIVE,
+                    'enrolled_at' => now(),
+                    'completed_at' => null,
+                ];
+
+                if ($payment->tier && \Illuminate\Support\Facades\Schema::hasColumn('enrollments', 'tier')) {
+                    $enrollmentData['tier'] = $payment->tier;
+                }
+
                 Enrollment::updateOrCreate(
                     [
                         'user_id' => $payment->user_id,
                         'course_id' => $payment->course_id,
                     ],
-                    [
-                        'status' => Enrollment::STATUS_ACTIVE,
-                        'enrolled_at' => now(),
-                        'completed_at' => null,
-                    ],
+                    $enrollmentData,
                 );
             }
 
