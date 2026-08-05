@@ -119,10 +119,15 @@ class CourseResource extends Resource
                     ->label('Price amount (legacy / single tier)'),
                 Repeater::make('price_tiers')
                     ->label('Pricing tiers')
-                    ->helperText('Add any number of custom-named tiers. Only used when Access type is Paid.')
+                    ->helperText('Add any number of custom-named tiers. Description is shown to students under the price on the public course page.')
                     ->schema([
                         TextInput::make('name')->required()->maxLength(60)->placeholder('Standard, Pro, VIP, ...'),
                         TextInput::make('amount')->required()->numeric()->minValue(0),
+                        Textarea::make('description')
+                            ->maxLength(400)
+                            ->rows(2)
+                            ->placeholder('What does this tier include? (shown to students under the price)')
+                            ->columnSpanFull(),
                     ])
                     ->columns(2)
                     ->addActionLabel('Add tier')

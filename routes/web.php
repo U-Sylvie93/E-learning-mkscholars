@@ -2817,6 +2817,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'price_tiers' => ['nullable', 'array'],
             'price_tiers.*.name' => ['nullable', 'string', 'max:60'],
             'price_tiers.*.amount' => ['nullable', 'numeric', 'min:0'],
+            'price_tiers.*.description' => ['nullable', 'string', 'max:400'],
             'currency' => ['nullable', 'string', 'max:8'],
             'status' => ['required', Rule::in(Course::STATUSES)],
             'learning_outcomes' => ['nullable', 'string'],
@@ -2837,6 +2838,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             ->map(fn ($row) => [
                 'name' => trim((string) ($row['name'] ?? '')),
                 'amount' => (float) ($row['amount'] ?? 0),
+                'description' => trim((string) ($row['description'] ?? '')),
             ])
             ->filter(fn ($row) => $row['name'] !== '' && $row['amount'] > 0)
             ->values()
@@ -2925,6 +2927,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'price_tiers' => ['nullable', 'array'],
             'price_tiers.*.name' => ['nullable', 'string', 'max:60'],
             'price_tiers.*.amount' => ['nullable', 'numeric', 'min:0'],
+            'price_tiers.*.description' => ['nullable', 'string', 'max:400'],
             'currency' => ['nullable', 'string', 'max:8'],
             'status' => ['required', Rule::in(Course::STATUSES)],
             'learning_outcomes' => ['nullable', 'string'],
@@ -2948,6 +2951,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             ->map(fn ($row) => [
                 'name' => trim((string) ($row['name'] ?? '')),
                 'amount' => (float) ($row['amount'] ?? 0),
+                'description' => trim((string) ($row['description'] ?? '')),
             ])
             ->filter(fn ($row) => $row['name'] !== '' && $row['amount'] > 0)
             ->values()

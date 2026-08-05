@@ -305,18 +305,24 @@
                             </div>
                             <div class="mt-4 space-y-3" data-tier-rows>
                                 @foreach ($existingTiers as $i => $tier)
-                                    <div class="grid gap-2 rounded-lg bg-white p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-center" data-tier-row>
-                                        <input name="price_tiers[{{ $i }}][name]" value="{{ $tier['name'] ?? '' }}" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Tier name (e.g. Standard)">
-                                        <input name="price_tiers[{{ $i }}][amount]" type="number" min="0" step="0.01" value="{{ $tier['amount'] ?? '' }}" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Amount">
-                                        <button type="button" data-remove-tier-row class="rounded-md border border-slate-200 px-3 py-2 text-xs font-bold text-slate-500 hover:border-red-400 hover:text-red-600">Remove</button>
+                                    <div class="rounded-lg bg-white p-3" data-tier-row>
+                                        <div class="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
+                                            <input name="price_tiers[{{ $i }}][name]" value="{{ $tier['name'] ?? '' }}" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Tier name (e.g. Standard)">
+                                            <input name="price_tiers[{{ $i }}][amount]" type="number" min="0" step="0.01" value="{{ $tier['amount'] ?? '' }}" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Amount">
+                                            <button type="button" data-remove-tier-row class="rounded-md border border-slate-200 px-3 py-2 text-xs font-bold text-slate-500 hover:border-red-400 hover:text-red-600">Remove</button>
+                                        </div>
+                                        <textarea name="price_tiers[{{ $i }}][description]" rows="2" maxlength="400" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="What does this tier include? (shown to students under the price)">{{ $tier['description'] ?? '' }}</textarea>
                                     </div>
                                 @endforeach
                             </div>
                             <template data-tier-row-template>
-                                <div class="grid gap-2 rounded-lg bg-white p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-center" data-tier-row>
-                                    <input name="price_tiers[__INDEX__][name]" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Tier name">
-                                    <input name="price_tiers[__INDEX__][amount]" type="number" min="0" step="0.01" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Amount">
-                                    <button type="button" data-remove-tier-row class="rounded-md border border-slate-200 px-3 py-2 text-xs font-bold text-slate-500 hover:border-red-400 hover:text-red-600">Remove</button>
+                                <div class="rounded-lg bg-white p-3" data-tier-row>
+                                    <div class="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
+                                        <input name="price_tiers[__INDEX__][name]" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Tier name">
+                                        <input name="price_tiers[__INDEX__][amount]" type="number" min="0" step="0.01" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Amount">
+                                        <button type="button" data-remove-tier-row class="rounded-md border border-slate-200 px-3 py-2 text-xs font-bold text-slate-500 hover:border-red-400 hover:text-red-600">Remove</button>
+                                    </div>
+                                    <textarea name="price_tiers[__INDEX__][description]" rows="2" maxlength="400" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="What does this tier include? (shown to students under the price)"></textarea>
                                 </div>
                             </template>
                         </div>

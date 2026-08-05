@@ -172,15 +172,16 @@ class Course extends Model
                 'name' => $name,
                 'slug' => \Illuminate\Support\Str::slug($name) ?: $name,
                 'amount' => $amount,
+                'description' => trim((string) ($entry['description'] ?? '')),
             ];
         }
 
         if (empty($tiers)) {
             if ($this->price_basic !== null && (float) $this->price_basic > 0) {
-                $tiers[] = ['name' => 'Basic', 'slug' => self::TIER_BASIC, 'amount' => (float) $this->price_basic];
+                $tiers[] = ['name' => 'Basic', 'slug' => self::TIER_BASIC, 'amount' => (float) $this->price_basic, 'description' => ''];
             }
             if ($this->price_premium !== null && (float) $this->price_premium > 0) {
-                $tiers[] = ['name' => 'Premium', 'slug' => self::TIER_PREMIUM, 'amount' => (float) $this->price_premium];
+                $tiers[] = ['name' => 'Premium', 'slug' => self::TIER_PREMIUM, 'amount' => (float) $this->price_premium, 'description' => ''];
             }
         }
 

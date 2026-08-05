@@ -92,10 +92,14 @@
                                     @foreach ($priceTiers as $tierIndex => $tier)
                                         @php
                                             $isHighlight = $tierIndex === count($priceTiers) - 1 && count($priceTiers) > 1;
+                                            $tierDescription = trim((string) ($tier['description'] ?? ''));
                                         @endphp
                                         <div class="rounded-lg border {{ $isHighlight ? 'border-mk-gold/40 bg-mk-goldSoft/40' : 'border-slate-200 bg-slate-50' }} p-4">
                                             <p class="text-xs font-black uppercase tracking-wide {{ $isHighlight ? 'text-mk-navy' : 'text-slate-500' }}">{{ $tier['name'] }}</p>
                                             <p class="mt-2 text-2xl font-black text-mk-navy">{{ number_format((float) $tier['amount'], 0) }} <span class="text-sm font-bold text-slate-500">{{ $currency }}</span></p>
+                                            @if ($tierDescription !== '')
+                                                <p class="mt-2 whitespace-pre-line text-xs leading-5 text-slate-600">{{ $tierDescription }}</p>
+                                            @endif
                                             @if ($ctaState === 'paid_not_started' && ! empty($course['id']))
                                                 <form method="POST" action="{{ route('courses.enroll', $course['id']) }}" class="mt-3">
                                                     @csrf
