@@ -960,28 +960,36 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         ]);
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.dashboard');
     Route::get('/student/messages', function () {
-        $user = Auth::user();
+        try {
+            $user = Auth::user();
 
-        $enrolledCourses = Enrollment::query()
-            ->with(['course.academy', 'course.instructor'])
-            ->where('user_id', $user->id)
-            ->where('status', Enrollment::STATUS_ACTIVE)
-            ->get()
-            ->pluck('course')
-            ->filter()
-            ->values();
+            $rooms = collect();
+            if (\Illuminate\Support\Facades\Schema::hasTable('enrollments')) {
+                $enrolledCourses = Enrollment::query()
+                    ->with(['course.academy', 'course.instructor'])
+                    ->where('user_id', $user->id)
+                    ->where('status', Enrollment::STATUS_ACTIVE)
+                    ->get()
+                    ->pluck('course')
+                    ->filter()
+                    ->values();
 
-        $rooms = $enrolledCourses->map(fn (Course $course) => \App\Support\CourseRoomView::describeRoom($course, $user))
-            ->sortByDesc(fn ($room) => $room['last_message_at']?->timestamp ?? 0)
-            ->values();
+                $rooms = $enrolledCourses->map(fn (Course $course) => \App\Support\CourseRoomView::describeRoom($course, $user))
+                    ->sortByDesc(fn ($room) => $room['last_message_at']?->timestamp ?? 0)
+                    ->values();
+            }
 
-        return view('student.messages.index', [
-            'rooms' => $rooms,
-            'activeRoom' => null,
-            'chatBaseRoute' => 'student.messages',
-            'chatShowRoute' => 'student.messages.show',
-            'chatSendRoute' => 'student.messages.send',
-        ]);
+            return view('student.messages.index', [
+                'rooms' => $rooms,
+                'activeRoom' => null,
+                'chatBaseRoute' => 'student.messages',
+                'chatShowRoute' => 'student.messages.show',
+                'chatSendRoute' => 'student.messages.send',
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('student.messages failed: '.$e->getMessage(), ['exception' => $e]);
+            abort(500, 'Chat rooms failed to load: '.$e->getMessage());
+        }
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.messages');
 
     Route::get('/student/messages/{course}', function (Course $course) {
@@ -2864,30 +2872,37 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.courses.store');
 
     Route::get('/instructor/courses/{course}/edit', function (Course $course) use ($abortUnlessInstructorOwnsCourse) {
-        $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
+        try {
+            $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
 
-        $course->load(['academy', 'modules.lessons.activities', 'modules.lessons.quizzes.questions.options', 'modules.lessons.assignments.questions.options']);
+            $course->load(['academy', 'modules.lessons.activities', 'modules.lessons.quizzes.questions.options', 'modules.lessons.assignments.questions.options']);
 
-        return view('instructor.course-form', [
-            'course' => $course,
-            'academies' => Academy::query()->orderBy('name')->get(),
-            'modules' => $course->modules()->with(['lessons.activities' => fn ($query) => $query->orderBy('sort_order')->orderBy('id')])->orderBy('sort_order')->orderBy('title')->get(),
-            'lessons' => Lesson::query()->with(['activities' => fn ($query) => $query->orderBy('sort_order')->orderBy('id')])->whereHas('module', fn ($query) => $query->where('course_id', $course->id))->orderBy('sort_order')->orderBy('title')->get(),
-            'quizzes' => Quiz::query()
-                ->with(['lesson.module', 'questions.options'])
-                ->where('quiz_type', Quiz::TYPE_LESSON_QUIZ)
-                ->whereHas('lesson.module', fn ($query) => $query->where('course_id', $course->id))
-                ->latest()
-                ->get(),
-            'finalTest' => Quiz::query()
-                ->with(['questions.options', 'attempts'])
-                ->where('course_id', $course->id)
-                ->where('quiz_type', Quiz::TYPE_FINAL_TEST)
-                ->latest()
-                ->first(),
-            'assignments' => Assignment::query()->with(['lesson.module', 'questions.options'])->whereHas('lesson.module', fn ($query) => $query->where('course_id', $course->id))->latest()->get(),
-            'mode' => 'edit',
-        ]);
+            return view('instructor.course-form', [
+                'course' => $course,
+                'academies' => Academy::query()->orderBy('name')->get(),
+                'modules' => $course->modules()->with(['lessons.activities' => fn ($query) => $query->orderBy('sort_order')->orderBy('id')])->orderBy('sort_order')->orderBy('title')->get(),
+                'lessons' => Lesson::query()->with(['activities' => fn ($query) => $query->orderBy('sort_order')->orderBy('id')])->whereHas('module', fn ($query) => $query->where('course_id', $course->id))->orderBy('sort_order')->orderBy('title')->get(),
+                'quizzes' => Quiz::query()
+                    ->with(['lesson.module', 'questions.options'])
+                    ->where('quiz_type', Quiz::TYPE_LESSON_QUIZ)
+                    ->whereHas('lesson.module', fn ($query) => $query->where('course_id', $course->id))
+                    ->latest()
+                    ->get(),
+                'finalTest' => Quiz::query()
+                    ->with(['questions.options', 'attempts'])
+                    ->where('course_id', $course->id)
+                    ->where('quiz_type', Quiz::TYPE_FINAL_TEST)
+                    ->latest()
+                    ->first(),
+                'assignments' => Assignment::query()->with(['lesson.module', 'questions.options'])->whereHas('lesson.module', fn ($query) => $query->where('course_id', $course->id))->latest()->get(),
+                'mode' => 'edit',
+            ]);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('instructor.courses.edit failed: '.$e->getMessage(), ['exception' => $e]);
+            abort(500, 'Course editor failed to load: '.$e->getMessage().' at '.$e->getFile().':'.$e->getLine());
+        }
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.courses.edit');
 
     Route::put('/instructor/courses/{course}', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse, $uniqueSlug) {

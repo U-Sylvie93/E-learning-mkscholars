@@ -28,20 +28,29 @@ class CourseRoomView
      */
     public static function describeRoom(Course $course, ?User $user): array
     {
-        $room = $course->room;
         $lastMessage = null;
         $lastMessageAt = null;
         $lastMessageSender = null;
         $unread = 0;
 
-        if ($room) {
-            $latest = $room->messages()->with('sender:id,name')->latest()->first();
-            if ($latest) {
-                $lastMessage = $latest->body;
-                $lastMessageAt = $latest->created_at;
-                $lastMessageSender = $latest->sender?->name;
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('course_rooms')) {
+                $room = $course->room;
+
+                if ($room) {
+                    if (\Illuminate\Support\Facades\Schema::hasTable('course_room_messages')) {
+                        $latest = $room->messages()->with('sender:id,name')->latest()->first();
+                        if ($latest) {
+                            $lastMessage = $latest->body;
+                            $lastMessageAt = $latest->created_at;
+                            $lastMessageSender = $latest->sender?->name;
+                        }
+                    }
+                    $unread = $user ? $room->unreadCountFor($user) : 0;
+                }
             }
-            $unread = $user ? $room->unreadCountFor($user) : 0;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('describeRoom failed: '.$e->getMessage(), ['course_id' => $course->id]);
         }
 
         return [
@@ -61,10 +70,17 @@ class CourseRoomView
      */
     public static function describeActiveRoom(Course $course, CourseRoom $room, ?User $user): array
     {
-        $messages = $room->messages()
-            ->with('sender:id,name,role')
-            ->orderBy('created_at')
-            ->get();
+        $messages = collect();
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('course_room_messages')) {
+                $messages = $room->messages()
+                    ->with('sender:id,name,role')
+                    ->orderBy('created_at')
+                    ->get();
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('describeActiveRoom failed: '.$e->getMessage());
+        }
 
         return [
             'course' => [
