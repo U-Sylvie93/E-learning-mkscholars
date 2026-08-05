@@ -48,6 +48,17 @@
     $unreadNotificationsCount = $user ? app(\App\Services\AppNotificationService::class)->unreadCount($user) : 0;
     $unreadNotificationsDisplay = $unreadNotificationsCount > 99 ? '99+' : (string) $unreadNotificationsCount;
     $latestNotifications = $user && $notificationRoute ? app(\App\Services\AppNotificationService::class)->visibleFor($user)->take(5)->get() : collect();
+
+    $messagesRoute = $navItems->firstWhere('label', 'Messages')['route'] ?? null;
+    $unreadMessagesCount = 0;
+    if ($user && $messagesRoute) {
+        try {
+            $unreadMessagesCount = \App\Models\CourseRoom::totalUnreadFor($user);
+        } catch (\Throwable $e) {
+            $unreadMessagesCount = 0;
+        }
+    }
+    $unreadMessagesDisplay = $unreadMessagesCount > 99 ? '99+' : (string) $unreadMessagesCount;
 @endphp
 
 <!DOCTYPE html>
@@ -195,6 +206,9 @@
                             @if ($item['label'] === 'Notifications' && $unreadNotificationsCount > 0)
                                 <span data-testid="notification-badge" class="mk-sidebar-label inline-flex min-w-6 shrink-0 items-center justify-center rounded-full bg-mk-gold px-2 py-0.5 text-xs font-black text-mk-navy ring-1 ring-white/40">{{ $unreadNotificationsDisplay }}</span>
                             @endif
+                            @if ($item['label'] === 'Messages' && $unreadMessagesCount > 0)
+                                <span data-testid="messages-sidebar-badge" class="mk-sidebar-label inline-flex min-w-6 shrink-0 items-center justify-center rounded-full bg-mk-gold px-2 py-0.5 text-xs font-black text-mk-navy ring-1 ring-white/40">{{ $unreadMessagesDisplay }}</span>
+                            @endif
                         </a>
                     @endforeach
                 </nav>
@@ -268,6 +282,15 @@
                         </div>
 
                         <div class="flex shrink-0 items-center gap-2 sm:gap-3">
+                            @if ($messagesRoute)
+                                <a href="{{ route($messagesRoute) }}" data-testid="messages-topbar" class="relative inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-mk-navy shadow-sm transition hover:border-mk-gold hover:bg-mk-goldSoft" aria-label="Chat rooms{{ $unreadMessagesCount ? ' - '.$unreadMessagesCount.' unread' : '' }}">
+                                    <x-dashboard-icon name="messages" class="h-5 w-5" />
+                                    <span class="hidden sm:inline">Chats</span>
+                                    @if ($unreadMessagesCount > 0)
+                                        <span data-testid="messages-badge" class="absolute -right-2 -top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-mk-gold px-1.5 py-0.5 text-xs font-black text-mk-navy ring-2 ring-white">{{ $unreadMessagesDisplay }}</span>
+                                    @endif
+                                </a>
+                            @endif
                             @if ($notificationRoute)
                                 <details class="relative" data-testid="notification-menu">
                                     <summary class="relative inline-flex cursor-pointer list-none items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-mk-navy shadow-sm transition marker:hidden hover:border-mk-gold hover:bg-mk-goldSoft" aria-label="Notifications{{ $unreadNotificationsCount ? ' - '.$unreadNotificationsCount.' unread' : '' }}">

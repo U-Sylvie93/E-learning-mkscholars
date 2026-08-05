@@ -132,6 +132,11 @@ class Course extends Model
         return $this->hasMany(CourseReview::class);
     }
 
+    public function room(): HasOne
+    {
+        return $this->hasOne(CourseRoom::class);
+    }
+
     public function isFree(): bool
     {
         if (filled($this->access_type)) {

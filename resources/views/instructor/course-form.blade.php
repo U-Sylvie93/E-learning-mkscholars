@@ -532,6 +532,7 @@
                                     </div>
                                     <span class="rounded-md border border-mk-gold px-2 py-1 text-xs font-black text-mk-navy">Edit</span>
                                 </summary>
+                                @if (\Illuminate\Support\Facades\Route::has('instructor.modules.update'))
                                 <form method="POST" action="{{ route('instructor.modules.update', $module) }}" class="space-y-3 border-t border-slate-100 p-3">
                                     @csrf
                                     @method('PUT')
@@ -550,11 +551,14 @@
                                         <x-button type="submit" size="sm">Save Module</x-button>
                                     </div>
                                 </form>
+                                @endif
+                                @if (\Illuminate\Support\Facades\Route::has('instructor.modules.destroy'))
                                 <form method="POST" action="{{ route('instructor.modules.destroy', $module) }}" class="border-t border-slate-100 p-3" onsubmit="return confirm('Delete this module and all its lessons?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-xs font-bold text-red-600 hover:underline">Delete module</button>
                                 </form>
+                                @endif
                             </details>
                         @empty
                             <p class="text-sm text-slate-600">No modules yet.</p>
@@ -610,6 +614,7 @@
                                         </div>
                                         <span class="rounded-md border border-mk-gold px-2 py-1 text-xs font-black text-mk-navy">Edit</span>
                                     </summary>
+                                    @if (\Illuminate\Support\Facades\Route::has('instructor.lessons.update'))
                                     <form method="POST" action="{{ route('instructor.lessons.update', $lesson) }}" class="space-y-3 border-t border-slate-100 p-3">
                                         @csrf
                                         @method('PUT')
@@ -644,11 +649,14 @@
                                         </div>
                                         <x-button type="submit" size="sm">Save Lesson</x-button>
                                     </form>
+                                    @endif
+                                    @if (\Illuminate\Support\Facades\Route::has('instructor.lessons.destroy'))
                                     <form method="POST" action="{{ route('instructor.lessons.destroy', $lesson) }}" class="border-t border-slate-100 p-3" onsubmit="return confirm('Delete this lesson and its materials?');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="text-xs font-bold text-red-600 hover:underline">Delete lesson</button>
                                     </form>
+                                    @endif
                                 </details>
                             @endforeach
                         </div>

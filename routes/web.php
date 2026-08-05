@@ -13,6 +13,8 @@ use App\Models\Course;
 use App\Models\CourseMessage;
 use App\Models\CourseMessageThread;
 use App\Models\CourseReview;
+use App\Models\CourseRoom;
+use App\Models\CourseRoomMessage;
 use App\Models\Enrollment;
 use App\Models\EntranceExamInstitution;
 use App\Models\EntranceExamPastPaper;
@@ -960,61 +962,64 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
     Route::get('/student/messages', function () {
         $user = Auth::user();
 
-        $threads = CourseMessageThread::query()
-            ->with(['course.academy', 'instructor', 'messages' => fn ($q) => $q->latest()->limit(1)])
-            ->where('student_id', $user->id)
-            ->orderByDesc('last_message_at')
-            ->orderByDesc('updated_at')
-            ->get();
-
-        $enrolledCoursesWithoutThread = Enrollment::query()
-            ->with(['course.instructor', 'course.academy'])
+        $enrolledCourses = Enrollment::query()
+            ->with(['course.academy', 'course.instructor'])
             ->where('user_id', $user->id)
             ->where('status', Enrollment::STATUS_ACTIVE)
             ->get()
             ->pluck('course')
-            ->filter(fn ($course) => $course && $course->instructor_id && ! $threads->contains(fn ($t) => $t->course_id === $course->id))
+            ->filter()
+            ->values();
+
+        $rooms = $enrolledCourses->map(fn (Course $course) => \App\Support\CourseRoomView::describeRoom($course, $user))
+            ->sortByDesc(fn ($room) => $room['last_message_at']?->timestamp ?? 0)
             ->values();
 
         return view('student.messages.index', [
-            'threads' => $threads,
-            'enrolledCoursesWithoutThread' => $enrolledCoursesWithoutThread,
+            'rooms' => $rooms,
+            'activeRoom' => null,
+            'chatBaseRoute' => 'student.messages',
+            'chatShowRoute' => 'student.messages.show',
+            'chatSendRoute' => 'student.messages.send',
         ]);
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.messages');
 
-    Route::get('/student/courses/{course}/messages', function (Course $course) {
+    Route::get('/student/messages/{course}', function (Course $course) {
         $user = Auth::user();
 
         abort_unless(Enrollment::query()
             ->where('user_id', $user->id)
             ->where('course_id', $course->id)
             ->where('status', Enrollment::STATUS_ACTIVE)
-            ->exists(), 403, 'You must be enrolled in this course to message the instructor.');
+            ->exists(), 403, 'You must be enrolled in this course to view its chat room.');
 
-        abort_unless($course->instructor_id, 404, 'This course has no instructor assigned yet.');
+        $room = CourseRoom::firstOrCreate(['course_id' => $course->id]);
+        $room->markReadFor($user);
+        $room->load(['course.academy', 'course.instructor', 'messages.sender']);
 
-        $thread = CourseMessageThread::firstOrCreate(
-            [
-                'course_id' => $course->id,
-                'student_id' => $user->id,
-                'instructor_id' => $course->instructor_id,
-            ],
-        );
+        $enrolledCourses = Enrollment::query()
+            ->with(['course.academy', 'course.instructor'])
+            ->where('user_id', $user->id)
+            ->where('status', Enrollment::STATUS_ACTIVE)
+            ->get()
+            ->pluck('course')
+            ->filter()
+            ->values();
 
-        $thread->messages()
-            ->where('sender_id', '!=', $user->id)
-            ->whereNull('read_at')
-            ->update(['read_at' => now()]);
+        $rooms = $enrolledCourses->map(fn (Course $c) => \App\Support\CourseRoomView::describeRoom($c, $user))
+            ->sortByDesc(fn ($r) => $r['last_message_at']?->timestamp ?? 0)
+            ->values();
 
-        $thread->load(['course.academy', 'instructor', 'student', 'messages.sender']);
-
-        return view('student.messages.show', [
-            'thread' => $thread,
-            'course' => $course->load('academy', 'instructor'),
+        return view('student.messages.index', [
+            'rooms' => $rooms,
+            'activeRoom' => \App\Support\CourseRoomView::describeActiveRoom($course, $room, $user),
+            'chatBaseRoute' => 'student.messages',
+            'chatShowRoute' => 'student.messages.show',
+            'chatSendRoute' => 'student.messages.send',
         ]);
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.messages.show');
 
-    Route::post('/student/courses/{course}/messages', function (Request $request, Course $course) {
+    Route::post('/student/messages/{course}', function (Request $request, Course $course) {
         $user = Auth::user();
 
         abort_unless(Enrollment::query()
@@ -1023,26 +1028,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             ->where('status', Enrollment::STATUS_ACTIVE)
             ->exists(), 403);
 
-        abort_unless($course->instructor_id, 404);
-
-        $validated = $request->validate([
-            'body' => ['required', 'string', 'max:4000'],
-        ]);
-
-        $thread = CourseMessageThread::firstOrCreate(
-            [
-                'course_id' => $course->id,
-                'student_id' => $user->id,
-                'instructor_id' => $course->instructor_id,
-            ],
-        );
-
-        $thread->messages()->create([
-            'sender_id' => $user->id,
-            'body' => $validated['body'],
-        ]);
-
-        $thread->update(['last_message_at' => now()]);
+        \App\Support\CourseRoomView::sendMessage($request, $course, $user);
 
         return redirect()->route('student.messages.show', $course);
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.messages.send');
@@ -2694,52 +2680,59 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
     Route::get('/instructor/messages', function () {
         $user = Auth::user();
 
-        $threads = CourseMessageThread::query()
-            ->with(['course.academy', 'student', 'messages' => fn ($q) => $q->latest()->limit(1)])
+        $courses = Course::query()
+            ->with(['academy', 'instructor'])
             ->where('instructor_id', $user->id)
-            ->orderByDesc('last_message_at')
-            ->orderByDesc('updated_at')
+            ->orderBy('title')
             ->get();
 
+        $rooms = $courses->map(fn (Course $course) => \App\Support\CourseRoomView::describeRoom($course, $user))
+            ->sortByDesc(fn ($room) => $room['last_message_at']?->timestamp ?? 0)
+            ->values();
+
         return view('instructor.messages.index', [
-            'threads' => $threads,
+            'rooms' => $rooms,
+            'activeRoom' => null,
+            'chatBaseRoute' => 'instructor.messages',
+            'chatShowRoute' => 'instructor.messages.show',
+            'chatSendRoute' => 'instructor.messages.send',
         ]);
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.messages');
 
-    Route::get('/instructor/messages/{thread}', function (CourseMessageThread $thread) {
+    Route::get('/instructor/messages/{course}', function (Course $course) use ($abortUnlessInstructorOwnsCourse) {
         $user = Auth::user();
+        $abortUnlessInstructorOwnsCourse($user, $course);
 
-        abort_unless($thread->instructor_id === $user->id, 403);
+        $room = CourseRoom::firstOrCreate(['course_id' => $course->id]);
+        $room->markReadFor($user);
+        $room->load(['course.academy', 'course.instructor', 'messages.sender']);
 
-        $thread->messages()
-            ->where('sender_id', '!=', $user->id)
-            ->whereNull('read_at')
-            ->update(['read_at' => now()]);
+        $courses = Course::query()
+            ->with(['academy', 'instructor'])
+            ->where('instructor_id', $user->id)
+            ->orderBy('title')
+            ->get();
 
-        $thread->load(['course.academy', 'student', 'instructor', 'messages.sender']);
+        $rooms = $courses->map(fn (Course $c) => \App\Support\CourseRoomView::describeRoom($c, $user))
+            ->sortByDesc(fn ($r) => $r['last_message_at']?->timestamp ?? 0)
+            ->values();
 
-        return view('instructor.messages.show', [
-            'thread' => $thread,
+        return view('instructor.messages.index', [
+            'rooms' => $rooms,
+            'activeRoom' => \App\Support\CourseRoomView::describeActiveRoom($course, $room, $user),
+            'chatBaseRoute' => 'instructor.messages',
+            'chatShowRoute' => 'instructor.messages.show',
+            'chatSendRoute' => 'instructor.messages.send',
         ]);
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.messages.show');
 
-    Route::post('/instructor/messages/{thread}', function (Request $request, CourseMessageThread $thread) {
+    Route::post('/instructor/messages/{course}', function (Request $request, Course $course) use ($abortUnlessInstructorOwnsCourse) {
         $user = Auth::user();
+        $abortUnlessInstructorOwnsCourse($user, $course);
 
-        abort_unless($thread->instructor_id === $user->id, 403);
+        \App\Support\CourseRoomView::sendMessage($request, $course, $user);
 
-        $validated = $request->validate([
-            'body' => ['required', 'string', 'max:4000'],
-        ]);
-
-        $thread->messages()->create([
-            'sender_id' => $user->id,
-            'body' => $validated['body'],
-        ]);
-
-        $thread->update(['last_message_at' => now()]);
-
-        return redirect()->route('instructor.messages.show', $thread);
+        return redirect()->route('instructor.messages.show', $course);
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.messages.send');
 
     Route::get('/instructor/settings', fn () => $settingsPage(User::ROLE_INSTRUCTOR, 'instructor.dashboard'))
