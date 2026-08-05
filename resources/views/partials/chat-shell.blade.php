@@ -74,27 +74,44 @@
                 @forelse ($messages as $message)
                     @php
                         $mine = (int) $message->sender_id === (int) $me;
-                        $day = $message->created_at?->format('Y-m-d');
-                        $isInstructor = $message->sender?->role === \App\Models\User::ROLE_INSTRUCTOR;
+                        $createdAt = $message->created_at;
+                        $day = $createdAt ? $createdAt->format('Y-m-d') : null;
+                        $senderRole = $message->sender ? $message->sender->role : null;
+                        $isInstructor = $senderRole === \App\Models\User::ROLE_INSTRUCTOR;
+
+                        $dayLabel = '';
+                        if ($createdAt) {
+                            $dayLabel = $createdAt->format('D, M j');
+                            if ($createdAt->isYesterday()) { $dayLabel = 'Yesterday'; }
+                            if ($createdAt->isToday()) { $dayLabel = 'Today'; }
+                        }
+
+                        $alignClass = $mine ? 'justify-end' : 'justify-start';
+                        $bubbleClass = $mine ? 'rounded-br-none bg-mk-navy text-white' : 'rounded-bl-none bg-white text-slate-800';
+                        $senderNameClass = $isInstructor ? 'text-mk-gold' : 'text-mk-navy';
+                        $timeClass = $mine ? 'text-white/70' : 'text-slate-400';
+                        $senderName = $message->sender ? $message->sender->name : 'User';
+                        $timeLabel = $createdAt ? $createdAt->format('H:i') : '';
+                        $showDayDivider = $day && $day !== $lastDay;
+                        if ($showDayDivider) { $lastDay = $day; }
                     @endphp
-                    @if ($day && $day !== $lastDay)
-                        @php($lastDay = $day)
+                    @if ($showDayDivider)
                         <div class="my-3 flex justify-center">
-                            <span class="rounded-full bg-white/80 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-500 shadow-sm">
-                                {{ $message->created_at->isToday() ? 'Today' : ($message->created_at->isYesterday() ? 'Yesterday' : $message->created_at->format('D, M j')) }}
-                            </span>
+                            <span class="rounded-full bg-white/80 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-500 shadow-sm">{{ $dayLabel }}</span>
                         </div>
                     @endif
-                    <div class="flex {{ $mine ? 'justify-end' : 'justify-start' }}">
-                        <div class="max-w-[78%] rounded-2xl px-3 py-2 shadow-sm {{ $mine ? 'rounded-br-none bg-mk-navy text-white' : 'rounded-bl-none bg-white text-slate-800' }}">
+                    <div class="flex {{ $alignClass }}">
+                        <div class="max-w-[78%] rounded-2xl px-3 py-2 shadow-sm {{ $bubbleClass }}">
                             @if (! $mine)
-                                <p class="text-[11px] font-black {{ $isInstructor ? 'text-mk-gold' : 'text-mk-navy' }}">
-                                    {{ $message->sender?->name ?? 'User' }}
-                                    @if ($isInstructor)<span class="ml-1 rounded bg-mk-gold px-1 text-[10px] text-mk-navy">Instructor</span>@endif
+                                <p class="text-[11px] font-black {{ $senderNameClass }}">
+                                    {{ $senderName }}
+                                    @if ($isInstructor)
+                                        <span class="ml-1 rounded bg-mk-gold px-1 text-[10px] text-mk-navy">Instructor</span>
+                                    @endif
                                 </p>
                             @endif
                             <p class="whitespace-pre-wrap break-words text-sm leading-6">{{ $message->body }}</p>
-                            <p class="mt-1 text-right text-[10px] font-bold {{ $mine ? 'text-white/70' : 'text-slate-400' }}">{{ $message->created_at?->format('H:i') }}</p>
+                            <p class="mt-1 text-right text-[10px] font-bold {{ $timeClass }}">{{ $timeLabel }}</p>
                         </div>
                     </div>
                 @empty
