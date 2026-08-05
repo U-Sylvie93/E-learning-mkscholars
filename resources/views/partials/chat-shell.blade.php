@@ -13,28 +13,37 @@
         </div>
         <div class="flex-1 overflow-y-auto">
             @forelse ($rooms as $room)
-                @php($isActive = $room['course_id'] === $activeCourseId)
-                <a href="{{ route($chatShowRoute, $room['course_id']) }}" class="flex items-start gap-3 border-b border-slate-100 px-4 py-3 transition {{ $isActive ? 'bg-mk-goldSoft/50' : 'hover:bg-slate-50' }}">
+                @php
+                    $isActive = $room['course_id'] === $activeCourseId;
+                    $rowClass = $isActive ? 'bg-mk-goldSoft/50' : 'hover:bg-slate-50';
+                    $courseInitial = mb_strtoupper(mb_substr((string) $room['course_title'], 0, 1));
+                    $rowTime = $room['last_message_at'] ? $room['last_message_at']->diffForHumans(null, true) : '';
+                    $unreadLabel = $room['unread'] > 99 ? '99+' : (string) $room['unread'];
+                @endphp
+                <a href="{{ route($chatShowRoute, $room['course_id']) }}" class="flex items-start gap-3 border-b border-slate-100 px-4 py-3 transition {{ $rowClass }}">
                     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-mk-navy text-sm font-black text-mk-gold">
-                        {{ \Illuminate\Support\Str::of($room['course_title'])->substr(0, 1)->upper() }}
+                        {{ $courseInitial }}
                     </span>
                     <span class="min-w-0 flex-1">
                         <span class="flex items-center justify-between gap-2">
                             <span class="truncate text-sm font-black text-mk-navy">{{ $room['course_title'] }}</span>
-                            @if ($room['last_message_at'])
-                                <span class="shrink-0 text-[11px] font-bold text-slate-400">{{ $room['last_message_at']->diffForHumans(null, true) }}</span>
+                            @if ($rowTime !== '')
+                                <span class="shrink-0 text-[11px] font-bold text-slate-400">{{ $rowTime }}</span>
                             @endif
                         </span>
                         <span class="mt-1 flex items-center justify-between gap-2">
                             <span class="truncate text-xs text-slate-600">
                                 @if ($room['last_message'])
-                                    @if ($room['last_message_sender'])<span class="font-bold text-slate-500">{{ $room['last_message_sender'] }}:</span> @endif{{ $room['last_message'] }}
+                                    @if ($room['last_message_sender'])
+                                        <span class="font-bold text-slate-500">{{ $room['last_message_sender'] }}:</span>
+                                    @endif
+                                    {{ $room['last_message'] }}
                                 @else
                                     <span class="italic text-slate-400">No messages yet</span>
                                 @endif
                             </span>
                             @if ($room['unread'] > 0)
-                                <span class="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-mk-gold px-1.5 py-0.5 text-[11px] font-black text-mk-navy">{{ $room['unread'] > 99 ? '99+' : $room['unread'] }}</span>
+                                <span class="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-mk-gold px-1.5 py-0.5 text-[11px] font-black text-mk-navy">{{ $unreadLabel }}</span>
                             @endif
                         </span>
                     </span>
@@ -56,13 +65,14 @@
                 $messages = $activeRoom['messages'];
                 $me = $activeRoom['my_id'];
                 $lastDay = null;
+                $courseInitial = mb_strtoupper(mb_substr((string) $course['title'], 0, 1));
             @endphp
             <div class="flex items-center gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3">
                 <a href="{{ route($chatBaseRoute) }}" class="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-mk-navy hover:bg-white" aria-label="Back to chats">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </a>
                 <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-mk-navy text-sm font-black text-mk-gold">
-                    {{ \Illuminate\Support\Str::of($course['title'])->substr(0, 1)->upper() }}
+                    {{ $courseInitial }}
                 </span>
                 <div class="min-w-0 flex-1">
                     <p class="truncate text-sm font-black text-mk-navy">{{ $course['title'] }}</p>
@@ -134,15 +144,15 @@
             </form>
 
             <script>
-                (() => {
-                    const scroll = document.getElementById('mk-chat-scroll');
-                    if (scroll) scroll.scrollTop = scroll.scrollHeight;
-                    const ta = document.getElementById('chat-body');
+                (function () {
+                    var scroll = document.getElementById('mk-chat-scroll');
+                    if (scroll) { scroll.scrollTop = scroll.scrollHeight; }
+                    var ta = document.getElementById('chat-body');
                     if (ta) {
-                        ta.addEventListener('keydown', (e) => {
+                        ta.addEventListener('keydown', function (e) {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
-                                ta.form?.requestSubmit();
+                                if (ta.form) { ta.form.requestSubmit(); }
                             }
                         });
                     }
