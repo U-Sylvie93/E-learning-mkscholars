@@ -2832,7 +2832,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $validated['is_free'] = $validated['access_type'] === Course::ACCESS_FREE;
         $validated['offers_certificate'] = (bool) ($validated['offers_certificate'] ?? false);
         $validated['currency'] = $validated['currency'] ?: 'RWF';
-        $validated['price_tiers'] = collect($validated['price_tiers'] ?? [])
+        $normalizedTiers = collect($validated['price_tiers'] ?? [])
             ->map(fn ($row) => [
                 'name' => trim((string) ($row['name'] ?? '')),
                 'amount' => (float) ($row['amount'] ?? 0),
@@ -2841,8 +2841,21 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             ->values()
             ->all();
 
-        if (empty($validated['price_amount']) && ! empty($validated['price_tiers'])) {
-            $validated['price_amount'] = $validated['price_tiers'][0]['amount'];
+        if (Schema::hasColumn('courses', 'price_tiers')) {
+            $validated['price_tiers'] = $normalizedTiers;
+        } else {
+            unset($validated['price_tiers']);
+        }
+
+        if (! Schema::hasColumn('courses', 'price_basic')) {
+            unset($validated['price_basic']);
+        }
+        if (! Schema::hasColumn('courses', 'price_premium')) {
+            unset($validated['price_premium']);
+        }
+
+        if (empty($validated['price_amount']) && ! empty($normalizedTiers)) {
+            $validated['price_amount'] = $normalizedTiers[0]['amount'];
         } elseif (empty($validated['price_amount']) && ! empty($validated['price_basic'])) {
             $validated['price_amount'] = $validated['price_basic'];
         }
@@ -2923,7 +2936,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $validated['is_free'] = $validated['access_type'] === Course::ACCESS_FREE;
         $validated['offers_certificate'] = (bool) ($validated['offers_certificate'] ?? false);
         $validated['currency'] = $validated['currency'] ?: 'RWF';
-        $validated['price_tiers'] = collect($validated['price_tiers'] ?? [])
+        $normalizedTiers = collect($validated['price_tiers'] ?? [])
             ->map(fn ($row) => [
                 'name' => trim((string) ($row['name'] ?? '')),
                 'amount' => (float) ($row['amount'] ?? 0),
@@ -2932,8 +2945,21 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             ->values()
             ->all();
 
-        if (empty($validated['price_amount']) && ! empty($validated['price_tiers'])) {
-            $validated['price_amount'] = $validated['price_tiers'][0]['amount'];
+        if (Schema::hasColumn('courses', 'price_tiers')) {
+            $validated['price_tiers'] = $normalizedTiers;
+        } else {
+            unset($validated['price_tiers']);
+        }
+
+        if (! Schema::hasColumn('courses', 'price_basic')) {
+            unset($validated['price_basic']);
+        }
+        if (! Schema::hasColumn('courses', 'price_premium')) {
+            unset($validated['price_premium']);
+        }
+
+        if (empty($validated['price_amount']) && ! empty($normalizedTiers)) {
+            $validated['price_amount'] = $normalizedTiers[0]['amount'];
         } elseif (empty($validated['price_amount']) && ! empty($validated['price_basic'])) {
             $validated['price_amount'] = $validated['price_basic'];
         }
