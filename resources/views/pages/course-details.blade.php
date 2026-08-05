@@ -6,9 +6,8 @@
     $academyIcon = $course['academy_icon'] ?? \App\Models\Academy::ICON_BOOK_OPEN;
     $isFree = $course['is_free'] ?? true;
     $priceAmount = (float) ($course['price_amount'] ?? 0);
-    $priceBasic = $course['price_basic'] ?? null;
-    $pricePremium = $course['price_premium'] ?? null;
-    $showPriceCard = ! $isFree && ($priceAmount > 0 || $priceBasic > 0 || $pricePremium > 0);
+    $priceTiers = $course['price_tiers'] ?? [];
+    $showPriceCard = ! $isFree && ($priceAmount > 0 || ! empty($priceTiers));
     $currency = $course['currency'] ?? 'RWF';
 @endphp
 
@@ -88,34 +87,24 @@
                                 <x-badge tone="gold">Manual payment</x-badge>
                             </div>
 
-                            @if ($priceBasic > 0 || $pricePremium > 0)
-                                <div class="grid gap-3 sm:grid-cols-2">
-                                    @if ($priceBasic > 0)
-                                        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                                            <p class="text-xs font-black uppercase tracking-wide text-slate-500">Basic</p>
-                                            <p class="mt-2 text-2xl font-black text-mk-navy">{{ number_format((float) $priceBasic, 0) }} <span class="text-sm font-bold text-slate-500">{{ $currency }}</span></p>
+                            @if (! empty($priceTiers))
+                                <div class="grid gap-3 @if (count($priceTiers) > 1) sm:grid-cols-2 @endif">
+                                    @foreach ($priceTiers as $tierIndex => $tier)
+                                        @php
+                                            $isHighlight = $tierIndex === count($priceTiers) - 1 && count($priceTiers) > 1;
+                                        @endphp
+                                        <div class="rounded-lg border {{ $isHighlight ? 'border-mk-gold/40 bg-mk-goldSoft/40' : 'border-slate-200 bg-slate-50' }} p-4">
+                                            <p class="text-xs font-black uppercase tracking-wide {{ $isHighlight ? 'text-mk-navy' : 'text-slate-500' }}">{{ $tier['name'] }}</p>
+                                            <p class="mt-2 text-2xl font-black text-mk-navy">{{ number_format((float) $tier['amount'], 0) }} <span class="text-sm font-bold text-slate-500">{{ $currency }}</span></p>
                                             @if ($ctaState === 'paid_not_started' && ! empty($course['id']))
                                                 <form method="POST" action="{{ route('courses.enroll', $course['id']) }}" class="mt-3">
                                                     @csrf
-                                                    <input type="hidden" name="tier" value="basic">
-                                                    <x-button type="submit" size="sm" variant="secondary" class="w-full">Pay Basic</x-button>
+                                                    <input type="hidden" name="tier" value="{{ $tier['slug'] }}">
+                                                    <x-button type="submit" size="sm" :variant="$isHighlight ? 'primary' : 'secondary'" class="w-full">Pay {{ $tier['name'] }}</x-button>
                                                 </form>
                                             @endif
                                         </div>
-                                    @endif
-                                    @if ($pricePremium > 0)
-                                        <div class="rounded-lg border border-mk-gold/40 bg-mk-goldSoft/40 p-4">
-                                            <p class="text-xs font-black uppercase tracking-wide text-mk-navy">Premium</p>
-                                            <p class="mt-2 text-2xl font-black text-mk-navy">{{ number_format((float) $pricePremium, 0) }} <span class="text-sm font-bold text-slate-500">{{ $currency }}</span></p>
-                                            @if ($ctaState === 'paid_not_started' && ! empty($course['id']))
-                                                <form method="POST" action="{{ route('courses.enroll', $course['id']) }}" class="mt-3">
-                                                    @csrf
-                                                    <input type="hidden" name="tier" value="premium">
-                                                    <x-button type="submit" size="sm" class="w-full">Pay Premium</x-button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    @endif
+                                    @endforeach
                                 </div>
                             @else
                                 <div>

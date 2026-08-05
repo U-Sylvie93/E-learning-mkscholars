@@ -286,18 +286,42 @@
                             <span class="mt-1 block text-xs font-semibold text-slate-500">Enable this only when students should see certificate tags and become eligible for certificate preparation after completion.</span>
                         </span>
                     </label>
-                    <div class="grid gap-4 sm:grid-cols-3 md:col-span-2">
-                        <label class="block text-sm font-bold text-mk-navy">
-                            Basic price
-                            <input name="price_basic" type="number" min="0" step="0.01" value="{{ old('price_basic', $course->price_basic) }}" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" placeholder="e.g. 15000">
-                            <span class="mt-1 block text-xs font-semibold text-slate-500">Standard access price. Required when the course is paid.</span>
-                        </label>
-                        <label class="block text-sm font-bold text-mk-navy">
-                            Premium price
-                            <input name="price_premium" type="number" min="0" step="0.01" value="{{ old('price_premium', $course->price_premium) }}" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" placeholder="Optional">
-                            <span class="mt-1 block text-xs font-semibold text-slate-500">Optional higher tier. Leave blank for a single price.</span>
-                        </label>
-                        <label class="block text-sm font-bold text-mk-navy">
+                    <div class="md:col-span-2">
+                        @php
+                            $existingTiers = old('price_tiers');
+                            if (! is_array($existingTiers)) {
+                                $existingTiers = $course->tierOptions();
+                                if (empty($existingTiers)) {
+                                    $existingTiers = [['name' => '', 'amount' => '']];
+                                }
+                            }
+                        @endphp
+                        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-black text-mk-navy">Pricing tiers</p>
+                                    <p class="mt-1 text-xs font-semibold text-slate-500">Add any number of tiers with your own names (Standard, Pro, VIP, School Package, ...). Only used when Access type is Paid.</p>
+                                </div>
+                                <button type="button" data-add-tier-row class="rounded-md border border-mk-gold bg-white px-3 py-1.5 text-xs font-black text-mk-navy hover:bg-mk-goldSoft">+ Add tier</button>
+                            </div>
+                            <div class="mt-4 space-y-3" data-tier-rows>
+                                @foreach ($existingTiers as $i => $tier)
+                                    <div class="grid gap-2 rounded-lg bg-white p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-center" data-tier-row>
+                                        <input name="price_tiers[{{ $i }}][name]" value="{{ $tier['name'] ?? '' }}" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Tier name (e.g. Standard)">
+                                        <input name="price_tiers[{{ $i }}][amount]" type="number" min="0" step="0.01" value="{{ $tier['amount'] ?? '' }}" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Amount">
+                                        <button type="button" data-remove-tier-row class="rounded-md border border-slate-200 px-3 py-2 text-xs font-bold text-slate-500 hover:border-red-400 hover:text-red-600">Remove</button>
+                                    </div>
+                                @endforeach
+                            </div>
+                            <template data-tier-row-template>
+                                <div class="grid gap-2 rounded-lg bg-white p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-center" data-tier-row>
+                                    <input name="price_tiers[__INDEX__][name]" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Tier name">
+                                    <input name="price_tiers[__INDEX__][amount]" type="number" min="0" step="0.01" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Amount">
+                                    <button type="button" data-remove-tier-row class="rounded-md border border-slate-200 px-3 py-2 text-xs font-bold text-slate-500 hover:border-red-400 hover:text-red-600">Remove</button>
+                                </div>
+                            </template>
+                        </div>
+                        <label class="mt-4 block text-sm font-bold text-mk-navy sm:max-w-xs">
                             Currency
                             <input name="currency" value="{{ old('currency', $course->currency ?? 'RWF') }}" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30">
                         </label>
@@ -405,6 +429,35 @@
                     });
 
                     sync();
+                });
+
+                document.querySelectorAll('[data-tier-rows]').forEach((container) => {
+                    const wrapper = container.closest('.rounded-lg') || container.parentElement;
+                    const addBtn = wrapper?.querySelector('[data-add-tier-row]');
+                    const template = wrapper?.querySelector('[data-tier-row-template]');
+
+                    const bindRemove = (row) => {
+                        row.querySelector('[data-remove-tier-row]')?.addEventListener('click', () => {
+                            if (container.querySelectorAll('[data-tier-row]').length > 1) {
+                                row.remove();
+                            } else {
+                                row.querySelectorAll('input').forEach((input) => { input.value = ''; });
+                            }
+                        });
+                    };
+
+                    container.querySelectorAll('[data-tier-row]').forEach(bindRemove);
+
+                    addBtn?.addEventListener('click', () => {
+                        if (! template) return;
+                        const index = container.querySelectorAll('[data-tier-row]').length;
+                        const html = template.innerHTML.replace(/__INDEX__/g, String(index));
+                        const wrap = document.createElement('div');
+                        wrap.innerHTML = html.trim();
+                        const row = wrap.firstElementChild;
+                        container.appendChild(row);
+                        bindRemove(row);
+                    });
                 });
 
                 document.querySelectorAll('[data-question-type-select]').forEach((select) => {

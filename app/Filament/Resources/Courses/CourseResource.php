@@ -15,6 +15,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\MarkdownEditor;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
@@ -116,16 +117,27 @@ class CourseResource extends Resource
                     ->numeric()
                     ->minValue(0)
                     ->label('Price amount (legacy / single tier)'),
+                Repeater::make('price_tiers')
+                    ->label('Pricing tiers')
+                    ->helperText('Add any number of custom-named tiers. Only used when Access type is Paid.')
+                    ->schema([
+                        TextInput::make('name')->required()->maxLength(60)->placeholder('Standard, Pro, VIP, ...'),
+                        TextInput::make('amount')->required()->numeric()->minValue(0),
+                    ])
+                    ->columns(2)
+                    ->addActionLabel('Add tier')
+                    ->reorderable()
+                    ->columnSpanFull(),
                 TextInput::make('price_basic')
                     ->numeric()
                     ->minValue(0)
-                    ->label('Basic tier price')
-                    ->helperText('Standard access tier. Shown as "Basic" to students.'),
+                    ->label('Legacy Basic price')
+                    ->helperText('Legacy field kept for older courses. Prefer Pricing tiers above.'),
                 TextInput::make('price_premium')
                     ->numeric()
                     ->minValue(0)
-                    ->label('Premium tier price')
-                    ->helperText('Optional higher tier. Leave blank for single-price courses.'),
+                    ->label('Legacy Premium price')
+                    ->helperText('Legacy field kept for older courses. Prefer Pricing tiers above.'),
                 TextInput::make('currency')
                     ->required()
                     ->default('RWF')

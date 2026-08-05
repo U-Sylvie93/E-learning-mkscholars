@@ -10,6 +10,8 @@ use App\Models\AssignmentSubmission;
 use App\Models\AssignmentQuestion;
 use App\Models\Certificate;
 use App\Models\Course;
+use App\Models\CourseMessage;
+use App\Models\CourseMessageThread;
 use App\Models\CourseReview;
 use App\Models\Enrollment;
 use App\Models\EntranceExamInstitution;
@@ -955,6 +957,96 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
                 : collect(),
         ]);
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.dashboard');
+    Route::get('/student/messages', function () {
+        $user = Auth::user();
+
+        $threads = CourseMessageThread::query()
+            ->with(['course.academy', 'instructor', 'messages' => fn ($q) => $q->latest()->limit(1)])
+            ->where('student_id', $user->id)
+            ->orderByDesc('last_message_at')
+            ->orderByDesc('updated_at')
+            ->get();
+
+        $enrolledCoursesWithoutThread = Enrollment::query()
+            ->with(['course.instructor', 'course.academy'])
+            ->where('user_id', $user->id)
+            ->where('status', Enrollment::STATUS_ACTIVE)
+            ->get()
+            ->pluck('course')
+            ->filter(fn ($course) => $course && $course->instructor_id && ! $threads->contains(fn ($t) => $t->course_id === $course->id))
+            ->values();
+
+        return view('student.messages.index', [
+            'threads' => $threads,
+            'enrolledCoursesWithoutThread' => $enrolledCoursesWithoutThread,
+        ]);
+    })->middleware('role:'.User::ROLE_STUDENT)->name('student.messages');
+
+    Route::get('/student/courses/{course}/messages', function (Course $course) {
+        $user = Auth::user();
+
+        abort_unless(Enrollment::query()
+            ->where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->where('status', Enrollment::STATUS_ACTIVE)
+            ->exists(), 403, 'You must be enrolled in this course to message the instructor.');
+
+        abort_unless($course->instructor_id, 404, 'This course has no instructor assigned yet.');
+
+        $thread = CourseMessageThread::firstOrCreate(
+            [
+                'course_id' => $course->id,
+                'student_id' => $user->id,
+                'instructor_id' => $course->instructor_id,
+            ],
+        );
+
+        $thread->messages()
+            ->where('sender_id', '!=', $user->id)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        $thread->load(['course.academy', 'instructor', 'student', 'messages.sender']);
+
+        return view('student.messages.show', [
+            'thread' => $thread,
+            'course' => $course->load('academy', 'instructor'),
+        ]);
+    })->middleware('role:'.User::ROLE_STUDENT)->name('student.messages.show');
+
+    Route::post('/student/courses/{course}/messages', function (Request $request, Course $course) {
+        $user = Auth::user();
+
+        abort_unless(Enrollment::query()
+            ->where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->where('status', Enrollment::STATUS_ACTIVE)
+            ->exists(), 403);
+
+        abort_unless($course->instructor_id, 404);
+
+        $validated = $request->validate([
+            'body' => ['required', 'string', 'max:4000'],
+        ]);
+
+        $thread = CourseMessageThread::firstOrCreate(
+            [
+                'course_id' => $course->id,
+                'student_id' => $user->id,
+                'instructor_id' => $course->instructor_id,
+            ],
+        );
+
+        $thread->messages()->create([
+            'sender_id' => $user->id,
+            'body' => $validated['body'],
+        ]);
+
+        $thread->update(['last_message_at' => now()]);
+
+        return redirect()->route('student.messages.show', $course);
+    })->middleware('role:'.User::ROLE_STUDENT)->name('student.messages.send');
+
     Route::get('/student/settings', fn () => $settingsPage(User::ROLE_STUDENT, 'student.dashboard'))
         ->middleware('role:'.User::ROLE_STUDENT)
         ->name('student.settings');
@@ -1177,13 +1269,13 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         abort_unless($user?->role === User::ROLE_STUDENT, 403);
         abort_unless($course->status === Course::STATUS_PUBLISHED, 404);
 
-        $tier = $request->input('tier');
-        if (! in_array($tier, Course::TIERS, true)) {
-            $tier = null;
-        }
+        $tierInput = $request->input('tier');
+        $tierMatch = $course->findTier($tierInput);
+        $tier = $tierMatch['slug'] ?? null;
 
         if ($course->hasTierPricing() && $tier === null) {
-            $tier = $course->price_basic > 0 ? Course::TIER_BASIC : Course::TIER_PREMIUM;
+            $firstTier = $course->tierOptions()[0] ?? null;
+            $tier = $firstTier['slug'] ?? null;
         }
 
         if ($course->requiresPayment()) {
@@ -2598,6 +2690,58 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
                 }),
         ]);
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.dashboard');
+
+    Route::get('/instructor/messages', function () {
+        $user = Auth::user();
+
+        $threads = CourseMessageThread::query()
+            ->with(['course.academy', 'student', 'messages' => fn ($q) => $q->latest()->limit(1)])
+            ->where('instructor_id', $user->id)
+            ->orderByDesc('last_message_at')
+            ->orderByDesc('updated_at')
+            ->get();
+
+        return view('instructor.messages.index', [
+            'threads' => $threads,
+        ]);
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.messages');
+
+    Route::get('/instructor/messages/{thread}', function (CourseMessageThread $thread) {
+        $user = Auth::user();
+
+        abort_unless($thread->instructor_id === $user->id, 403);
+
+        $thread->messages()
+            ->where('sender_id', '!=', $user->id)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        $thread->load(['course.academy', 'student', 'instructor', 'messages.sender']);
+
+        return view('instructor.messages.show', [
+            'thread' => $thread,
+        ]);
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.messages.show');
+
+    Route::post('/instructor/messages/{thread}', function (Request $request, CourseMessageThread $thread) {
+        $user = Auth::user();
+
+        abort_unless($thread->instructor_id === $user->id, 403);
+
+        $validated = $request->validate([
+            'body' => ['required', 'string', 'max:4000'],
+        ]);
+
+        $thread->messages()->create([
+            'sender_id' => $user->id,
+            'body' => $validated['body'],
+        ]);
+
+        $thread->update(['last_message_at' => now()]);
+
+        return redirect()->route('instructor.messages.show', $thread);
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.messages.send');
+
     Route::get('/instructor/settings', fn () => $settingsPage(User::ROLE_INSTRUCTOR, 'instructor.dashboard'))
         ->middleware('role:'.User::ROLE_INSTRUCTOR)
         ->name('instructor.settings');
@@ -2669,6 +2813,9 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'price_amount' => ['nullable', 'numeric', 'min:0'],
             'price_basic' => ['nullable', 'numeric', 'min:0'],
             'price_premium' => ['nullable', 'numeric', 'min:0'],
+            'price_tiers' => ['nullable', 'array'],
+            'price_tiers.*.name' => ['nullable', 'string', 'max:60'],
+            'price_tiers.*.amount' => ['nullable', 'numeric', 'min:0'],
             'currency' => ['nullable', 'string', 'max:8'],
             'status' => ['required', Rule::in(Course::STATUSES)],
             'learning_outcomes' => ['nullable', 'string'],
@@ -2685,7 +2832,18 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $validated['is_free'] = $validated['access_type'] === Course::ACCESS_FREE;
         $validated['offers_certificate'] = (bool) ($validated['offers_certificate'] ?? false);
         $validated['currency'] = $validated['currency'] ?: 'RWF';
-        if (empty($validated['price_amount']) && ! empty($validated['price_basic'])) {
+        $validated['price_tiers'] = collect($validated['price_tiers'] ?? [])
+            ->map(fn ($row) => [
+                'name' => trim((string) ($row['name'] ?? '')),
+                'amount' => (float) ($row['amount'] ?? 0),
+            ])
+            ->filter(fn ($row) => $row['name'] !== '' && $row['amount'] > 0)
+            ->values()
+            ->all();
+
+        if (empty($validated['price_amount']) && ! empty($validated['price_tiers'])) {
+            $validated['price_amount'] = $validated['price_tiers'][0]['amount'];
+        } elseif (empty($validated['price_amount']) && ! empty($validated['price_basic'])) {
             $validated['price_amount'] = $validated['price_basic'];
         }
         $validated['learning_outcomes'] = collect(preg_split('/\r\n|\r|\n/', (string) ($validated['learning_outcomes'] ?? '')))
@@ -2743,6 +2901,9 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'price_amount' => ['nullable', 'numeric', 'min:0'],
             'price_basic' => ['nullable', 'numeric', 'min:0'],
             'price_premium' => ['nullable', 'numeric', 'min:0'],
+            'price_tiers' => ['nullable', 'array'],
+            'price_tiers.*.name' => ['nullable', 'string', 'max:60'],
+            'price_tiers.*.amount' => ['nullable', 'numeric', 'min:0'],
             'currency' => ['nullable', 'string', 'max:8'],
             'status' => ['required', Rule::in(Course::STATUSES)],
             'learning_outcomes' => ['nullable', 'string'],
@@ -2762,7 +2923,18 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $validated['is_free'] = $validated['access_type'] === Course::ACCESS_FREE;
         $validated['offers_certificate'] = (bool) ($validated['offers_certificate'] ?? false);
         $validated['currency'] = $validated['currency'] ?: 'RWF';
-        if (empty($validated['price_amount']) && ! empty($validated['price_basic'])) {
+        $validated['price_tiers'] = collect($validated['price_tiers'] ?? [])
+            ->map(fn ($row) => [
+                'name' => trim((string) ($row['name'] ?? '')),
+                'amount' => (float) ($row['amount'] ?? 0),
+            ])
+            ->filter(fn ($row) => $row['name'] !== '' && $row['amount'] > 0)
+            ->values()
+            ->all();
+
+        if (empty($validated['price_amount']) && ! empty($validated['price_tiers'])) {
+            $validated['price_amount'] = $validated['price_tiers'][0]['amount'];
+        } elseif (empty($validated['price_amount']) && ! empty($validated['price_basic'])) {
             $validated['price_amount'] = $validated['price_basic'];
         }
         $validated['learning_outcomes'] = collect(preg_split('/\r\n|\r|\n/', (string) ($validated['learning_outcomes'] ?? '')))

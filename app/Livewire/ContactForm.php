@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Models\ContactSubmission;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 
@@ -23,7 +24,15 @@ class ContactForm extends Component
 
     public function submit(): void
     {
-        $this->validate();
+        $validated = $this->validate();
+
+        ContactSubmission::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'interest' => $validated['interest'],
+            'message' => $validated['message'],
+            'status' => ContactSubmission::STATUS_NEW,
+        ]);
 
         $this->reset('name', 'email', 'interest', 'message');
         $this->submitted = true;
