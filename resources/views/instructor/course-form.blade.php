@@ -5,6 +5,14 @@
         $videoLessonsCount = $lessons->where('lesson_type', 'video')->count();
         $readingLessonsCount = $lessons->where('lesson_type', 'text')->count();
         $finalTestStatus = $finalTest ? str($finalTest->status)->headline() : 'Not present';
+
+        $existingTiers = old('price_tiers');
+        if (! is_array($existingTiers)) {
+            $existingTiers = method_exists($course, 'tierOptions') ? $course->tierOptions() : [];
+            if (empty($existingTiers)) {
+                $existingTiers = [['name' => '', 'amount' => '']];
+            }
+        }
     @endphp
 
     <div class="space-y-6">
@@ -287,15 +295,6 @@
                         </span>
                     </label>
                     <div class="md:col-span-2">
-                        @php
-                            $existingTiers = old('price_tiers');
-                            if (! is_array($existingTiers)) {
-                                $existingTiers = $course->tierOptions();
-                                if (empty($existingTiers)) {
-                                    $existingTiers = [['name' => '', 'amount' => '']];
-                                }
-                            }
-                        @endphp
                         <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
                             <div class="flex flex-wrap items-center justify-between gap-3">
                                 <div>
