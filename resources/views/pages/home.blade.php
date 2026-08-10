@@ -91,38 +91,6 @@
         </div>
     </section>
 
-    <section class="py-20" data-testid="home-premium-image-cards">
-        <div class="mk-container">
-            <div class="grid gap-10 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
-                <x-section-header eyebrow="The MK Scholars experience" title="A premium learning journey built around real student needs" description="The platform is designed to make learning feel guided, practical, and supported from the first course to verified progress." />
-                <div class="flex flex-col gap-3 sm:flex-row lg:justify-end">
-                    <x-button :href="route('academies')">View Academies</x-button>
-                    <x-button :href="route('courses')" variant="secondary">Browse Courses</x-button>
-                </div>
-            </div>
-
-            <div class="mt-12 grid gap-6 lg:grid-cols-2">
-                @foreach ([
-                    ['Academy-based learning', 'Choose a focused lane and follow a clear path through courses and milestones.', $marketingImages['academy'], 'lg:row-span-2', 'academy'],
-                    ['Practical courses', 'Build useful skills through lessons, activities, quizzes, and assignments.', $marketingImages['skills'], '', 'play'],
-                    ['Learning support', 'Keep momentum with check-ins, feedback, live sessions, and progress visibility.', $marketingImages['support'], '', 'message'],
-                ] as $card)
-                    <article class="group relative min-h-[330px] overflow-hidden rounded-[2rem] bg-mk-navy shadow-soft {{ $card[3] }}">
-                        <img src="{{ $card[2] }}" alt="{{ $card[0] }}" class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105">
-                        <div class="absolute inset-0 bg-gradient-to-t from-mk-navy/90 via-mk-navy/35 to-transparent"></div>
-                        <div class="absolute bottom-0 left-0 right-0 p-7">
-                            <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-mk-gold text-mk-navy shadow-sm shadow-mk-gold/20">
-                                <x-public-icon :name="$card[4]" class="h-6 w-6" />
-                            </span>
-                            <h3 class="mt-5 text-3xl font-black tracking-normal text-white">{{ $card[0] }}</h3>
-                            <p class="mt-3 max-w-xl text-sm leading-7 text-slate-200">{{ $card[1] }}</p>
-                        </div>
-                    </article>
-                @endforeach
-            </div>
-        </div>
-    </section>
-
     <section class="bg-white py-20">
         <div class="mk-container">
             <x-section-header eyebrow="Learning journey" title="Four steps that keep students moving" description="A guided journey from choosing a focus to showing real progress." />

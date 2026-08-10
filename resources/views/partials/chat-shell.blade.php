@@ -100,10 +100,27 @@
                         $bubbleClass = $mine ? 'rounded-br-none bg-mk-navy text-white' : 'rounded-bl-none bg-white text-slate-800';
                         $senderNameClass = $isInstructor ? 'text-mk-gold' : 'text-mk-navy';
                         $timeClass = $mine ? 'text-white/70' : 'text-slate-400';
+                        $linkClass = $mine ? 'text-mk-gold underline' : 'text-mk-blue underline';
                         $senderName = $message->sender ? $message->sender->name : 'User';
                         $timeLabel = $createdAt ? $createdAt->format('H:i') : '';
                         $showDayDivider = $day && $day !== $lastDay;
                         if ($showDayDivider) { $lastDay = $day; }
+
+                        // Linkify: escape then wrap URLs with <a>. Also convert newlines to <br>.
+                        $rawBody = (string) ($message->body ?? '');
+                        $escapedBody = e($rawBody);
+                        $bodyHtml = preg_replace(
+                            '~(https?://[^\s<]+)~i',
+                            '<a href="$1" target="_blank" rel="noopener noreferrer" class="'.$linkClass.' break-all">$1</a>',
+                            $escapedBody
+                        );
+                        $bodyHtml = nl2br($bodyHtml, false);
+
+                        $hasAttachment = method_exists($message, 'hasAttachment') ? $message->hasAttachment() : false;
+                        $isImage = $hasAttachment && method_exists($message, 'isImageAttachment') ? $message->isImageAttachment() : false;
+                        $attachmentUrl = $hasAttachment ? $message->attachmentUrl() : null;
+                        $attachmentName = $hasAttachment ? ($message->attachment_name ?? 'file') : null;
+                        $attachmentSize = $hasAttachment && method_exists($message, 'humanAttachmentSize') ? $message->humanAttachmentSize() : '';
                     @endphp
                     @if ($showDayDivider)
                         <div class="my-3 flex justify-center">
@@ -120,7 +137,29 @@
                                     @endif
                                 </p>
                             @endif
-                            <p class="whitespace-pre-wrap break-words text-sm leading-6">{{ $message->body }}</p>
+
+                            @if ($hasAttachment)
+                                @if ($isImage)
+                                    <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener noreferrer" class="mt-1 block">
+                                        <img src="{{ $attachmentUrl }}" alt="{{ $attachmentName }}" class="max-h-64 w-auto rounded-lg border border-black/10 object-contain">
+                                    </a>
+                                @else
+                                    <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener noreferrer" class="mt-1 flex items-center gap-2 rounded-lg border {{ $mine ? 'border-white/20 bg-white/10 text-white' : 'border-slate-200 bg-slate-50 text-mk-navy' }} px-3 py-2 text-sm">
+                                        <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block truncate font-bold">{{ $attachmentName }}</span>
+                                            @if ($attachmentSize !== '')
+                                                <span class="block text-[10px] {{ $mine ? 'text-white/70' : 'text-slate-500' }}">{{ $attachmentSize }}</span>
+                                            @endif
+                                        </span>
+                                    </a>
+                                @endif
+                            @endif
+
+                            @if ($rawBody !== '')
+                                <div class="mt-1 break-words text-sm leading-6">{!! $bodyHtml !!}</div>
+                            @endif
+
                             <p class="mt-1 text-right text-[10px] font-bold {{ $timeClass }}">{{ $timeLabel }}</p>
                         </div>
                     </div>
@@ -134,25 +173,71 @@
                 @endforelse
             </div>
 
-            <form method="POST" action="{{ route($chatSendRoute, $course['id']) }}" class="flex items-end gap-2 border-t border-slate-100 bg-white p-3">
+            <form method="POST" action="{{ route($chatSendRoute, $course['id']) }}" enctype="multipart/form-data" class="border-t border-slate-100 bg-white p-3" id="mk-chat-form">
                 @csrf
-                <label class="sr-only" for="chat-body">Type a message</label>
-                <textarea id="chat-body" name="body" rows="1" required maxlength="4000" placeholder="Type a message…" class="max-h-36 min-h-[42px] flex-1 resize-y rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30"></textarea>
-                <button type="submit" class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-mk-navy text-white shadow-sm transition hover:bg-mk-blue" aria-label="Send message">
-                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
-                </button>
+                <div id="mk-chat-attachment-preview" class="mb-2 hidden items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
+                    <span class="min-w-0 flex-1 truncate font-bold text-mk-navy" data-attachment-name></span>
+                    <button type="button" class="rounded-md border border-slate-200 px-2 py-0.5 text-[11px] font-bold text-slate-500 hover:border-red-400 hover:text-red-600" data-attachment-clear>Remove</button>
+                </div>
+                <div class="flex items-end gap-2">
+                    <label class="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-600 shadow-sm transition hover:border-mk-gold hover:bg-mk-goldSoft hover:text-mk-navy" title="Attach file">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49L12.95 2.56a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83L15.07 6.1"/></svg>
+                        <span class="sr-only">Attach file</span>
+                        <input type="file" name="attachment" id="chat-attachment" class="hidden" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip">
+                    </label>
+                    <label class="sr-only" for="chat-body">Type a message</label>
+                    <textarea id="chat-body" name="body" rows="1" maxlength="4000" placeholder="Type a message…" class="max-h-36 min-h-[42px] flex-1 resize-y rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30"></textarea>
+                    <button type="submit" class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-mk-navy text-white shadow-sm transition hover:bg-mk-blue" aria-label="Send message">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+                    </button>
+                </div>
             </form>
 
             <script>
                 (function () {
                     var scroll = document.getElementById('mk-chat-scroll');
                     if (scroll) { scroll.scrollTop = scroll.scrollHeight; }
+
                     var ta = document.getElementById('chat-body');
                     if (ta) {
                         ta.addEventListener('keydown', function (e) {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
                                 if (ta.form) { ta.form.requestSubmit(); }
+                            }
+                        });
+                    }
+
+                    var fileInput = document.getElementById('chat-attachment');
+                    var preview = document.getElementById('mk-chat-attachment-preview');
+                    var nameEl = preview ? preview.querySelector('[data-attachment-name]') : null;
+                    var clearBtn = preview ? preview.querySelector('[data-attachment-clear]') : null;
+
+                    if (fileInput && preview && nameEl && clearBtn) {
+                        fileInput.addEventListener('change', function () {
+                            if (fileInput.files && fileInput.files[0]) {
+                                nameEl.textContent = fileInput.files[0].name;
+                                preview.classList.remove('hidden');
+                                preview.classList.add('flex');
+                            } else {
+                                preview.classList.add('hidden');
+                                preview.classList.remove('flex');
+                            }
+                        });
+                        clearBtn.addEventListener('click', function () {
+                            fileInput.value = '';
+                            preview.classList.add('hidden');
+                            preview.classList.remove('flex');
+                        });
+                    }
+
+                    var form = document.getElementById('mk-chat-form');
+                    if (form) {
+                        form.addEventListener('submit', function (e) {
+                            var hasFile = fileInput && fileInput.files && fileInput.files[0];
+                            var hasBody = ta && ta.value.trim() !== '';
+                            if (!hasFile && !hasBody) {
+                                e.preventDefault();
                             }
                         });
                     }

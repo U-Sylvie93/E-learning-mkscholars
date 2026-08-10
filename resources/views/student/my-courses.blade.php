@@ -96,7 +96,8 @@
                 <x-badge tone="gray">{{ $unpaidCourses->count() }} courses</x-badge>
             </div>
 
-            @if ($unpaidCourses->isEmpty())
+            @php($mergedUnpaid = $unpaidCourses->concat($availablePaidCourses ?? collect()))
+            @if ($mergedUnpaid->isEmpty())
                 <x-empty-state
                     icon="payments"
                     title="No unpaid courses found."
@@ -104,7 +105,7 @@
                 />
             @else
                 <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                    @foreach ($unpaidCourses as $item)
+                    @foreach ($mergedUnpaid as $item)
                         @php
                             $course = $item['course'];
                             $image = $course->coverImageUrl();

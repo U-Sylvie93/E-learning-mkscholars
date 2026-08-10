@@ -41,7 +41,10 @@ class CourseRoomView
                     if (\Illuminate\Support\Facades\Schema::hasTable('course_room_messages')) {
                         $latest = $room->messages()->with('sender:id,name')->latest()->first();
                         if ($latest) {
-                            $lastMessage = $latest->body;
+                            $lastMessage = trim((string) $latest->body);
+                            if ($lastMessage === '' && method_exists($latest, 'hasAttachment') && $latest->hasAttachment()) {
+                                $lastMessage = $latest->isImageAttachment() ? '📷 Photo' : '📎 '.($latest->attachment_name ?: 'File');
+                            }
                             $lastMessageAt = $latest->created_at;
                             $lastMessageSender = $latest->sender?->name;
                         }
@@ -102,15 +105,32 @@ class CourseRoomView
     public static function sendMessage(Request $request, Course $course, User $sender): CourseRoomMessage
     {
         $validated = $request->validate([
-            'body' => ['required', 'string', 'max:4000'],
+            'body' => ['nullable', 'string', 'max:4000'],
+            'attachment' => ['nullable', 'file', 'max:5120', 'mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip'],
         ]);
+
+        if (empty(trim((string) ($validated['body'] ?? ''))) && ! $request->hasFile('attachment')) {
+            abort(422, 'Message body or an attachment is required.');
+        }
 
         $room = CourseRoom::firstOrCreate(['course_id' => $course->id]);
 
-        $message = $room->messages()->create([
+        $attachmentData = [];
+        if ($request->hasFile('attachment')) {
+            $file = $request->file('attachment');
+            $path = $file->store('chat-attachments', 'public');
+            $attachmentData = [
+                'attachment_path' => $path,
+                'attachment_name' => $file->getClientOriginalName(),
+                'attachment_mime' => $file->getMimeType(),
+                'attachment_size' => $file->getSize(),
+            ];
+        }
+
+        $message = $room->messages()->create(array_merge([
             'sender_id' => $sender->id,
-            'body' => $validated['body'],
-        ]);
+            'body' => trim((string) ($validated['body'] ?? '')),
+        ], $attachmentData));
 
         $room->update(['last_message_at' => now()]);
         $room->markReadFor($sender);
@@ -122,12 +142,17 @@ class CourseRoomView
             User::ROLE_STUDENT => route('student.messages.show', $course),
         ];
 
+        $bodyText = trim((string) ($validated['body'] ?? ''));
+        $notificationBody = $bodyText !== ''
+            ? $sender->name.': '.$bodyText
+            : $sender->name.' sent an attachment';
+
         foreach ($recipients as $recipient) {
             $url = $courseUrlByRole[$recipient->role] ?? null;
             try {
                 $service->createForUser($recipient, [
                     'title' => 'New message in '.$course->title,
-                    'message' => (string) Str::of($sender->name.': '.$validated['body'])->limit(140),
+                    'message' => (string) Str::of($notificationBody)->limit(140),
                     'action_url' => $url,
                     'role' => $recipient->role,
                 ]);

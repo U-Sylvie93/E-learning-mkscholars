@@ -13,6 +13,7 @@ use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\Repeater;
@@ -95,6 +96,18 @@ class CourseResource extends Resource
                 TextInput::make('duration')
                     ->nullable()
                     ->maxLength(80),
+                DatePicker::make('start_date')
+                    ->label('Start date')
+                    ->nullable(),
+                DatePicker::make('registration_deadline')
+                    ->label('Registration deadline')
+                    ->nullable(),
+                TextInput::make('available_seats')
+                    ->label('Available seats')
+                    ->numeric()
+                    ->minValue(0)
+                    ->nullable()
+                    ->helperText('Leave blank for unlimited enrollment.'),
                 TextInput::make('price')
                     ->numeric()
                     ->prefix('$')

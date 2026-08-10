@@ -40,6 +40,9 @@ class Course extends Model
         'full_description',
         'level',
         'duration',
+        'start_date',
+        'registration_deadline',
+        'available_seats',
         'price',
         'is_free',
         'price_amount',
@@ -64,6 +67,9 @@ class Course extends Model
             'price_basic' => 'decimal:2',
             'price_premium' => 'decimal:2',
             'price_tiers' => 'array',
+            'start_date' => 'date',
+            'registration_deadline' => 'date',
+            'available_seats' => 'integer',
             'learning_outcomes' => 'array',
         ];
     }
@@ -284,7 +290,36 @@ class Course extends Model
             'outcomes' => $this->learning_outcomes ?: [],
             'image' => $this->coverImageUrl(),
             'lessons_count' => $lessonsCount,
+            'start_date' => $this->start_date,
+            'registration_deadline' => $this->registration_deadline,
+            'available_seats' => $this->available_seats,
+            'seats_remaining' => $this->seatsRemaining(),
+            'registration_open' => $this->registrationOpen(),
         ];
+    }
+
+    public function seatsRemaining(): ?int
+    {
+        if ($this->available_seats === null) {
+            return null;
+        }
+
+        try {
+            $taken = $this->enrollments()->where('status', Enrollment::STATUS_ACTIVE)->count();
+        } catch (\Throwable) {
+            $taken = 0;
+        }
+
+        return max(0, (int) $this->available_seats - (int) $taken);
+    }
+
+    public function registrationOpen(): ?bool
+    {
+        if (! $this->registration_deadline) {
+            return null;
+        }
+
+        return ! $this->registration_deadline->isPast();
     }
 
     public function coverImageUrl(): ?string

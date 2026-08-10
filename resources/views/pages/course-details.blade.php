@@ -125,6 +125,68 @@
                     </x-card>
                 @endif
 
+                @php
+                    $startDate = $course['start_date'] ?? null;
+                    $regDeadline = $course['registration_deadline'] ?? null;
+                    $availableSeats = $course['available_seats'] ?? null;
+                    $seatsRemaining = $course['seats_remaining'] ?? null;
+                    $regOpen = $course['registration_open'] ?? null;
+                    $hasSchedule = $startDate || $regDeadline || $availableSeats !== null;
+                @endphp
+
+                @if ($hasSchedule)
+                    <x-card>
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-xs font-bold uppercase tracking-wide text-mk-gold">Schedule</p>
+                                <h3 class="mt-1 text-lg font-black text-mk-navy">Session details</h3>
+                            </div>
+                            @if ($regOpen === false)
+                                <x-badge tone="danger">Registration closed</x-badge>
+                            @elseif ($regOpen === true)
+                                <x-badge tone="green">Registration open</x-badge>
+                            @endif
+                        </div>
+                        <dl class="mt-4 grid gap-4 text-sm">
+                            @if ($startDate)
+                                <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
+                                    <dt class="inline-flex items-center gap-2 font-bold text-slate-500">
+                                        <svg class="h-4 w-4 text-mk-gold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+                                        Start date
+                                    </dt>
+                                    <dd class="font-extrabold text-mk-navy">{{ $startDate->format('D, M j, Y') }}</dd>
+                                </div>
+                            @endif
+                            @if ($regDeadline)
+                                <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
+                                    <dt class="inline-flex items-center gap-2 font-bold text-slate-500">
+                                        <svg class="h-4 w-4 text-mk-gold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                                        Register by
+                                    </dt>
+                                    <dd class="font-extrabold text-mk-navy">{{ $regDeadline->format('D, M j, Y') }}</dd>
+                                </div>
+                            @endif
+                            @if ($availableSeats !== null)
+                                <div class="flex items-center justify-between gap-4">
+                                    <dt class="inline-flex items-center gap-2 font-bold text-slate-500">
+                                        <svg class="h-4 w-4 text-mk-gold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                        Seats
+                                    </dt>
+                                    <dd class="font-extrabold text-mk-navy">
+                                        @if ($seatsRemaining !== null && $seatsRemaining <= 0)
+                                            <span class="text-red-600">Full</span>
+                                        @elseif ($seatsRemaining !== null)
+                                            {{ $seatsRemaining }} / {{ $availableSeats }} remaining
+                                        @else
+                                            {{ $availableSeats }}
+                                        @endif
+                                    </dd>
+                                </div>
+                            @endif
+                        </dl>
+                    </x-card>
+                @endif
+
                 @if (($course['level'] ?? null) || ($course['duration'] ?? null) || $lessonsCount)
                     <x-card>
                         <p class="text-xs font-bold uppercase tracking-wide text-mk-gold">Course details</p>
@@ -180,13 +242,18 @@
                     </div>
                     <x-badge tone="blue">Student focused</x-badge>
                 </div>
-                <div class="mt-6 grid gap-4 md:grid-cols-2">
+                <ul class="mt-6 grid gap-3 md:grid-cols-2">
                     @forelse (($course['outcomes'] ?? []) as $outcome)
-                        <div class="rounded-lg border border-slate-100 bg-slate-50 p-4 font-bold text-mk-navy">{{ $outcome }}</div>
+                        <li class="flex items-start gap-3 rounded-lg border border-slate-100 bg-slate-50 p-4">
+                            <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-mk-gold text-mk-navy">
+                                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>
+                            </span>
+                            <span class="text-sm font-bold leading-6 text-mk-navy">{{ $outcome }}</span>
+                        </li>
                     @empty
-                        <p class="text-sm leading-6 text-slate-600">Learning outcomes will be published soon.</p>
+                        <li class="text-sm leading-6 text-slate-600">Learning outcomes will be published soon.</li>
                     @endforelse
-                </div>
+                </ul>
             </x-card>
         </div>
     </section>

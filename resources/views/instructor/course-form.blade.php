@@ -154,6 +154,25 @@
                         <input name="duration" value="{{ old('duration', $course->duration) }}" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" placeholder="Optional">
                     </label>
                     </div>
+
+                    <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <p class="text-sm font-black text-mk-navy">Schedule</p>
+                        <p class="mt-1 text-xs font-semibold text-slate-500">Optional. Shown to students as a dedicated schedule card on the public course page.</p>
+                        <div class="mt-4 grid gap-4 sm:grid-cols-3">
+                            <label class="block text-sm font-bold text-mk-navy">
+                                Start date
+                                <input type="date" name="start_date" value="{{ old('start_date', optional($course->start_date)->format('Y-m-d')) }}" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30">
+                            </label>
+                            <label class="block text-sm font-bold text-mk-navy">
+                                Registration deadline
+                                <input type="date" name="registration_deadline" value="{{ old('registration_deadline', optional($course->registration_deadline)->format('Y-m-d')) }}" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30">
+                            </label>
+                            <label class="block text-sm font-bold text-mk-navy">
+                                Available seats
+                                <input type="number" min="0" name="available_seats" value="{{ old('available_seats', $course->available_seats) }}" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" placeholder="Leave blank for unlimited">
+                            </label>
+                        </div>
+                    </div>
                 </section>
 
                 <section class="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">

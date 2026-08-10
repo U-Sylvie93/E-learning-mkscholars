@@ -1583,6 +1583,30 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             ->unique(fn (array $item): int => $item['course']->id)
             ->values();
 
+        $seenCourseIds = collect($unpaidCourses)->pluck('course.id')
+            ->merge($activeCourses->pluck('course.id'))
+            ->all();
+
+        $availablePaidCourses = Course::query()
+            ->with(['academy', 'instructor'])
+            ->where('status', Course::STATUS_PUBLISHED)
+            ->where(fn ($q) => $q->where('is_free', false)->orWhere('access_type', Course::ACCESS_PAID))
+            ->when(! empty($seenCourseIds), fn ($q) => $q->whereNotIn('id', $seenCourseIds))
+            ->orderByDesc('updated_at')
+            ->limit(6)
+            ->get()
+            ->map(fn (Course $course): array => [
+                'course' => $course,
+                'payment' => null,
+                'subscription' => null,
+                'status_label' => 'Available',
+                'status_tone' => 'blue',
+                'reason' => 'Enroll and complete payment to unlock this course.',
+                'pay_label' => 'Enroll & Pay',
+                'pay_href' => route('courses.show', $course->slug),
+                'pay_form_route' => null,
+            ]);
+
         $enrollments = $activeCourses->map(fn (array $item): array => [
                 'enrollment' => $item['enrollment'],
                 'course' => $item['course'],
@@ -1594,6 +1618,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'enrollments' => $enrollments,
             'activeCourses' => $activeCourses,
             'unpaidCourses' => $unpaidCourses,
+            'availablePaidCourses' => $availablePaidCourses,
         ]);
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.my-courses');
 
@@ -2809,6 +2834,9 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'featured_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'level' => ['nullable', 'string', 'max:80'],
             'duration' => ['nullable', 'string', 'max:80'],
+            'start_date' => ['nullable', 'date'],
+            'registration_deadline' => ['nullable', 'date'],
+            'available_seats' => ['nullable', 'integer', 'min:0'],
             'access_type' => ['required', Rule::in([Course::ACCESS_FREE, Course::ACCESS_PAID])],
             'offers_certificate' => ['nullable', 'boolean'],
             'price_amount' => ['nullable', 'numeric', 'min:0'],
@@ -2855,6 +2883,12 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         }
         if (! Schema::hasColumn('courses', 'price_premium')) {
             unset($validated['price_premium']);
+        }
+
+        foreach (['start_date', 'registration_deadline', 'available_seats'] as $scheduleField) {
+            if (! Schema::hasColumn('courses', $scheduleField)) {
+                unset($validated[$scheduleField]);
+            }
         }
 
         if (empty($validated['price_amount']) && ! empty($normalizedTiers)) {
@@ -2919,6 +2953,9 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'featured_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'level' => ['nullable', 'string', 'max:80'],
             'duration' => ['nullable', 'string', 'max:80'],
+            'start_date' => ['nullable', 'date'],
+            'registration_deadline' => ['nullable', 'date'],
+            'available_seats' => ['nullable', 'integer', 'min:0'],
             'access_type' => ['required', Rule::in([Course::ACCESS_FREE, Course::ACCESS_PAID])],
             'offers_certificate' => ['nullable', 'boolean'],
             'price_amount' => ['nullable', 'numeric', 'min:0'],
@@ -2968,6 +3005,12 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         }
         if (! Schema::hasColumn('courses', 'price_premium')) {
             unset($validated['price_premium']);
+        }
+
+        foreach (['start_date', 'registration_deadline', 'available_seats'] as $scheduleField) {
+            if (! Schema::hasColumn('courses', $scheduleField)) {
+                unset($validated[$scheduleField]);
+            }
         }
 
         if (empty($validated['price_amount']) && ! empty($normalizedTiers)) {
