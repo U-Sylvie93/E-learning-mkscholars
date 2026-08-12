@@ -25,7 +25,12 @@
         </div>
 
         <div>
-            <label class="text-sm font-bold text-mk-navy" for="password">Password</label>
+            <div class="flex items-center justify-between">
+                <label class="text-sm font-bold text-mk-navy" for="password">Password</label>
+                @if (\Illuminate\Support\Facades\Route::has('password.forgot'))
+                    <a href="{{ route('password.forgot') }}" class="text-xs font-bold text-mk-blue hover:text-mk-navy">Forgot password?</a>
+                @endif
+            </div>
             <div class="relative mt-2">
                 <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400" aria-hidden="true">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke-linecap="round"/></svg>

@@ -548,6 +548,107 @@ Route::middleware('guest')->group(function (): void {
         return redirect($user->dashboardPath());
     })->name('login.store');
     Route::view('/register', 'auth.register')->name('register');
+
+    Route::view('/password/forgot', 'auth.forgot-password')->name('password.forgot');
+
+    Route::post('/password/forgot', function (Request $request) {
+        $validated = $request->validate([
+            'email' => ['required', 'email', 'max:190'],
+        ]);
+
+        $user = User::query()->where('email', $validated['email'])->first();
+
+        // Neutral response: don't confirm whether an account exists.
+        $genericStatus = 'If an account exists for that email, a reset code has been generated. Check your inbox or contact an MK Scholars admin.';
+
+        if (! $user) {
+            return back()->with('status', $genericStatus);
+        }
+
+        // Rate-limit: at most 5 pending requests per email in the last hour.
+        $recentCount = \App\Models\PasswordResetRequest::query()
+            ->where('email', $user->email)
+            ->where('created_at', '>=', now()->subHour())
+            ->count();
+
+        if ($recentCount >= 5) {
+            return back()->with('status', 'Too many reset attempts for this email in the last hour. Please try again later or contact support.');
+        }
+
+        $otp = \App\Models\PasswordResetRequest::generateOtp();
+        $reset = \App\Models\PasswordResetRequest::create([
+            'email' => $user->email,
+            'user_id' => $user->id,
+            'otp' => $otp,
+            'status' => \App\Models\PasswordResetRequest::STATUS_PENDING,
+            'expires_at' => now()->addMinutes(30),
+            'request_ip' => $request->ip(),
+        ]);
+
+        try {
+            \Illuminate\Support\Facades\Mail::raw(
+                "Hello {$user->name},\n\nYour MK Scholars password reset code is: {$otp}\n\nIt expires in 30 minutes. If you did not request this, you can ignore this message.\n\n— MK Scholars",
+                function ($message) use ($user) {
+                    $message->to($user->email)
+                        ->subject('Your MK Scholars password reset code');
+                }
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Password reset mail failed: '.$e->getMessage(), ['email' => $user->email, 'reset_id' => $reset->id]);
+        }
+
+        return redirect()
+            ->route('password.reset', ['email' => $user->email])
+            ->with('status', 'A reset code has been generated. Check your email — or ask an MK Scholars admin for it if you don\'t see it.');
+    })->name('password.forgot.store');
+
+    Route::view('/password/reset', 'auth.reset-password')->name('password.reset');
+
+    Route::post('/password/reset', function (Request $request) {
+        $validated = $request->validate([
+            'email' => ['required', 'email', 'max:190'],
+            'otp' => ['required', 'string', 'size:6'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $reset = \App\Models\PasswordResetRequest::query()
+            ->where('email', $validated['email'])
+            ->where('otp', $validated['otp'])
+            ->latest()
+            ->first();
+
+        if (! $reset || ! $reset->isUsable()) {
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors(['otp' => 'That code is invalid, already used, or expired. Request a new one.']);
+        }
+
+        $user = User::query()->where('email', $validated['email'])->first();
+        if (! $user) {
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors(['email' => 'No account matches that email.']);
+        }
+
+        $user->forceFill([
+            'password' => \Illuminate\Support\Facades\Hash::make($validated['password']),
+        ])->save();
+
+        $reset->update([
+            'status' => \App\Models\PasswordResetRequest::STATUS_USED,
+            'used_at' => now(),
+        ]);
+
+        // Invalidate any other pending resets for this email
+        \App\Models\PasswordResetRequest::query()
+            ->where('email', $user->email)
+            ->where('id', '!=', $reset->id)
+            ->where('status', \App\Models\PasswordResetRequest::STATUS_PENDING)
+            ->update(['status' => \App\Models\PasswordResetRequest::STATUS_EXPIRED]);
+
+        return redirect()->route('login')
+            ->with('status', 'Password updated. You can sign in with your new password now.');
+    })->name('password.reset.store');
 });
 
 Route::view('/setup-admin', 'auth.setup-admin')->name('setup-admin');
