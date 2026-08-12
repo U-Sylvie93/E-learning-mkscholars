@@ -234,12 +234,12 @@
 
             <div class="min-w-0">
                 <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur" data-testid="dashboard-topbar">
-                    <div class="flex min-h-16 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-                        <div class="flex min-w-0 items-center gap-3">
+                    <div class="flex min-h-16 items-center justify-between gap-2 px-3 sm:gap-3 sm:px-6 lg:px-8">
+                        <div class="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
                             <details class="relative lg:hidden" data-testid="dashboard-mobile-drawer">
                                 <summary class="inline-flex cursor-pointer list-none items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-mk-navy shadow-sm marker:hidden">
                                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/></svg>
-                                    Menu
+                                    <span class="hidden min-[360px]:inline">Menu</span>
                                 </summary>
                                 <div class="absolute left-0 top-12 z-40 flex max-h-[calc(100vh-5rem)] w-80 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
                                     <div class="mb-3 border-b border-slate-100 pb-3">
@@ -275,13 +275,13 @@
                                     </div>
                                 </div>
                             </details>
-                            <div class="min-w-0">
-                                <p class="text-xs font-bold uppercase tracking-wide text-mk-gold">{{ $roleLabel }} dashboard</p>
+                            <div class="hidden min-w-0 min-[360px]:block">
+                                <p class="truncate text-xs font-bold uppercase tracking-wide text-mk-gold">{{ $roleLabel }} dashboard</p>
                                 <h1 class="truncate text-lg font-extrabold text-mk-navy sm:text-xl">{{ $title }}</h1>
                             </div>
                         </div>
 
-                        <div class="flex shrink-0 items-center gap-2 sm:gap-3">
+                        <div class="flex shrink-0 items-center gap-1.5 sm:gap-3">
                             @if ($messagesRoute)
                                 <a href="{{ route($messagesRoute) }}" data-testid="messages-topbar" class="relative inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-mk-navy shadow-sm transition hover:border-mk-gold hover:bg-mk-goldSoft" aria-label="Chat rooms{{ $unreadMessagesCount ? ' - '.$unreadMessagesCount.' unread' : '' }}">
                                     <x-dashboard-icon name="messages" class="h-5 w-5" />

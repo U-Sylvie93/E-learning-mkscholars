@@ -8,6 +8,7 @@ use App\Models\CourseRoomMessage;
 use App\Models\User;
 use App\Services\AppNotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class CourseRoomView
@@ -41,7 +42,7 @@ class CourseRoomView
                     if (\Illuminate\Support\Facades\Schema::hasTable('course_room_messages')) {
                         $latest = $room->messages()->with('sender:id,name')->latest()->first();
                         if ($latest) {
-                            $lastMessage = trim((string) $latest->body);
+                            $lastMessage = $latest->isDeleted() ? 'This message was deleted' : trim((string) $latest->body);
                             if ($lastMessage === '' && method_exists($latest, 'hasAttachment') && $latest->hasAttachment()) {
                                 $lastMessage = $latest->isImageAttachment() ? '📷 Photo' : '📎 '.($latest->attachment_name ?: 'File');
                             }
@@ -162,5 +163,31 @@ class CourseRoomView
         }
 
         return $message;
+    }
+
+    public static function deleteMessage(CourseRoomMessage $message, User $user): void
+    {
+        abort_unless((int) $message->sender_id === (int) $user->id, 403);
+
+        $room = $message->room;
+        $attachmentPath = $message->attachment_path;
+
+        if ($message->hasAttachment()) {
+            Storage::disk('public')->delete($attachmentPath);
+        }
+
+        $message->forceFill([
+            'body' => '',
+            'attachment_path' => null,
+            'attachment_name' => null,
+            'attachment_mime' => null,
+            'attachment_size' => null,
+            'deleted_at' => now(),
+            'deleted_by_id' => $user->id,
+        ])->save();
+
+        if ($room) {
+            $room->update(['last_message_at' => now()]);
+        }
     }
 }

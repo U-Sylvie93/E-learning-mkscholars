@@ -2,11 +2,12 @@
     /** @var \Illuminate\Support\Collection $rooms */
     /** @var array|null $activeRoom */
     $activeCourseId = $activeRoom['course']['id'] ?? null;
+    $chatDeleteRoute = $chatDeleteRoute ?? null;
 @endphp
 
-<div class="grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm h-[calc(100dvh-9rem)] min-h-[520px] lg:h-[calc(100vh-9rem)] lg:min-h-[500px] lg:grid-cols-[320px_minmax(0,1fr)]" style="grid-template-rows: minmax(0, 1fr);">
+<div class="-mx-4 flex h-[calc(100dvh-7.25rem)] min-h-[460px] w-[calc(100%+2rem)] max-w-none flex-col overflow-hidden border-y border-slate-200 bg-white shadow-sm sm:mx-0 sm:h-[calc(100dvh-9rem)] sm:min-h-[520px] sm:w-full sm:rounded-2xl sm:border lg:h-[calc(100vh-9rem)] lg:min-h-[500px] lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:flex-row">
     {{-- Sidebar: room list --}}
-    <aside class="flex min-h-0 flex-col border-slate-200 lg:border-r {{ $activeRoom ? 'hidden lg:flex' : 'flex' }}">
+    <aside class="flex h-full min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden border-slate-200 lg:flex-none lg:border-r {{ $activeRoom ? 'hidden lg:flex' : 'flex' }}">
         <div class="border-b border-slate-100 p-4">
             <p class="text-xs font-black uppercase tracking-wide text-mk-gold">Course rooms</p>
             <h2 class="mt-1 text-lg font-black text-mk-navy">Chats</h2>
@@ -58,7 +59,7 @@
     </aside>
 
     {{-- Chat pane --}}
-    <section class="flex min-h-0 flex-col {{ $activeRoom ? 'flex' : 'hidden lg:flex' }}">
+    <section class="flex h-full min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden {{ $activeRoom ? 'flex' : 'hidden lg:flex' }}">
         @if ($activeRoom)
             @php
                 $course = $activeRoom['course'];
@@ -67,20 +68,20 @@
                 $lastDay = null;
                 $courseInitial = mb_strtoupper(mb_substr((string) $course['title'], 0, 1));
             @endphp
-            <div class="flex shrink-0 items-center gap-3 border-b border-slate-100 bg-slate-50 px-3 py-2 sm:px-4 sm:py-3">
+            <div class="flex shrink-0 items-center gap-2 border-b border-slate-100 bg-slate-50 px-2 py-2 sm:gap-3 sm:px-4 sm:py-3">
                 <a href="{{ route($chatBaseRoute) }}" class="lg:hidden inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-mk-navy hover:bg-white" aria-label="Back to chats">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </a>
-                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mk-navy text-sm font-black text-mk-gold sm:h-11 sm:w-11">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mk-navy text-xs font-black text-mk-gold sm:h-11 sm:w-11 sm:text-sm">
                     {{ $courseInitial }}
                 </span>
                 <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-black text-mk-navy">{{ $course['title'] }}</p>
+                    <p class="truncate text-xs font-black text-mk-navy sm:text-sm">{{ $course['title'] }}</p>
                     <p class="truncate text-[11px] font-semibold text-slate-500 sm:text-xs">{{ $course['academy'] }} · Instructor: {{ $course['instructor_name'] ?? 'Unassigned' }}</p>
                 </div>
             </div>
 
-            <div class="min-h-0 flex-1 space-y-2 overflow-y-auto bg-[#f0f2f5] px-3 py-3 sm:px-4 sm:py-4" id="mk-chat-scroll" style="background-image: radial-gradient(rgba(11,58,90,0.05) 1px, transparent 1px); background-size: 20px 20px; overscroll-behavior: contain;">
+            <div class="min-h-0 min-w-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto bg-[#f0f2f5] px-2 py-3 sm:px-4 sm:py-4" id="mk-chat-scroll" style="background-image: radial-gradient(rgba(11,58,90,0.05) 1px, transparent 1px); background-size: 20px 20px; overscroll-behavior: contain;">
                 @forelse ($messages as $message)
                     @php
                         $mine = (int) $message->sender_id === (int) $me;
@@ -88,6 +89,7 @@
                         $day = $createdAt ? $createdAt->format('Y-m-d') : null;
                         $senderRole = $message->sender ? $message->sender->role : null;
                         $isInstructor = $senderRole === \App\Models\User::ROLE_INSTRUCTOR;
+                        $isDeleted = method_exists($message, 'isDeleted') ? $message->isDeleted() : false;
 
                         $dayLabel = '';
                         if ($createdAt) {
@@ -129,7 +131,7 @@
                         );
                         $bodyHtml = nl2br($bodyHtml, false);
 
-                        $hasAttachment = method_exists($message, 'hasAttachment') ? $message->hasAttachment() : false;
+                        $hasAttachment = ! $isDeleted && method_exists($message, 'hasAttachment') ? $message->hasAttachment() : false;
                         $isImage = $hasAttachment && method_exists($message, 'isImageAttachment') ? $message->isImageAttachment() : false;
                         $attachmentUrl = $hasAttachment ? $message->attachmentUrl() : null;
                         $attachmentName = $hasAttachment ? ($message->attachment_name ?? 'file') : null;
@@ -140,8 +142,17 @@
                             <span class="rounded-full bg-white/80 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-500 shadow-sm">{{ $dayLabel }}</span>
                         </div>
                     @endif
-                    <div class="flex {{ $alignClass }}">
-                        <div class="max-w-[78%] rounded-2xl px-3 py-2 shadow-sm {{ $bubbleClass }}">
+                    <div class="flex min-w-0 max-w-full {{ $alignClass }}">
+                        <div class="group relative min-w-0 w-fit max-w-[min(88%,22rem)] overflow-hidden break-words rounded-2xl px-3 py-2 shadow-sm sm:max-w-[78%] {{ $bubbleClass }}">
+                            @if ($mine && $chatDeleteRoute && ! $isDeleted)
+                                <form method="POST" action="{{ route($chatDeleteRoute, [$course['id'], $message]) }}" class="absolute right-1 top-1">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="inline-flex h-7 w-7 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white focus:bg-white/10 focus:text-white focus:outline-none" title="Delete message" aria-label="Delete message" onclick="return confirm('Delete this message?')">
+                                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>
+                                    </button>
+                                </form>
+                            @endif
                             @if (! $mine)
                                 <p class="text-[11px] font-black {{ $senderNameClass }}">
                                     {{ $senderName }}
@@ -149,6 +160,10 @@
                                         <span class="ml-1 rounded bg-mk-gold px-1 text-[10px] text-mk-navy">Instructor</span>
                                     @endif
                                 </p>
+                            @endif
+
+                            @if ($isDeleted)
+                                <div class="mt-1 text-sm italic leading-6 {{ $mine ? 'pr-7 text-white/75' : 'text-slate-500' }}">This message was deleted</div>
                             @endif
 
                             @if ($hasAttachment)
@@ -169,8 +184,8 @@
                                 @endif
                             @endif
 
-                            @if ($rawBody !== '')
-                                <div class="mt-1 break-words text-sm leading-6">{!! $bodyHtml !!}</div>
+                            @if (! $isDeleted && $rawBody !== '')
+                                <div class="mt-1 max-w-full overflow-hidden break-words text-sm leading-6 [overflow-wrap:anywhere] {{ $mine && $chatDeleteRoute ? 'pr-7' : '' }}">{!! $bodyHtml !!}</div>
                             @endif
 
                             <p class="mt-1 text-right text-[10px] font-bold {{ $timeClass }}">{{ $timeLabel }}</p>
@@ -186,21 +201,21 @@
                 @endforelse
             </div>
 
-            <form method="POST" action="{{ route($chatSendRoute, $course['id']) }}" enctype="multipart/form-data" class="shrink-0 border-t border-slate-100 bg-white p-3" style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));" id="mk-chat-form">
+            <form method="POST" action="{{ route($chatSendRoute, $course['id']) }}" enctype="multipart/form-data" class="shrink-0 border-t border-slate-100 bg-white p-2 sm:p-3" style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));" id="mk-chat-form">
                 @csrf
                 <div id="mk-chat-attachment-preview" class="mb-2 hidden items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
                     <span class="min-w-0 flex-1 truncate font-bold text-mk-navy" data-attachment-name></span>
                     <button type="button" class="rounded-md border border-slate-200 px-2 py-0.5 text-[11px] font-bold text-slate-500 hover:border-red-400 hover:text-red-600" data-attachment-clear>Remove</button>
                 </div>
-                <div class="flex items-end gap-2">
-                    <label class="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-600 shadow-sm transition hover:border-mk-gold hover:bg-mk-goldSoft hover:text-mk-navy" title="Attach file">
+                <div class="flex min-w-0 items-end gap-2">
+                    <label class="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-600 shadow-sm transition hover:border-mk-gold hover:bg-mk-goldSoft hover:text-mk-navy sm:h-11 sm:w-11" title="Attach file">
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49L12.95 2.56a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83L15.07 6.1"/></svg>
                         <span class="sr-only">Attach file</span>
                         <input type="file" name="attachment" id="chat-attachment" class="hidden" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip">
                     </label>
                     <label class="sr-only" for="chat-body">Type a message</label>
-                    <textarea id="chat-body" name="body" rows="1" maxlength="4000" placeholder="Type a message or paste a link…" class="max-h-36 min-h-[42px] flex-1 resize-y rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30"></textarea>
-                    <button type="submit" class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-mk-navy text-white shadow-sm transition hover:bg-mk-blue" aria-label="Send message">
+                    <textarea id="chat-body" name="body" rows="1" maxlength="4000" placeholder="Type a message" class="max-h-36 min-h-10 min-w-0 flex-1 resize-y rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30 sm:min-h-[42px] sm:px-4"></textarea>
+                    <button type="submit" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mk-navy text-white shadow-sm transition hover:bg-mk-blue sm:h-11 sm:w-11" aria-label="Send message">
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
                     </button>
                 </div>

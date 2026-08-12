@@ -1142,6 +1142,21 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return redirect()->route('student.messages.show', $course);
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.messages.send');
 
+    Route::delete('/student/messages/{course}/messages/{message}', function (Course $course, CourseRoomMessage $message) {
+        $user = Auth::user();
+
+        abort_unless(Enrollment::query()
+            ->where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->where('status', Enrollment::STATUS_ACTIVE)
+            ->exists(), 403);
+        abort_unless((int) $message->room?->course_id === (int) $course->id, 404);
+
+        \App\Support\CourseRoomView::deleteMessage($message, $user);
+
+        return redirect()->route('student.messages.show', $course);
+    })->middleware('role:'.User::ROLE_STUDENT)->name('student.messages.delete');
+
     Route::get('/student/settings', fn () => $settingsPage(User::ROLE_STUDENT, 'student.dashboard'))
         ->middleware('role:'.User::ROLE_STUDENT)
         ->name('student.settings');
@@ -2869,6 +2884,16 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return redirect()->route('instructor.messages.show', $course);
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.messages.send');
 
+    Route::delete('/instructor/messages/{course}/messages/{message}', function (Course $course, CourseRoomMessage $message) use ($abortUnlessInstructorOwnsCourse) {
+        $user = Auth::user();
+        $abortUnlessInstructorOwnsCourse($user, $course);
+        abort_unless((int) $message->room?->course_id === (int) $course->id, 404);
+
+        \App\Support\CourseRoomView::deleteMessage($message, $user);
+
+        return redirect()->route('instructor.messages.show', $course);
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.messages.delete');
+
     Route::get('/instructor/settings', fn () => $settingsPage(User::ROLE_INSTRUCTOR, 'instructor.dashboard'))
         ->middleware('role:'.User::ROLE_INSTRUCTOR)
         ->name('instructor.settings');
@@ -3841,6 +3866,5 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return redirect()->route('mentor.check-ins');
     })->middleware('role:'.User::ROLE_MENTOR)->name('mentor.check-ins.complete');
 });
-
 
 

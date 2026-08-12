@@ -18,11 +18,25 @@ class CourseRoomMessage extends Model
         'attachment_name',
         'attachment_mime',
         'attachment_size',
+        'deleted_at',
+        'deleted_by_id',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'deleted_at' => 'datetime',
+        ];
+    }
+
+    public function isDeleted(): bool
+    {
+        return filled($this->deleted_at);
+    }
 
     public function hasAttachment(): bool
     {
-        return filled($this->attachment_path);
+        return ! $this->isDeleted() && filled($this->attachment_path);
     }
 
     public function isImageAttachment(): bool
@@ -60,5 +74,10 @@ class CourseRoomMessage extends Model
     public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sender_id');
+    }
+
+    public function deletedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by_id');
     }
 }

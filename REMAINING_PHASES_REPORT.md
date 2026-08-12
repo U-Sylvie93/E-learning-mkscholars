@@ -673,3 +673,11 @@ Added hosting MIME configuration for PDF.js worker assets so Hostinger/LiteSpeed
 The Entrance Exam viewer continues to pass the protected main paper route to PDF.js through `data-pdf-url`, and the protected inline route continues to serve PDFs and images from the main uploaded paper file with inline headers while preserving paid/free access checks. Word and PowerPoint files remain protected and show the preview-unavailable message without direct downloads.
 
 No migration was added. Manual tests, asset build, route inspection, PDF Network-tab checks for both the protected paper file request and JavaScript worker MIME, image viewer checks, Office no-preview checks, and paid/free entrance exam access checks remain required.
+
+### Chat Mobile Display and Sender Delete
+
+Refined the shared course-room chat layout for narrow phones by letting the chat shell use the full mobile width, hiding long top-bar labels below very small breakpoints, constraining message bubbles, wrapping long text/links, and shortening the composer placeholder. Student and instructor chat rooms share the same corrected partial.
+
+Added sender-only message deletion for course-room chat. Deleted messages keep a WhatsApp-style placeholder in the timeline, clear message content and attachment metadata, and remove stored attachment files. Other users cannot delete messages they did not send.
+
+The existing `2026_08_12_000000_add_deleted_to_course_room_messages.php` migration supplies the deleted-message columns. Manual migration, tests, asset build, and mobile browser checks remain required.

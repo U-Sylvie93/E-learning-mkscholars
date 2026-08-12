@@ -1405,3 +1405,15 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Raw storage paths are not exposed.
 - Paid/free access rules remain protected.
 - UI remains mobile responsive.
+
+## Student/Instructor Chat Mobile Display and Delete QA
+
+- Chat room page fits narrow phone widths without horizontal clipping.
+- Dashboard top bar does not overlap the role label, chat button, notification button, or avatar on phones.
+- Message bubbles wrap long text and links inside the visible chat area.
+- Chat composer keeps attachment, text input, and send button visible on phones.
+- Sender sees a delete button on their own messages.
+- Sender can delete their own message and sees a deleted-message placeholder.
+- Sender cannot delete another user's message.
+- Deleted message attachments are removed from storage and no longer displayed.
+- Student and instructor chat rooms both use the corrected shared layout.
