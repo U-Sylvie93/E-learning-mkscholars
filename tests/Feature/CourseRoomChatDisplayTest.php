@@ -8,6 +8,7 @@ use App\Models\CourseRoomMessage;
 use App\Models\Enrollment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class CourseRoomChatDisplayTest extends TestCase
@@ -22,6 +23,9 @@ class CourseRoomChatDisplayTest extends TestCase
         $this->assertStringContainsString('max-w-[min(88%,22rem)]', $view);
         $this->assertStringContainsString('[overflow-wrap:anywhere]', $view);
         $this->assertStringContainsString('aria-label="Delete message"', $view);
+        $this->assertStringContainsString('id="mk-chat-delete-modal"', $view);
+        $this->assertStringContainsString('data-chat-delete-confirm', $view);
+        $this->assertStringNotContainsString("confirm('Delete this message?')", $view);
         $this->assertStringContainsString('This message was deleted', $view);
         $this->assertStringContainsString('placeholder="Type a message"', $view);
     }
@@ -58,6 +62,33 @@ class CourseRoomChatDisplayTest extends TestCase
             'id' => $otherMessage->id,
             'body' => 'Keep this message',
             'deleted_by_id' => null,
+        ]);
+    }
+
+    public function test_delete_falls_back_when_deleted_columns_are_not_migrated_yet(): void
+    {
+        [$student, , $course, $room] = $this->chatContext();
+        $message = CourseRoomMessage::create([
+            'course_room_id' => $room->id,
+            'sender_id' => $student->id,
+            'body' => 'Delete before migration is applied',
+        ]);
+
+        Schema::table('course_room_messages', function ($table): void {
+            if (Schema::hasColumn('course_room_messages', 'deleted_by_id')) {
+                $table->dropConstrainedForeignId('deleted_by_id');
+            }
+            if (Schema::hasColumn('course_room_messages', 'deleted_at')) {
+                $table->dropColumn('deleted_at');
+            }
+        });
+
+        $this->actingAs($student)
+            ->delete(route('student.messages.delete', [$course, $message]))
+            ->assertRedirect(route('student.messages.show', $course));
+
+        $this->assertDatabaseMissing('course_room_messages', [
+            'id' => $message->id,
         ]);
     }
 

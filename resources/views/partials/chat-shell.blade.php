@@ -148,7 +148,7 @@
                                 <form method="POST" action="{{ route($chatDeleteRoute, [$course['id'], $message]) }}" class="absolute right-1 top-1">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="inline-flex h-7 w-7 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white focus:bg-white/10 focus:text-white focus:outline-none" title="Delete message" aria-label="Delete message" onclick="return confirm('Delete this message?')">
+                                    <button type="button" class="inline-flex h-7 w-7 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white focus:bg-white/10 focus:text-white focus:outline-none" title="Delete message" aria-label="Delete message" data-chat-delete-open>
                                         <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>
                                     </button>
                                 </form>
@@ -225,6 +225,24 @@
                 </div>
             </form>
 
+            <div id="mk-chat-delete-modal" class="fixed inset-0 z-50 hidden items-end justify-center bg-mk-navy/50 p-4 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="mk-chat-delete-title">
+                <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl shadow-mk-navy/30">
+                    <div class="flex items-start gap-3">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
+                        </span>
+                        <div class="min-w-0">
+                            <h2 id="mk-chat-delete-title" class="text-base font-black text-mk-navy">Delete message?</h2>
+                            <p class="mt-1 text-sm leading-6 text-slate-600">This will remove the message from this chat.</p>
+                        </div>
+                    </div>
+                    <div class="mt-5 flex justify-end gap-2">
+                        <button type="button" class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold text-mk-navy transition hover:bg-slate-50" data-chat-delete-cancel>Cancel</button>
+                        <button type="button" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-700" data-chat-delete-confirm>Delete</button>
+                    </div>
+                </div>
+            </div>
+
             <script>
                 (function () {
                     var scroll = document.getElementById('mk-chat-scroll');
@@ -291,6 +309,44 @@
                             if (!hasFile && !hasBody) {
                                 e.preventDefault();
                             }
+                        });
+                    }
+
+                    var deleteModal = document.getElementById('mk-chat-delete-modal');
+                    var pendingDeleteForm = null;
+                    var openDeleteButtons = document.querySelectorAll('[data-chat-delete-open]');
+                    var cancelDelete = deleteModal ? deleteModal.querySelector('[data-chat-delete-cancel]') : null;
+                    var confirmDelete = deleteModal ? deleteModal.querySelector('[data-chat-delete-confirm]') : null;
+
+                    var closeDeleteModal = function () {
+                        if (!deleteModal) { return; }
+                        deleteModal.classList.add('hidden');
+                        deleteModal.classList.remove('flex');
+                        pendingDeleteForm = null;
+                    };
+
+                    openDeleteButtons.forEach(function (button) {
+                        button.addEventListener('click', function () {
+                            pendingDeleteForm = button.closest('form');
+                            if (!deleteModal || !pendingDeleteForm) { return; }
+                            deleteModal.classList.remove('hidden');
+                            deleteModal.classList.add('flex');
+                        });
+                    });
+
+                    if (cancelDelete) {
+                        cancelDelete.addEventListener('click', closeDeleteModal);
+                    }
+
+                    if (deleteModal) {
+                        deleteModal.addEventListener('click', function (e) {
+                            if (e.target === deleteModal) { closeDeleteModal(); }
+                        });
+                    }
+
+                    if (confirmDelete) {
+                        confirmDelete.addEventListener('click', function () {
+                            if (pendingDeleteForm) { pendingDeleteForm.submit(); }
                         });
                     }
                 })();
