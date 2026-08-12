@@ -4,7 +4,7 @@
     $activeCourseId = $activeRoom['course']['id'] ?? null;
 @endphp
 
-<div class="grid gap-4 rounded-2xl border border-slate-200 bg-white shadow-sm lg:h-[calc(100vh-9rem)] lg:min-h-[500px] lg:grid-cols-[320px_minmax(0,1fr)]">
+<div class="grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm h-[calc(100dvh-9rem)] min-h-[520px] lg:h-[calc(100vh-9rem)] lg:min-h-[500px] lg:grid-cols-[320px_minmax(0,1fr)]" style="grid-template-rows: minmax(0, 1fr);">
     {{-- Sidebar: room list --}}
     <aside class="flex min-h-0 flex-col border-slate-200 lg:border-r {{ $activeRoom ? 'hidden lg:flex' : 'flex' }}">
         <div class="border-b border-slate-100 p-4">
@@ -67,20 +67,20 @@
                 $lastDay = null;
                 $courseInitial = mb_strtoupper(mb_substr((string) $course['title'], 0, 1));
             @endphp
-            <div class="flex items-center gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3">
-                <a href="{{ route($chatBaseRoute) }}" class="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-mk-navy hover:bg-white" aria-label="Back to chats">
+            <div class="flex shrink-0 items-center gap-3 border-b border-slate-100 bg-slate-50 px-3 py-2 sm:px-4 sm:py-3">
+                <a href="{{ route($chatBaseRoute) }}" class="lg:hidden inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-mk-navy hover:bg-white" aria-label="Back to chats">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </a>
-                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-mk-navy text-sm font-black text-mk-gold">
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mk-navy text-sm font-black text-mk-gold sm:h-11 sm:w-11">
                     {{ $courseInitial }}
                 </span>
                 <div class="min-w-0 flex-1">
                     <p class="truncate text-sm font-black text-mk-navy">{{ $course['title'] }}</p>
-                    <p class="truncate text-xs font-semibold text-slate-500">{{ $course['academy'] }} · Instructor: {{ $course['instructor_name'] ?? 'Unassigned' }}</p>
+                    <p class="truncate text-[11px] font-semibold text-slate-500 sm:text-xs">{{ $course['academy'] }} · Instructor: {{ $course['instructor_name'] ?? 'Unassigned' }}</p>
                 </div>
             </div>
 
-            <div class="flex-1 space-y-2 overflow-y-auto bg-[#f0f2f5] px-4 py-4" id="mk-chat-scroll" style="background-image: radial-gradient(rgba(11,58,90,0.05) 1px, transparent 1px); background-size: 20px 20px;">
+            <div class="min-h-0 flex-1 space-y-2 overflow-y-auto bg-[#f0f2f5] px-3 py-3 sm:px-4 sm:py-4" id="mk-chat-scroll" style="background-image: radial-gradient(rgba(11,58,90,0.05) 1px, transparent 1px); background-size: 20px 20px; overscroll-behavior: contain;">
                 @forelse ($messages as $message)
                     @php
                         $mine = (int) $message->sender_id === (int) $me;
@@ -186,7 +186,7 @@
                 @endforelse
             </div>
 
-            <form method="POST" action="{{ route($chatSendRoute, $course['id']) }}" enctype="multipart/form-data" class="border-t border-slate-100 bg-white p-3" id="mk-chat-form">
+            <form method="POST" action="{{ route($chatSendRoute, $course['id']) }}" enctype="multipart/form-data" class="shrink-0 border-t border-slate-100 bg-white p-3" style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));" id="mk-chat-form">
                 @csrf
                 <div id="mk-chat-attachment-preview" class="mb-2 hidden items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
                     <span class="min-w-0 flex-1 truncate font-bold text-mk-navy" data-attachment-name></span>
