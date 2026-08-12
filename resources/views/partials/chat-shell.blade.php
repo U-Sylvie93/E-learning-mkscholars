@@ -106,13 +106,26 @@
                         $showDayDivider = $day && $day !== $lastDay;
                         if ($showDayDivider) { $lastDay = $day; }
 
-                        // Linkify: escape then wrap URLs with <a>. Also convert newlines to <br>.
+                        // Linkify: escape then wrap URLs / www. / emails with <a>.
                         $rawBody = (string) ($message->body ?? '');
                         $escapedBody = e($rawBody);
+                        // http(s):// links
                         $bodyHtml = preg_replace(
                             '~(https?://[^\s<]+)~i',
                             '<a href="$1" target="_blank" rel="noopener noreferrer" class="'.$linkClass.' break-all">$1</a>',
                             $escapedBody
+                        );
+                        // Bare www. links (add https:// prefix in href)
+                        $bodyHtml = preg_replace(
+                            '~(^|[\s(])((?<!//)www\.[^\s<]+)~i',
+                            '$1<a href="https://$2" target="_blank" rel="noopener noreferrer" class="'.$linkClass.' break-all">$2</a>',
+                            $bodyHtml
+                        );
+                        // Email addresses
+                        $bodyHtml = preg_replace(
+                            '~([\w.+-]+@[\w-]+\.[\w.-]+)~i',
+                            '<a href="mailto:$1" class="'.$linkClass.' break-all">$1</a>',
+                            $bodyHtml
                         );
                         $bodyHtml = nl2br($bodyHtml, false);
 
@@ -186,10 +199,14 @@
                         <input type="file" name="attachment" id="chat-attachment" class="hidden" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip">
                     </label>
                     <label class="sr-only" for="chat-body">Type a message</label>
-                    <textarea id="chat-body" name="body" rows="1" maxlength="4000" placeholder="Type a message…" class="max-h-36 min-h-[42px] flex-1 resize-y rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30"></textarea>
+                    <textarea id="chat-body" name="body" rows="1" maxlength="4000" placeholder="Type a message or paste a link…" class="max-h-36 min-h-[42px] flex-1 resize-y rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30"></textarea>
                     <button type="submit" class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-mk-navy text-white shadow-sm transition hover:bg-mk-blue" aria-label="Send message">
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
                     </button>
+                </div>
+                <div id="mk-chat-link-hint" class="mt-2 hidden items-center gap-2 text-[11px] font-bold text-mk-blue">
+                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.1 0l-2 2A5 5 0 0 0 12 20.1l1.1-1.1"/></svg>
+                    <span data-link-count>Link detected — will be clickable once sent</span>
                 </div>
             </form>
 
@@ -199,7 +216,27 @@
                     if (scroll) { scroll.scrollTop = scroll.scrollHeight; }
 
                     var ta = document.getElementById('chat-body');
+                    var linkHint = document.getElementById('mk-chat-link-hint');
+                    var linkCountEl = linkHint ? linkHint.querySelector('[data-link-count]') : null;
+                    var urlRe = /(https?:\/\/[^\s]+|(?:^|\s)www\.[^\s]+|[\w.+-]+@[\w-]+\.[\w.-]+)/gi;
+
+                    var refreshLinkHint = function () {
+                        if (!ta || !linkHint || !linkCountEl) { return; }
+                        var matches = (ta.value.match(urlRe) || []);
+                        if (matches.length > 0) {
+                            linkCountEl.textContent = matches.length === 1
+                                ? 'Link detected — will be clickable once sent'
+                                : matches.length + ' links detected — will be clickable once sent';
+                            linkHint.classList.remove('hidden');
+                            linkHint.classList.add('flex');
+                        } else {
+                            linkHint.classList.add('hidden');
+                            linkHint.classList.remove('flex');
+                        }
+                    };
+
                     if (ta) {
+                        ta.addEventListener('input', refreshLinkHint);
                         ta.addEventListener('keydown', function (e) {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();

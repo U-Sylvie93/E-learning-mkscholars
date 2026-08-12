@@ -397,15 +397,44 @@
                         return;
                     }
 
+                    // Prefer <p> blocks over <div>/<br> when the user hits Enter.
+                    try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (_) {}
+
+                    // Normalize HTML on sync so top-level <div> blocks become <p>,
+                    // and stray text nodes get wrapped, so styles apply predictably.
+                    const normalizeHtml = (root) => {
+                        const container = document.createElement('div');
+                        container.innerHTML = root;
+                        Array.from(container.childNodes).forEach((node) => {
+                            if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '') {
+                                const p = document.createElement('p');
+                                p.textContent = node.textContent;
+                                node.replaceWith(p);
+                            } else if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'DIV') {
+                                const p = document.createElement('p');
+                                p.innerHTML = node.innerHTML;
+                                node.replaceWith(p);
+                            }
+                        });
+                        return container.innerHTML;
+                    };
+
                     const sync = () => {
-                        const html = editor.innerHTML.trim();
-                        target.value = (html === '' || html === '<br>') ? '' : html;
+                        let html = normalizeHtml(editor.innerHTML).trim();
+                        target.value = (html === '' || html === '<br>' || html === '<p><br></p>') ? '' : html;
                     };
 
                     editor.addEventListener('input', sync);
                     editor.addEventListener('blur', sync);
 
                     editor.closest('form')?.addEventListener('submit', sync);
+
+                    // If content already exists but the outermost element is a bare div/text, wrap on load.
+                    editor.addEventListener('focus', () => {
+                        if (editor.innerHTML.trim() === '') {
+                            editor.innerHTML = '<p><br></p>';
+                        }
+                    });
 
                     toolbar.querySelectorAll('button').forEach((button) => {
                         button.addEventListener('mousedown', (event) => event.preventDefault());

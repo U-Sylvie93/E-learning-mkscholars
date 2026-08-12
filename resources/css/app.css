@@ -103,20 +103,65 @@
         @apply text-lg font-bold tracking-normal text-mk-navy;
     }
 
-    .mk-rich-content p {
+    .mk-rich-content h5 {
+        @apply text-base font-bold tracking-normal text-mk-navy;
+    }
+
+    .mk-rich-content h6 {
+        @apply text-sm font-bold uppercase tracking-wide text-mk-navy;
+    }
+
+    .mk-rich-content p,
+    .mk-rich-content div {
         @apply leading-7 text-slate-700;
     }
 
+    /* Force list markers even when browsers/reset CSS strip them. */
     .mk-rich-content ul {
-        @apply list-disc space-y-2 pl-6;
+        list-style-type: disc !important;
+        list-style-position: outside !important;
+        padding-left: 1.5rem !important;
+        margin: 0.5rem 0;
+    }
+    .mk-rich-content ul ul {
+        list-style-type: circle !important;
+    }
+    .mk-rich-content ul ul ul {
+        list-style-type: square !important;
     }
 
     .mk-rich-content ol {
-        @apply list-decimal space-y-2 pl-6;
+        list-style-type: decimal !important;
+        list-style-position: outside !important;
+        padding-left: 1.5rem !important;
+        margin: 0.5rem 0;
     }
 
-    .mk-rich-content li {
-        @apply pl-1;
+    .mk-rich-content ul li,
+    .mk-rich-content ol li {
+        display: list-item !important;
+        margin: 0.25rem 0;
+        padding-left: 0.25rem;
+    }
+
+    /* Undo Tailwind Preflight for nested lists too. */
+    .mk-rich-content ul > li::marker,
+    .mk-rich-content ol > li::marker {
+        color: currentColor;
+    }
+
+    .mk-rich-content strong,
+    .mk-rich-content b {
+        @apply font-black text-mk-navy;
+    }
+
+    .mk-rich-content em,
+    .mk-rich-content i {
+        font-style: italic;
+    }
+
+    .mk-rich-content u {
+        text-decoration: underline;
     }
 
     .mk-rich-content a {
