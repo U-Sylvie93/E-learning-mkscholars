@@ -31,7 +31,7 @@
                 />
             @else
                 <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                    @php foreach ($activeCourses as $item) { @endphp
+                    @foreach ($activeCourses as $item)
                         @php
                             $course = $item['course'];
                             $image = $course->coverImageUrl();
@@ -115,7 +115,7 @@
                                 </div>
                             </div>
                         </x-card>
-                    @php } @endphp
+                    @endforeach
                 </div>
             @endif
         </section>
@@ -138,7 +138,7 @@
                 />
             @else
                 <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                    @php foreach ($mergedUnpaid as $item) { @endphp
+                    @foreach ($mergedUnpaid as $item)
                         @php
                             $course = $item['course'];
                             $image = $course->coverImageUrl();
@@ -192,7 +192,7 @@
                                 </div>
                             </div>
                         </x-card>
-                    @php } @endphp
+                    @endforeach
                 </div>
             @endif
         </section>
