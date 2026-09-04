@@ -34,67 +34,27 @@
                     @foreach ($activeCourses as $item)
                         @php
                             $course = $item['course'];
-                            $image = $course->coverImageUrl();
                             $academy = $course->academy?->name ?? 'MK Scholars';
-                            $academyIcon = $course->academy?->safeIcon() ?? \App\Models\Academy::ICON_BOOK_OPEN;
                             $completion = $item['completion'];
-                            $certificate = $item['certificate'];
                             $offersCertificate = $course->offersCertificate();
                             $completed = (bool) $completion->completed_at || $completion->is_eligible_for_certificate;
-                            $certificateLabel = match ($certificate?->status) {
-                                \App\Models\Certificate::STATUS_PENDING => 'Certificate Pending Approval',
-                                \App\Models\Certificate::STATUS_ISSUED => 'Certificate Issued',
-                                \App\Models\Certificate::STATUS_REJECTED => 'Certificate Rejected',
-                                \App\Models\Certificate::STATUS_REVOKED => 'Certificate Revoked',
-                                default => $offersCertificate && $completed ? 'Certificate Not Requested/Not Available' : null,
-                            };
-                            $certificateTone = match ($certificate?->status) {
-                                \App\Models\Certificate::STATUS_ISSUED => 'success',
-                                \App\Models\Certificate::STATUS_REJECTED,
-                                \App\Models\Certificate::STATUS_REVOKED => 'danger',
-                                \App\Models\Certificate::STATUS_PENDING => 'warning',
-                                default => 'gray',
-                            };
                             $learnHref = route('student.courses.learn', $course);
+                            $certificateBadge = $offersCertificate
+                                ? ($completion->is_eligible_for_certificate ? 'Certificate eligible' : $completion->lesson_percentage.'% lessons')
+                                : $completion->lesson_percentage.'% lessons';
+                            $certificateBadgeTone = $offersCertificate && $completion->is_eligible_for_certificate ? 'success' : 'gray';
                         @endphp
-                        <x-card class="group flex h-full flex-col overflow-hidden p-0">
-                            <a href="{{ $learnHref }}" class="relative block aspect-[16/9] overflow-hidden bg-mk-navy mk-focus" aria-label="{{ $course->title }}">
-                                @if ($image)
-                                    <img src="{{ $image }}" alt="{{ $course->title }}" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
-                                @else
-                                    <span class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,196,12,0.30),transparent_38%),linear-gradient(135deg,#073653_0%,#0e4a72_60%,#102a3a_100%)]"></span>
-                                    <span class="absolute inset-0 flex items-center justify-center text-mk-gold">
-                                        <x-academy-icon :name="$academyIcon" class="h-12 w-12" />
-                                    </span>
-                                @endif
-                            </a>
-
-                            <div class="flex flex-1 flex-col p-5">
-                                <p class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-mk-gold">
-                                    <x-academy-icon :name="$academyIcon" class="h-4 w-4" />{{ $academy }}
-                                </p>
+                        <x-card class="flex h-full flex-col p-5">
+                            <div class="flex flex-1 flex-col">
+                                <p class="text-xs font-bold uppercase tracking-wide text-mk-gold">{{ $academy }}</p>
                                 <h3 class="mt-2 line-clamp-2 break-words text-lg font-black tracking-normal text-mk-navy">
                                     <a href="{{ $learnHref }}" class="mk-focus rounded-sm hover:text-mk-blue">{{ $course->title }}</a>
                                 </h3>
-
                                 <div class="mt-3 flex flex-wrap items-center gap-2">
-                                    @if ($course->level)
-                                        <x-badge tone="blue">{{ $course->level }}</x-badge>
-                                    @endif
                                     <x-badge :tone="$completed ? 'success' : 'green'">{{ $completed ? 'Completed' : $item['access_label'] }}</x-badge>
                                     <x-badge tone="gray">{{ $course->instructor?->name ?? 'MK Scholars' }}</x-badge>
-                                    @if ($offersCertificate)
-                                        <x-badge :tone="$completion->is_eligible_for_certificate ? 'success' : 'gray'">
-                                            {{ $completion->is_eligible_for_certificate ? 'Certificate eligible' : $completion->lesson_percentage.'% lessons' }}
-                                        </x-badge>
-                                    @else
-                                        <x-badge tone="gray">{{ $completion->lesson_percentage }}% lessons</x-badge>
-                                    @endif
-                                    @if ($certificateLabel)
-                                        <x-badge :tone="$certificateTone">{{ $certificateLabel }}</x-badge>
-                                    @endif
+                                    <x-badge :tone="$certificateBadgeTone">{{ $certificateBadge }}</x-badge>
                                 </div>
-
                                 <div class="mt-4">
                                     <div class="flex items-center justify-between text-xs font-bold">
                                         <span class="text-slate-500">Progress</span>
@@ -104,14 +64,10 @@
                                         <div class="h-full rounded-full bg-mk-gold transition-[width] duration-500" style="width: {{ $item['progress'] }}%"></div>
                                     </div>
                                 </div>
-
                                 <div class="mt-auto flex flex-wrap gap-2 pt-5">
                                     <x-button :href="$learnHref" :variant="$completed ? 'secondary' : 'primary'" size="sm" class="flex-1">
                                         {{ $completed ? 'Completed' : 'Continue Learning' }}
                                     </x-button>
-                                    @if ($certificate?->status === \App\Models\Certificate::STATUS_ISSUED)
-                                        <x-button :href="route('student.certificates.show', $certificate)" variant="secondary" size="sm">View Certificate</x-button>
-                                    @endif
                                 </div>
                             </div>
                         </x-card>
@@ -141,53 +97,28 @@
                     @foreach ($mergedUnpaid as $item)
                         @php
                             $course = $item['course'];
-                            $image = $course->coverImageUrl();
                             $academy = $course->academy?->name ?? 'MK Scholars';
-                            $academyIcon = $course->academy?->safeIcon() ?? \App\Models\Academy::ICON_BOOK_OPEN;
                             $isPending = $item['payment'] && in_array($item['payment']->status, [\App\Models\Payment::STATUS_PENDING, \App\Models\Payment::STATUS_SUBMITTED], true);
+                            $paymentHref = $item['pay_href'] ?? route('courses.show', $course->slug);
                         @endphp
-                        <x-card class="group flex h-full flex-col overflow-hidden p-0">
-                            <a href="{{ route('courses.show', $course->slug) }}" class="relative block aspect-[16/9] overflow-hidden bg-mk-navy mk-focus" aria-label="{{ $course->title }}">
-                                @if ($image)
-                                    <img src="{{ $image }}" alt="{{ $course->title }}" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
-                                @else
-                                    <span class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,196,12,0.30),transparent_38%),linear-gradient(135deg,#073653_0%,#0e4a72_60%,#102a3a_100%)]"></span>
-                                    <span class="absolute inset-0 flex items-center justify-center text-mk-gold">
-                                        <x-academy-icon :name="$academyIcon" class="h-12 w-12" />
-                                    </span>
-                                @endif
-                                <span class="absolute right-3 top-3"><x-badge :tone="$item['status_tone']">{{ $item['status_label'] }}</x-badge></span>
-                            </a>
-
-                            <div class="flex flex-1 flex-col p-5">
-                                <p class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-mk-gold">
-                                    <x-academy-icon :name="$academyIcon" class="h-4 w-4" />{{ $academy }}
-                                </p>
+                        <x-card class="flex h-full flex-col p-5">
+                            <div class="flex flex-1 flex-col">
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <p class="text-xs font-bold uppercase tracking-wide text-mk-gold">{{ $academy }}</p>
+                                    <x-badge :tone="$item['status_tone']">{{ $item['status_label'] }}</x-badge>
+                                </div>
                                 <h3 class="mt-2 line-clamp-2 break-words text-lg font-black tracking-normal text-mk-navy">
                                     <a href="{{ route('courses.show', $course->slug) }}" class="mk-focus rounded-sm hover:text-mk-blue">{{ $course->title }}</a>
                                 </h3>
-
                                 <div class="mt-3 flex flex-wrap items-center gap-2">
                                     <x-badge tone="gray">{{ $course->instructor?->name ?? 'MK Scholars' }}</x-badge>
                                     <x-badge tone="blue">{{ $course->priceLabel() }}</x-badge>
-                                    @if ($item['subscription']?->subscriptionPlan)
-                                        <x-badge tone="gray">{{ $item['subscription']->subscriptionPlan->name }}</x-badge>
-                                    @endif
                                 </div>
-
                                 <p class="mt-4 flex-1 text-sm leading-6 text-slate-600">{{ $item['reason'] }}</p>
-
                                 <div class="mt-5 flex flex-wrap gap-2">
-                                    @if ($item['pay_form_route'])
-                                        <form method="POST" action="{{ $item['pay_form_route'] }}" class="flex-1">
-                                            @csrf
-                                            <x-button type="submit" size="sm" class="w-full">{{ $item['pay_label'] }}</x-button>
-                                        </form>
-                                    @else
-                                        <x-button :href="$item['pay_href']" size="sm" :variant="$isPending ? 'secondary' : 'primary'" class="flex-1">
-                                            {{ $item['pay_label'] }}
-                                        </x-button>
-                                    @endif
+                                    <x-button :href="$paymentHref" size="sm" :variant="$isPending ? 'secondary' : 'primary'" class="flex-1">
+                                        {{ $item['pay_label'] }}
+                                    </x-button>
                                     <x-button :href="route('courses.show', $course->slug)" variant="secondary" size="sm">View Details</x-button>
                                 </div>
                             </div>
