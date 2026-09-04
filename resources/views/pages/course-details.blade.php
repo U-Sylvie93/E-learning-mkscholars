@@ -7,14 +7,14 @@
     $isFree = $course['is_free'] ?? true;
     $priceAmount = (float) ($course['price_amount'] ?? 0);
     $priceTiers = $course['price_tiers'] ?? [];
-    $showPriceCard = ! $isFree && ($priceAmount > 0 || ! empty($priceTiers));
+    $showPriceCard = auth()->check() && ! $isFree && ($priceAmount > 0 || ! empty($priceTiers));
     $currency = $course['currency'] ?? 'RWF';
 @endphp
 
 <x-layouts.app :title="$course['title']" :description="$course['short_description'] ?? 'MK Scholars course details.'" :image="$course['image'] ?? null">
     <section class="bg-white py-16">
         <div class="mk-container grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-            <div>
+            <div class="order-2 lg:order-1">
                 <div class="flex flex-wrap gap-2">
                     @if (! empty($course['level']))
                         <x-badge tone="blue">{{ $course['level'] }}</x-badge>
@@ -53,15 +53,16 @@
                     @elseif ($ctaState === 'enrolled' && ! empty($course['id']))
                         <x-button :href="route('student.courses.learn', $course['id'])" size="lg">Continue Learning</x-button>
                     @elseif ($ctaState === 'non_student')
-                        <x-button :href="route('courses.show', $course['slug'])" size="lg">View Course</x-button>
+                        <x-button :href="route('courses.show', $course['slug'])" size="lg">Open Now</x-button>
                     @else
                         <x-button :href="route('login')" size="lg">Login to Continue</x-button>
+                        <x-button :href="route('register')" variant="secondary" size="lg">Register</x-button>
                     @endif
                     <x-button :href="route('courses')" variant="secondary" size="lg">Back to Courses</x-button>
                 </div>
             </div>
 
-            <div class="space-y-6">
+            <div class="order-1 space-y-6 lg:order-2">
                 <div class="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-mk-navy shadow-soft">
                     <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,196,12,0.30),transparent_34%),linear-gradient(135deg,#073653_0%,#0e4a72_56%,#102a3a_100%)]"></div>
                     @if ($image)
@@ -148,15 +149,6 @@
                             @endif
                         </div>
                         <dl class="mt-4 grid gap-4 text-sm">
-                            @if ($startDate)
-                                <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
-                                    <dt class="inline-flex items-center gap-2 font-bold text-slate-500">
-                                        <svg class="h-4 w-4 text-mk-gold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
-                                        Start date
-                                    </dt>
-                                    <dd class="font-extrabold text-mk-navy">{{ $startDate->format('D, M j, Y') }}</dd>
-                                </div>
-                            @endif
                             @if ($regDeadline)
                                 <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
                                     <dt class="inline-flex items-center gap-2 font-bold text-slate-500">
@@ -164,6 +156,15 @@
                                         Register by
                                     </dt>
                                     <dd class="font-extrabold text-mk-navy">{{ $regDeadline->format('D, M j, Y') }}</dd>
+                                </div>
+                            @endif
+                            @if ($startDate)
+                                <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
+                                    <dt class="inline-flex items-center gap-2 font-bold text-slate-500">
+                                        <svg class="h-4 w-4 text-mk-gold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+                                        Start date
+                                    </dt>
+                                    <dd class="font-extrabold text-mk-navy">{{ $startDate->format('D, M j, Y') }}</dd>
                                 </div>
                             @endif
                             @if ($availableSeats !== null)
@@ -234,38 +235,6 @@
                 @endif
             </x-card>
 
-            <x-card>
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <p class="text-sm font-bold uppercase tracking-wide text-mk-gold">Outcomes</p>
-                        <h2 class="mt-1 text-2xl font-extrabold text-mk-navy">What you will learn</h2>
-                    </div>
-                    <x-badge tone="blue">Student focused</x-badge>
-                </div>
-                <ul class="mt-6 grid gap-3 md:grid-cols-2">
-                    @forelse (($course['outcomes'] ?? []) as $outcome)
-                        <li class="flex items-start gap-3 rounded-lg border border-slate-100 bg-slate-50 p-4">
-                            <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-mk-gold text-mk-navy">
-                                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>
-                            </span>
-                            <span class="text-sm font-bold leading-6 text-mk-navy">{{ $outcome }}</span>
-                        </li>
-                    @empty
-                        <li class="text-sm leading-6 text-slate-600">Learning outcomes will be published soon.</li>
-                    @endforelse
-                </ul>
-            </x-card>
-        </div>
-    </section>
-
-    <section class="bg-white py-16">
-        <div class="mk-container">
-            <x-section-header eyebrow="Skills" title="Skills you will gain" />
-            <div class="mt-8 flex flex-wrap gap-3">
-                @foreach ($skills as $skill)
-                    <x-badge tone="gold">{{ $skill }}</x-badge>
-                @endforeach
-            </div>
         </div>
     </section>
 
@@ -368,9 +337,10 @@
                 @elseif ($ctaState === 'enrolled' && ! empty($course['id']))
                     <x-button :href="route('student.courses.learn', $course['id'])" size="lg">Continue Learning</x-button>
                 @elseif ($ctaState === 'non_student')
-                    <x-button :href="route('courses.show', $course['slug'])" size="lg">View Course</x-button>
+                    <x-button :href="route('courses.show', $course['slug'])" size="lg">Open Now</x-button>
                 @else
                     <x-button :href="route('login')" size="lg">Login to Continue</x-button>
+                    <x-button :href="route('register')" variant="secondary" size="lg">Register</x-button>
                 @endif
             </div>
         </div>
@@ -387,5 +357,3 @@
         </div>
     </section>
 </x-layouts.app>
-
-

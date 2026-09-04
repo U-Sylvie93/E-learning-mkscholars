@@ -241,11 +241,11 @@
                                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/></svg>
                                     <span class="hidden min-[360px]:inline">Menu</span>
                                 </summary>
-                                <div class="absolute left-0 top-12 z-40 flex max-h-[calc(100vh-5rem)] w-80 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+                                <div class="absolute left-0 top-12 z-40 flex max-h-[calc(100dvh-5rem)] w-80 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
                                     <div class="mb-3 border-b border-slate-100 pb-3">
                                         <x-brand-logo size="sm" />
                                     </div>
-                                    <nav class="grid min-h-0 gap-1 overflow-y-auto pr-1" aria-label="Mobile {{ $roleLabel }} navigation">
+                                    <nav class="grid min-h-0 flex-1 gap-1 overflow-y-auto overscroll-contain pr-1" aria-label="Mobile {{ $roleLabel }} navigation">
                                         @foreach ($navItems as $item)
                                             @php($isActive = request()->routeIs($item['route']) || request()->routeIs($item['route'].'.*'))
                                             <a

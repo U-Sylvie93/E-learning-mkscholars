@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Support\LoginAuthenticator;
+use App\Models\User;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 
@@ -20,6 +21,10 @@ class LoginForm extends Component
     {
         $credentials = $this->validate();
         $user = app(LoginAuthenticator::class)->attempt($credentials, $this->remember);
+
+        if ($user->role === User::ROLE_STUDENT) {
+            return $this->redirectRoute('student.my-courses', navigate: false);
+        }
 
         return $this->redirect($user->dashboardPath(), navigate: false);
     }

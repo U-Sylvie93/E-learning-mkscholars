@@ -83,7 +83,7 @@
                                 @if ($subscription->isActive())
                                     <x-button :href="route('student.courses.learn', $course)" size="sm">Start Learning</x-button>
                                 @else
-                                    <x-button :href="route('courses.show', $course->slug)" size="sm" variant="secondary">View Course</x-button>
+                                    <x-button :href="route('courses.show', $course->slug)" size="sm" variant="secondary">Open Now</x-button>
                                 @endif
                             </div>
                         </div>
@@ -124,4 +124,3 @@
         </div>
     </section>
 </x-dashboard-layout>
-

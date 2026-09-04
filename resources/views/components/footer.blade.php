@@ -1,5 +1,5 @@
 <footer class="bg-[#062B45] text-white">
-    <div class="border-b border-white/10 bg-white/[0.025]">
+    <div class="hidden border-b border-white/10 bg-white/[0.025] sm:block">
         <div class="mk-container py-5">
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 @foreach ([
@@ -99,5 +99,4 @@
         </div>
     </div>
 </footer>
-
 

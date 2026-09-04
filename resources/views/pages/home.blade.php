@@ -61,58 +61,6 @@
         </div>
     </section>
 
-    <section class="relative z-10 -mt-8 bg-mk-cloud pb-16">
-        <div class="mk-container">
-            <div class="overflow-hidden rounded-[2rem] bg-[#0B5D8E] p-3 shadow-soft" data-testid="home-stats-belt">
-                <div class="grid gap-3 md:grid-cols-4">
-                    @foreach ([
-                        [$academyCount, 'Academies', 'Focused learning lanes', 'academy'],
-                        [$courseCount, 'Courses', 'Published learning paths', 'book'],
-                        [$studentCountValue, 'Students supported', 'Registered student accounts', 'users'],
-                        [$supportCount, 'Support pillars', 'Courses, learning support, live classes, certificates', 'headset'],
-                    ] as $stat)
-                        <div class="rounded-[1.5rem] bg-white/95 p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-soft md:p-7">
-                            <div class="flex items-start gap-4">
-                                <span class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#FFF6DC] text-[#062B45] ring-1 ring-mk-gold/40">
-                                    <x-public-icon :name="$stat[3]" class="h-6 w-6" />
-                                </span>
-                                <div>
-                                    <p class="text-4xl font-black text-[#062B45] sm:text-5xl">
-                                        <span data-testid="animated-counter" data-counter-target="{{ $stat[0] }}">{{ $stat[0] }}</span>
-                                    </p>
-                                    <p class="mt-3 text-sm font-extrabold uppercase tracking-wide text-[#0B5D8E]">{{ $stat[1] }}</p>
-                                    <p class="mt-2 text-sm leading-6 text-slate-600">{{ $stat[2] }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="bg-white py-20">
-        <div class="mk-container">
-            <x-section-header eyebrow="Learning journey" title="Four steps that keep students moving" description="A guided journey from choosing a focus to showing real progress." />
-            <div class="mt-12 grid gap-5 lg:grid-cols-4" data-testid="pathways-section">
-                @foreach ([
-                    ['Build tech skills', 'Start with practical tools, coding habits, and project confidence.', 'code'],
-                    ['Prepare for exams', 'Use structured lessons and checkpoints to revise with less guesswork.', 'clipboard'],
-                    ['Plan next steps', 'Organize certificates, documents, goals, and learning evidence.', 'compass'],
-                    ['Grow career confidence', 'Practice communication, interviews, and portfolio-ready proof.', 'trending'],
-                ] as $pathway)
-                    <article class="relative rounded-[1.75rem] border border-slate-200 bg-slate-50 p-6 shadow-sm transition hover:-translate-y-1 hover:bg-white hover:shadow-soft">
-                        <div class="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-mk-navy text-mk-gold shadow-sm">
-                            <x-public-icon :name="$pathway[2]" class="h-7 w-7" />
-                        </div>
-                        <h3 class="mt-8 text-xl font-black tracking-normal text-mk-navy">{{ $pathway[0] }}</h3>
-                        <p class="mt-3 text-sm leading-7 text-slate-600">{{ $pathway[1] }}</p>
-                    </article>
-                @endforeach
-            </div>
-        </div>
-    </section>
-
     <section class="py-20">
         <div class="mk-container">
             <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
@@ -141,32 +89,36 @@
         </div>
     </section>
 
-    <section class="bg-[#EAF2F8] py-20">
-        <div class="mk-container grid gap-8 lg:grid-cols-2 lg:items-center">
-            <div>
-                <p class="text-sm font-bold uppercase tracking-wide text-[#0B5D8E]">Support system</p>
-                <h2 class="mt-3 text-3xl font-extrabold text-mk-navy sm:text-4xl">Certificates, learning support, and live learning in one student workspace</h2>
-                <p class="mt-5 text-sm leading-7 text-slate-600">MK Scholars keeps learning evidence visible through progress, quiz results, assignments, live class attendance, support check-ins, and public certificate verification.</p>
-            </div>
-            <div class="grid gap-4 sm:grid-cols-2">
-                @foreach ([
-                    ['Verified certificates', 'certificate'],
-                    ['Weekly check-ins', 'headset'],
-                    ['Live class schedule', 'calendar'],
-                    ['Progress tracker', 'chart'],
-                ] as $item)
-                    <div class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-5 text-sm font-bold text-mk-navy shadow-sm transition hover:-translate-y-1 hover:shadow-soft">
-                        <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-mk-gold text-mk-navy">
-                            <x-public-icon :name="$item[1]" class="h-5 w-5" />
-                        </span>
-                        <span>{{ $item[0] }}</span>
-                    </div>
-                @endforeach
+    <section class="bg-mk-cloud py-16">
+        <div class="mk-container">
+            <div class="overflow-hidden rounded-[2rem] bg-[#0B5D8E] p-3 shadow-soft" data-testid="home-stats-belt">
+                <div class="grid gap-3 md:grid-cols-4">
+                    @foreach ([
+                        [$academyCount, 'Academies', 'Focused learning lanes', 'academy'],
+                        [$courseCount, 'Courses', 'Published learning paths', 'book'],
+                        [$studentCountValue, 'Students supported', 'Registered student accounts', 'users'],
+                        [$supportCount, 'Support pillars', 'Courses, learning support, live classes, certificates', 'headset'],
+                    ] as $stat)
+                        <div class="rounded-[1.5rem] bg-white/95 p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-soft md:p-7">
+                            <div class="flex items-start gap-4">
+                                <span class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#FFF6DC] text-[#062B45] ring-1 ring-mk-gold/40">
+                                    <x-public-icon :name="$stat[3]" class="h-6 w-6" />
+                                </span>
+                                <div>
+                                    <p class="text-4xl font-black text-[#062B45] sm:text-5xl">
+                                        <span data-testid="animated-counter" data-counter-target="{{ $stat[0] }}">{{ $stat[0] }}</span>
+                                    </p>
+                                    <p class="mt-3 text-sm font-extrabold uppercase tracking-wide text-[#0B5D8E]">{{ $stat[1] }}</p>
+                                    <p class="mt-2 text-sm leading-6 text-slate-600">{{ $stat[2] }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
             </div>
         </div>
     </section>
 </x-layouts.app>
-
 
 
 

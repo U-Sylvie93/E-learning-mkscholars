@@ -48,7 +48,24 @@
         </div>
     </section>
 
-    <section class="relative -mt-10 pb-12">
+    <section id="academy-list" class="bg-mk-cloud pb-20 pt-4">
+        <div class="mk-container">
+            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3" data-testid="academies-grid">
+                @forelse ($academies as $academy)
+                    <x-academy-card :academy="$academy" />
+                @empty
+                    <div class="rounded-[2rem] border border-slate-200 bg-white p-8 text-center shadow-soft md:col-span-2 lg:col-span-3">
+                        <span class="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-mk-navy text-mk-gold"><x-public-icon name="academy" class="h-7 w-7" /></span>
+                        <h2 class="mt-5 text-2xl font-black text-mk-navy">Academies are being prepared</h2>
+                        <p class="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-600">Published academy pathways will appear here once they are available.</p>
+                        <x-button :href="route('contact')" class="mt-6">Contact MK Scholars</x-button>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+    </section>
+
+    <section class="bg-mk-cloud pb-16">
         <div class="mk-container grid gap-4 md:grid-cols-4" data-testid="academies-trust-strip">
             @foreach ([
                 [$academyCount, 'Academies', 'Structured learning pathways', 'academy'],
@@ -69,34 +86,4 @@
             @endforeach
         </div>
     </section>
-
-    <section id="academy-list" class="bg-mk-cloud pb-20 pt-4">
-        <div class="mk-container">
-            <div class="mb-8 grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
-                <x-section-header eyebrow="Browse pathways" title="Pick the learning lane that matches your next goal" description="Every academy card is designed to help students scan the focus, support model, and matching courses before choosing where to begin." />
-                <div class="grid gap-3 rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-3">
-                    @foreach ([['Skills', 'code'], ['Exams', 'clipboard'], ['Progress', 'chart']] as $filter)
-                        <div class="flex items-center gap-3 rounded-2xl bg-slate-50 p-3 text-sm font-extrabold text-mk-navy">
-                            <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-mk-goldSoft text-mk-navy"><x-public-icon :name="$filter[1]" class="h-4 w-4" /></span>
-                            {{ $filter[0] }}
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-
-            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3" data-testid="academies-grid">
-                @forelse ($academies as $academy)
-                    <x-academy-card :academy="$academy" />
-                @empty
-                    <div class="rounded-[2rem] border border-slate-200 bg-white p-8 text-center shadow-soft md:col-span-2 lg:col-span-3">
-                        <span class="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-mk-navy text-mk-gold"><x-public-icon name="academy" class="h-7 w-7" /></span>
-                        <h2 class="mt-5 text-2xl font-black text-mk-navy">Academies are being prepared</h2>
-                        <p class="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-600">Published academy pathways will appear here once they are available.</p>
-                        <x-button :href="route('contact')" class="mt-6">Contact MK Scholars</x-button>
-                    </div>
-                @endforelse
-            </div>
-        </div>
-    </section>
 </x-layouts.app>
-

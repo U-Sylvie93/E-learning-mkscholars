@@ -42,7 +42,31 @@
         </div>
     </section>
 
-    <section class="relative -mt-10 pb-12">
+    <section id="course-list" class="bg-mk-cloud pb-20 pt-4">
+        <div class="mk-container">
+            @if ($activeAcademy)
+                <div class="mb-6 flex flex-col gap-3 rounded-2xl border border-mk-gold/30 bg-mk-goldSoft/70 p-4 md:flex-row md:items-center md:justify-between">
+                    <p class="text-sm font-bold text-mk-navy">Showing courses for selected academy.</p>
+                    <x-button :href="route('courses')" size="sm" variant="secondary">Clear Filter</x-button>
+                </div>
+            @endif
+
+            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3" data-testid="courses-grid">
+                @forelse ($courses as $course)
+                    <x-course-card :course="$course" />
+                @empty
+                    <div class="rounded-[2rem] border border-slate-200 bg-white p-8 text-center shadow-soft md:col-span-2 lg:col-span-3">
+                        <span class="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-mk-navy text-mk-gold"><x-public-icon name="book" class="h-7 w-7" /></span>
+                        <h2 class="mt-5 text-2xl font-black text-mk-navy">Courses are being prepared</h2>
+                        <p class="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-600">Published courses will appear here once available.</p>
+                        <x-button :href="route('contact')" class="mt-6">Contact MK Scholars</x-button>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+    </section>
+
+    <section class="bg-mk-cloud pb-16">
         <div class="mk-container grid gap-4 md:grid-cols-4" data-testid="courses-trust-strip">
             @foreach ([
                 [$courseCount, 'Courses', 'Published learning paths ready to explore', 'book'],
@@ -65,41 +89,4 @@
             @endforeach
         </div>
     </section>
-
-    <section id="course-list" class="bg-mk-cloud pb-20 pt-4">
-        <div class="mk-container">
-            @if ($activeAcademy)
-                <div class="mb-6 flex flex-col gap-3 rounded-2xl border border-mk-gold/30 bg-mk-goldSoft/70 p-4 md:flex-row md:items-center md:justify-between">
-                    <p class="text-sm font-bold text-mk-navy">Showing courses for selected academy.</p>
-                    <x-button :href="route('courses')" size="sm" variant="secondary">Clear Filter</x-button>
-                </div>
-            @endif
-
-            <div class="mb-8 grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
-                <x-section-header eyebrow="Browse courses" title="Choose a practical course and start with clarity" description="Scan the academy, level, lesson count, certificate value, and pricing before opening a full course profile." />
-                <div class="grid gap-3 rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-3">
-                    @foreach ([['Learning path', 'compass'], ['Assignments', 'clipboard'], ['Progress', 'chart']] as $filter)
-                        <div class="flex items-center gap-3 rounded-2xl bg-slate-50 p-3 text-sm font-extrabold text-mk-navy">
-                            <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-mk-goldSoft text-mk-navy"><x-public-icon :name="$filter[1]" class="h-4 w-4" /></span>
-                            {{ $filter[0] }}
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-
-            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3" data-testid="courses-grid">
-                @forelse ($courses as $course)
-                    <x-course-card :course="$course" />
-                @empty
-                    <div class="rounded-[2rem] border border-slate-200 bg-white p-8 text-center shadow-soft md:col-span-2 lg:col-span-3">
-                        <span class="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-mk-navy text-mk-gold"><x-public-icon name="book" class="h-7 w-7" /></span>
-                        <h2 class="mt-5 text-2xl font-black text-mk-navy">Courses are being prepared</h2>
-                        <p class="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-600">Published courses will appear here once available.</p>
-                        <x-button :href="route('contact')" class="mt-6">Contact MK Scholars</x-button>
-                    </div>
-                @endforelse
-            </div>
-        </div>
-    </section>
 </x-layouts.app>
-

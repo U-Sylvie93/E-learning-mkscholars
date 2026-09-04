@@ -8,6 +8,7 @@ use App\Models\CourseRoomMessage;
 use App\Models\User;
 use App\Services\AppNotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -176,6 +177,18 @@ class CourseRoomView
             Storage::disk('public')->delete($attachmentPath);
         }
 
+        if (! Schema::hasColumn('course_room_messages', 'deleted_at')) {
+            $message->delete();
+
+            if ($room) {
+                $room->update([
+                    'last_message_at' => $room->messages()->latest()->value('created_at'),
+                ]);
+            }
+
+            return;
+        }
+
         $message->forceFill([
             'body' => '',
             'attachment_path' => null,
@@ -183,8 +196,13 @@ class CourseRoomView
             'attachment_mime' => null,
             'attachment_size' => null,
             'deleted_at' => now(),
-            'deleted_by_id' => $user->id,
-        ])->save();
+        ]);
+
+        if (Schema::hasColumn('course_room_messages', 'deleted_by_id')) {
+            $message->deleted_by_id = $user->id;
+        }
+
+        $message->save();
 
         if ($room) {
             $room->update(['last_message_at' => now()]);

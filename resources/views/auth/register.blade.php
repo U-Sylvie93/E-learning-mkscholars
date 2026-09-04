@@ -3,7 +3,7 @@
         <div class="absolute inset-x-0 top-0 h-48 bg-mk-navy"></div>
         <div class="mk-container relative">
             <div class="grid overflow-hidden rounded-2xl border border-white/60 bg-white shadow-2xl shadow-mk-navy/10 lg:grid-cols-[1fr_1fr]">
-                <div class="relative overflow-hidden bg-mk-navy p-6 text-white sm:p-8 lg:p-10">
+                <div class="relative hidden overflow-hidden bg-mk-navy p-6 text-white sm:p-8 lg:block lg:p-10">
                     <div class="absolute inset-0 opacity-25" aria-hidden="true">
                         <div class="absolute left-1/3 top-0 h-72 w-72 rounded-full bg-mk-gold blur-3xl"></div>
                         <div class="absolute -bottom-20 -left-20 h-72 w-72 rounded-full bg-sky-500 blur-3xl"></div>
@@ -48,4 +48,3 @@
         </div>
     </section>
 </x-layouts.app>
-

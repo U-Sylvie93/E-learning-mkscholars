@@ -54,6 +54,10 @@ class RegisterForm extends Component
         Auth::login($user);
         session()->regenerate();
 
+        if ($user->role === User::ROLE_STUDENT) {
+            return $this->redirectRoute('student.my-courses', navigate: false);
+        }
+
         return $this->redirect($user->dashboardPath(), navigate: false);
     }
 
@@ -62,4 +66,3 @@ class RegisterForm extends Component
         return view('livewire.register-form');
     }
 }
-

@@ -545,6 +545,10 @@ Route::middleware('guest')->group(function (): void {
 
         $user = $authenticator->attempt($credentials, $request->boolean('remember'));
 
+        if ($user->role === User::ROLE_STUDENT) {
+            return redirect()->route('student.my-courses');
+        }
+
         return redirect($user->dashboardPath());
     })->name('login.store');
     Route::view('/register', 'auth.register')->name('register');
@@ -3866,5 +3870,4 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return redirect()->route('mentor.check-ins');
     })->middleware('role:'.User::ROLE_MENTOR)->name('mentor.check-ins.complete');
 });
-
 
