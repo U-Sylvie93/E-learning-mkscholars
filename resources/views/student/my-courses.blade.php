@@ -85,7 +85,9 @@
                 <x-badge tone="gray">{{ $unpaidCourses->count() }} courses</x-badge>
             </div>
 
-            @php($mergedUnpaid = $unpaidCourses->concat($availablePaidCourses ?? collect()))
+            @php
+                $mergedUnpaid = $unpaidCourses->concat($availablePaidCourses ?? collect());
+            @endphp
             @if ($mergedUnpaid->isEmpty())
                 <x-empty-state
                     icon="payments"
