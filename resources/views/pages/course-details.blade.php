@@ -238,51 +238,6 @@
         </div>
     </section>
 
-    <section class="py-16">
-        <div class="mk-container">
-            <x-section-header eyebrow="Syllabus" title="Course syllabus" description="Preview the published modules, lessons, lesson types, and free preview items." />
-            <div class="mt-10 grid gap-5">
-                @forelse (($course['modules'] ?? []) as $module)
-                    <x-card>
-                        <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                            <div>
-                                <h3 class="text-xl font-bold text-mk-navy">{{ $module['title'] }}</h3>
-                                @if (! empty($module['summary']))
-                                    <p class="mt-2 text-sm leading-6 text-slate-600">{{ $module['summary'] }}</p>
-                                @endif
-                            </div>
-                            <x-badge tone="gray">{{ count($module['lessons']) }} lessons</x-badge>
-                        </div>
-                        <div class="mt-6 divide-y divide-slate-100 rounded-lg border border-slate-100">
-                            @forelse ($module['lessons'] as $lesson)
-                                <div class="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
-                                    <div>
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <h4 class="font-bold text-mk-navy">{{ $lesson['title'] }}</h4>
-                                            @if ($lesson['is_free_preview'])
-                                                <x-badge>Free preview</x-badge>
-                                            @endif
-                                        </div>
-                                        <div class="mt-2 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                            <span>{{ $lesson['lesson_type'] }}</span>
-                                            @if (! empty($lesson['duration_minutes']))
-                                                <span>{{ $lesson['duration_minutes'] }} min</span>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-                            @empty
-                                <div class="p-4 text-sm text-slate-600">Lessons will be published soon.</div>
-                            @endforelse
-                        </div>
-                    </x-card>
-                @empty
-                    <x-card><p class="text-sm leading-6 text-slate-600">The curriculum outline will be published soon.</p></x-card>
-                @endforelse
-            </div>
-        </div>
-    </section>
-
     <section class="bg-white py-16">
         <div class="mk-container grid gap-5 md:grid-cols-3">
             @foreach ([['Quizzes', 'Check understanding with structured questions.'], ['Assignments', 'Build work students can review and improve.'], ['Live classes', 'Join scheduled sessions with external meeting links.']] as $preview)
@@ -306,7 +261,7 @@
                     @if ($course['offers_certificate'] ?? false)
                         <p class="text-sm leading-6 text-slate-600"><strong class="text-mk-navy">Will I get a certificate?</strong> Certificates can be issued and publicly verified after completion.</p>
                     @endif
-                    <p class="text-sm leading-6 text-slate-600"><strong class="text-mk-navy">Can I preview lessons?</strong> Free preview lessons are marked inside the syllabus.</p>
+                    <p class="text-sm leading-6 text-slate-600"><strong class="text-mk-navy">Can I preview lessons?</strong> Free preview lessons are available after opening the course.</p>
                 </div>
             </x-card>
         </div>

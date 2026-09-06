@@ -35,6 +35,7 @@
                         @php
                             $course = $item['course'];
                             $academy = $course->academy?->name ?? 'MK Scholars';
+                            $courseImage = $course->coverImageUrl() ?: asset('images/marketing/practical-courses.webp');
                             $completion = $item['completion'];
                             $offersCertificate = $course->offersCertificate();
                             $completed = (bool) $completion->completed_at || $completion->is_eligible_for_certificate;
@@ -44,8 +45,11 @@
                                 : $completion->lesson_percentage.'% lessons';
                             $certificateBadgeTone = $offersCertificate && $completion->is_eligible_for_certificate ? 'success' : 'gray';
                         @endphp
-                        <x-card class="flex h-full flex-col p-5">
-                            <div class="flex flex-1 flex-col">
+                        <x-card class="flex h-full flex-col overflow-hidden p-0">
+                            <a href="{{ $learnHref }}" class="block aspect-[16/9] overflow-hidden bg-mk-navy mk-focus" aria-label="{{ $course->title }}">
+                                <img src="{{ $courseImage }}" alt="{{ $course->title }}" class="h-full w-full object-cover transition duration-500 hover:scale-105">
+                            </a>
+                            <div class="flex flex-1 flex-col p-5">
                                 <p class="text-xs font-bold uppercase tracking-wide text-mk-gold">{{ $academy }}</p>
                                 <h3 class="mt-2 line-clamp-2 break-words text-lg font-black tracking-normal text-mk-navy">
                                     <a href="{{ $learnHref }}" class="mk-focus rounded-sm hover:text-mk-blue">{{ $course->title }}</a>
@@ -100,11 +104,15 @@
                         @php
                             $course = $item['course'];
                             $academy = $course->academy?->name ?? 'MK Scholars';
+                            $courseImage = $course->coverImageUrl() ?: asset('images/marketing/practical-courses.webp');
                             $isPending = $item['payment'] && in_array($item['payment']->status, [\App\Models\Payment::STATUS_PENDING, \App\Models\Payment::STATUS_SUBMITTED], true);
                             $paymentHref = $item['pay_href'] ?? route('courses.show', $course->slug);
                         @endphp
-                        <x-card class="flex h-full flex-col p-5">
-                            <div class="flex flex-1 flex-col">
+                        <x-card class="flex h-full flex-col overflow-hidden p-0">
+                            <a href="{{ route('courses.show', $course->slug) }}" class="block aspect-[16/9] overflow-hidden bg-mk-navy mk-focus" aria-label="{{ $course->title }}">
+                                <img src="{{ $courseImage }}" alt="{{ $course->title }}" class="h-full w-full object-cover transition duration-500 hover:scale-105">
+                            </a>
+                            <div class="flex flex-1 flex-col p-5">
                                 <div class="flex flex-wrap items-center justify-between gap-2">
                                     <p class="text-xs font-bold uppercase tracking-wide text-mk-gold">{{ $academy }}</p>
                                     <x-badge :tone="$item['status_tone']">{{ $item['status_label'] }}</x-badge>
