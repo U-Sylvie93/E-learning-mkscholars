@@ -55,8 +55,8 @@
                     @elseif ($ctaState === 'non_student')
                         <x-button :href="route('courses.show', $course['slug'])" size="lg">Open Now</x-button>
                     @else
-                        <x-button :href="route('login')" size="lg">Login to Continue</x-button>
-                        <x-button :href="route('register')" variant="secondary" size="lg">Register</x-button>
+                        <x-button :href="route('login', ['redirect' => route('courses.show', $course['slug'])])" size="lg">Login to Continue</x-button>
+                        <x-button :href="route('register', ['redirect' => route('courses.show', $course['slug'])])" variant="secondary" size="lg">Register</x-button>
                     @endif
                     <x-button :href="route('courses')" variant="secondary" size="lg">Back to Courses</x-button>
                 </div>
@@ -294,8 +294,8 @@
                 @elseif ($ctaState === 'non_student')
                     <x-button :href="route('courses.show', $course['slug'])" size="lg">Open Now</x-button>
                 @else
-                    <x-button :href="route('login')" size="lg">Login to Continue</x-button>
-                    <x-button :href="route('register')" variant="secondary" size="lg">Register</x-button>
+                    <x-button :href="route('login', ['redirect' => route('courses.show', $course['slug'])])" size="lg">Login to Continue</x-button>
+                    <x-button :href="route('register', ['redirect' => route('courses.show', $course['slug'])])" variant="secondary" size="lg">Register</x-button>
                 @endif
             </div>
         </div>

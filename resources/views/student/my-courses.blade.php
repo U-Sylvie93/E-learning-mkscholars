@@ -56,7 +56,6 @@
                                 </h3>
                                 <div class="mt-3 flex flex-wrap items-center gap-2">
                                     <x-badge :tone="$completed ? 'success' : 'green'">{{ $completed ? 'Completed' : $item['access_label'] }}</x-badge>
-                                    <x-badge tone="gray">{{ $course->instructor?->name ?? 'MK Scholars' }}</x-badge>
                                     <x-badge :tone="$certificateBadgeTone">{{ $certificateBadge }}</x-badge>
                                 </div>
                                 <div class="mt-4">
@@ -121,7 +120,6 @@
                                     <a href="{{ route('courses.show', $course->slug) }}" class="mk-focus rounded-sm hover:text-mk-blue">{{ $course->title }}</a>
                                 </h3>
                                 <div class="mt-3 flex flex-wrap items-center gap-2">
-                                    <x-badge tone="gray">{{ $course->instructor?->name ?? 'MK Scholars' }}</x-badge>
                                     <x-badge tone="blue">{{ $course->priceLabel() }}</x-badge>
                                 </div>
                                 <p class="mt-4 flex-1 text-sm leading-6 text-slate-600">{{ $item['reason'] }}</p>

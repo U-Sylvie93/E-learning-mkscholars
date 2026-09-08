@@ -21,12 +21,6 @@
                 </span>
             </div>
         @endif
-        <div class="absolute left-4 top-4 flex max-w-[calc(100%-2rem)] flex-wrap gap-2">
-            <span class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/92 px-3 py-1.5 text-xs font-extrabold text-mk-navy shadow-soft backdrop-blur">
-                <x-academy-icon :name="$academyIcon" class="h-4 w-4 text-mk-gold" />
-                {{ $course['academy'] }}
-            </span>
-        </div>
         <div class="absolute bottom-4 left-4 right-4 flex flex-wrap gap-2">
             @if ($course['offers_certificate'] ?? false)
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-mk-gold px-3 py-1.5 text-xs font-extrabold text-mk-navy shadow-soft"><x-public-icon name="certificate" class="h-3.5 w-3.5" />Certificate</span>

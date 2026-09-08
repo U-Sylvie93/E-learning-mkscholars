@@ -546,6 +546,12 @@ Route::middleware('guest')->group(function (): void {
         $user = $authenticator->attempt($credentials, $request->boolean('remember'));
 
         if ($user->role === User::ROLE_STUDENT) {
+            $redirect = $request->query('redirect');
+
+            if (is_string($redirect) && Str::startsWith($redirect, url('/'))) {
+                return redirect($redirect);
+            }
+
             return redirect()->route('student.my-courses');
         }
 
@@ -3870,4 +3876,3 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return redirect()->route('mentor.check-ins');
     })->middleware('role:'.User::ROLE_MENTOR)->name('mentor.check-ins.complete');
 });
-

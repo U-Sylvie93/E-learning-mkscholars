@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -19,6 +20,13 @@ class RegisterForm extends Component
     public string $password = '';
 
     public string $password_confirmation = '';
+
+    public ?string $redirect = null;
+
+    public function mount(): void
+    {
+        $this->redirect = request()->query('redirect');
+    }
 
     public function register()
     {
@@ -55,10 +63,25 @@ class RegisterForm extends Component
         session()->regenerate();
 
         if ($user->role === User::ROLE_STUDENT) {
+            $redirect = $this->studentRedirect();
+
+            if ($redirect) {
+                return $this->redirect($redirect, navigate: false);
+            }
+
             return $this->redirectRoute('student.my-courses', navigate: false);
         }
 
         return $this->redirect($user->dashboardPath(), navigate: false);
+    }
+
+    private function studentRedirect(): ?string
+    {
+        if (! $this->redirect || ! Str::startsWith($this->redirect, url('/'))) {
+            return null;
+        }
+
+        return $this->redirect;
     }
 
     public function render()
