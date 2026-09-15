@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 class Course extends Model
 {
@@ -339,10 +340,30 @@ class Course extends Model
 
     public static function fallbackImageForAcademy(?string $academyName): ?string
     {
-        return null;
+        $normalized = Str::of($academyName ?? '')->lower()->toString();
+
+        $fallbacks = [
+            'language' => 'images/demo/academy-language.webp',
+            'english' => 'images/demo/academy-language.webp',
+            'ielts' => 'images/demo/academy-language.webp',
+            'duolingo' => 'images/demo/academy-language.webp',
+            'coding' => 'images/demo/academy-technology.webp',
+            'tech' => 'images/demo/academy-technology.webp',
+            'technology' => 'images/demo/academy-technology.webp',
+            'interview' => 'images/demo/academy-career.webp',
+            'career' => 'images/demo/academy-career.webp',
+            'exam' => 'images/demo/academy-exams.webp',
+            'test' => 'images/demo/academy-exams.webp',
+        ];
+
+        foreach ($fallbacks as $needle => $path) {
+            if (str_contains($normalized, $needle) && file_exists(public_path($path))) {
+                return asset($path);
+            }
+        }
+
+        return asset('images/marketing/practical-courses.webp');
     }
 }
-
-
 
 

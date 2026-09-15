@@ -134,6 +134,32 @@ MARKDOWN,
             ->assertSee('property="og:description" content="Shared course description."', false);
     }
 
+    public function test_public_course_detail_uses_academy_fallback_image_for_social_share_meta(): void
+    {
+        $academy = Academy::factory()->create([
+            'name' => 'Language Academy',
+            'slug' => 'language-academy',
+            'status' => Academy::STATUS_PUBLISHED,
+        ]);
+
+        $course = Course::factory()->create([
+            'academy_id' => $academy->id,
+            'title' => 'IELTS Mastery Coaching',
+            'slug' => 'ielts-mastery-coaching',
+            'short_description' => 'Ready to take your IELTS score to the next level?',
+            'status' => Course::STATUS_PUBLISHED,
+            'featured_image_path' => null,
+        ]);
+
+        $fallbackImageUrl = asset('images/demo/academy-language.webp');
+
+        $this->get(route('courses.show', $course->slug))
+            ->assertOk()
+            ->assertSee('property="og:image" content="'.$fallbackImageUrl.'"', false)
+            ->assertSee('name="twitter:image" content="'.$fallbackImageUrl.'"', false)
+            ->assertDontSee('property="og:image" content="'.asset('images/mk-scholars-logo.webp').'"', false);
+    }
+
     public function test_course_detail_handles_missing_overview_and_cover_image(): void
     {
         $academy = Academy::factory()->create([
