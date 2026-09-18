@@ -1,0 +1,37 @@
+MK Scholars Chat — Reply + Edit
+================================
+
+Replace/copy these files into the matching project paths:
+
+1. app/Models/CourseRoomMessage.php
+2. app/Support/CourseRoomView.php
+3. routes/web.php
+4. resources/views/partials/chat-shell.blade.php
+5. resources/views/student/messages/index.blade.php
+6. resources/views/instructor/messages/index.blade.php
+7. database/migrations/2026_09_18_000100_add_reply_and_edit_to_course_room_messages.php
+
+Then, from the Laravel project root, run:
+
+    php artisan migrate
+    php artisan optimize:clear
+
+Recommended verification:
+
+    php artisan route:list | Select-String "messages"
+
+Test as a student and instructor:
+- Reply to your own message.
+- Reply to another person's message.
+- Edit your own text message.
+- Edit your own message that also has an attachment (attachment should remain unchanged).
+- Confirm another user's messages do not show Edit/Delete.
+- Delete a message that already has replies; the reply should remain and show "Original message was deleted" in its quote.
+
+Behavior added:
+- Reply uses reply_to_message_id and the normal send route.
+- Edit uses PATCH routes and edited_at.
+- Only the original sender can edit a message.
+- Deleted messages cannot be edited or replied to.
+- Editing changes text only; attachments are preserved.
+- Replies must reference a message in the same course room.

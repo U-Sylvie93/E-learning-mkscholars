@@ -20,12 +20,15 @@ class CourseRoomMessage extends Model
         'attachment_size',
         'deleted_at',
         'deleted_by_id',
+        'reply_to_message_id',
+        'edited_at',
     ];
 
     protected function casts(): array
     {
         return [
             'deleted_at' => 'datetime',
+            'edited_at' => 'datetime',
         ];
     }
 
@@ -79,5 +82,10 @@ class CourseRoomMessage extends Model
     public function deletedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'deleted_by_id');
+    }
+
+    public function repliedMessage(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'reply_to_message_id');
     }
 }

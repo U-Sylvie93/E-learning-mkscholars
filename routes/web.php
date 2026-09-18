@@ -1152,6 +1152,21 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return redirect()->route('student.messages.show', $course);
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.messages.send');
 
+    Route::patch('/student/messages/{course}/messages/{message}', function (Request $request, Course $course, CourseRoomMessage $message) {
+        $user = Auth::user();
+
+        abort_unless(Enrollment::query()
+            ->where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->where('status', Enrollment::STATUS_ACTIVE)
+            ->exists(), 403);
+        abort_unless((int) $message->room?->course_id === (int) $course->id, 404);
+
+        \App\Support\CourseRoomView::editMessage($request, $message, $user);
+
+        return redirect()->route('student.messages.show', $course);
+    })->middleware('role:'.User::ROLE_STUDENT)->name('student.messages.edit');
+
     Route::delete('/student/messages/{course}/messages/{message}', function (Course $course, CourseRoomMessage $message) {
         $user = Auth::user();
 
@@ -2893,6 +2908,16 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
         return redirect()->route('instructor.messages.show', $course);
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.messages.send');
+
+    Route::patch('/instructor/messages/{course}/messages/{message}', function (Request $request, Course $course, CourseRoomMessage $message) use ($abortUnlessInstructorOwnsCourse) {
+        $user = Auth::user();
+        $abortUnlessInstructorOwnsCourse($user, $course);
+        abort_unless((int) $message->room?->course_id === (int) $course->id, 404);
+
+        \App\Support\CourseRoomView::editMessage($request, $message, $user);
+
+        return redirect()->route('instructor.messages.show', $course);
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.messages.edit');
 
     Route::delete('/instructor/messages/{course}/messages/{message}', function (Course $course, CourseRoomMessage $message) use ($abortUnlessInstructorOwnsCourse) {
         $user = Auth::user();

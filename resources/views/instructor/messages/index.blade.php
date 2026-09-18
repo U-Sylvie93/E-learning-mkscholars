@@ -5,6 +5,7 @@
         'chatBaseRoute' => $chatBaseRoute,
         'chatShowRoute' => $chatShowRoute,
         'chatSendRoute' => $chatSendRoute,
+        'chatEditRoute' => 'instructor.messages.edit',
         'chatDeleteRoute' => 'instructor.messages.delete',
     ])
 </x-dashboard-layout>

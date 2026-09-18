@@ -36,15 +36,15 @@ class CourseRoomView
         $unread = 0;
 
         try {
-            if (\Illuminate\Support\Facades\Schema::hasTable('course_rooms')) {
+            if (Schema::hasTable('course_rooms')) {
                 $room = $course->room;
 
                 if ($room) {
-                    if (\Illuminate\Support\Facades\Schema::hasTable('course_room_messages')) {
+                    if (Schema::hasTable('course_room_messages')) {
                         $latest = $room->messages()->with('sender:id,name')->latest()->first();
                         if ($latest) {
                             $lastMessage = $latest->isDeleted() ? 'This message was deleted' : trim((string) $latest->body);
-                            if ($lastMessage === '' && method_exists($latest, 'hasAttachment') && $latest->hasAttachment()) {
+                            if ($lastMessage === '' && $latest->hasAttachment()) {
                                 $lastMessage = $latest->isImageAttachment() ? '📷 Photo' : '📎 '.($latest->attachment_name ?: 'File');
                             }
                             $lastMessageAt = $latest->created_at;
@@ -77,9 +77,12 @@ class CourseRoomView
     {
         $messages = collect();
         try {
-            if (\Illuminate\Support\Facades\Schema::hasTable('course_room_messages')) {
+            if (Schema::hasTable('course_room_messages')) {
                 $messages = $room->messages()
-                    ->with('sender:id,name,role')
+                    ->with([
+                        'sender:id,name,role',
+                        'repliedMessage.sender:id,name,role',
+                    ])
                     ->orderBy('created_at')
                     ->get();
             }
@@ -109,6 +112,7 @@ class CourseRoomView
         $validated = $request->validate([
             'body' => ['nullable', 'string', 'max:4000'],
             'attachment' => ['nullable', 'file', 'max:5120', 'mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip'],
+            'reply_to_message_id' => ['nullable', 'integer', 'exists:course_room_messages,id'],
         ]);
 
         if (empty(trim((string) ($validated['body'] ?? ''))) && ! $request->hasFile('attachment')) {
@@ -116,6 +120,13 @@ class CourseRoomView
         }
 
         $room = CourseRoom::firstOrCreate(['course_id' => $course->id]);
+
+        $replyToMessage = null;
+        if (! empty($validated['reply_to_message_id'])) {
+            $replyToMessage = CourseRoomMessage::query()->findOrFail((int) $validated['reply_to_message_id']);
+            abort_unless((int) $replyToMessage->course_room_id === (int) $room->id, 422, 'You can only reply to a message in this room.');
+            abort_if($replyToMessage->isDeleted(), 422, 'You cannot reply to a deleted message.');
+        }
 
         $attachmentData = [];
         if ($request->hasFile('attachment')) {
@@ -132,6 +143,7 @@ class CourseRoomView
         $message = $room->messages()->create(array_merge([
             'sender_id' => $sender->id,
             'body' => trim((string) ($validated['body'] ?? '')),
+            'reply_to_message_id' => $replyToMessage?->id,
         ], $attachmentData));
 
         $room->update(['last_message_at' => now()]);
@@ -164,6 +176,34 @@ class CourseRoomView
         }
 
         return $message;
+    }
+
+    /**
+     * Edit the text of one of the current user's messages.
+     * Attachments are intentionally kept unchanged.
+     */
+    public static function editMessage(Request $request, CourseRoomMessage $message, User $user): CourseRoomMessage
+    {
+        abort_unless((int) $message->sender_id === (int) $user->id, 403);
+        abort_if($message->isDeleted(), 422, 'Deleted messages cannot be edited.');
+
+        $validated = $request->validate([
+            'body' => ['nullable', 'string', 'max:4000'],
+        ]);
+
+        $body = trim((string) ($validated['body'] ?? ''));
+        if ($body === '' && ! $message->hasAttachment()) {
+            abort(422, 'Message body is required.');
+        }
+
+        if ((string) $message->body !== $body) {
+            $message->forceFill([
+                'body' => $body,
+                'edited_at' => now(),
+            ])->save();
+        }
+
+        return $message->refresh();
     }
 
     public static function deleteMessage(CourseRoomMessage $message, User $user): void

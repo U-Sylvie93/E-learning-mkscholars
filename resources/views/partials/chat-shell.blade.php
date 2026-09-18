@@ -2,6 +2,7 @@
     /** @var \Illuminate\Support\Collection $rooms */
     /** @var array|null $activeRoom */
     $activeCourseId = $activeRoom['course']['id'] ?? null;
+    $chatEditRoute = $chatEditRoute ?? null;
     $chatDeleteRoute = $chatDeleteRoute ?? null;
 @endphp
 
@@ -68,6 +69,7 @@
                 $lastDay = null;
                 $courseInitial = mb_strtoupper(mb_substr((string) $course['title'], 0, 1));
             @endphp
+
             <div class="flex shrink-0 items-center gap-2 border-b border-slate-100 bg-slate-50 px-2 py-2 sm:gap-3 sm:px-4 sm:py-3">
                 <a href="{{ route($chatBaseRoute) }}" class="lg:hidden inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-mk-navy hover:bg-white" aria-label="Back to chats">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -111,19 +113,16 @@
                         // Linkify: escape then wrap URLs / www. / emails with <a>.
                         $rawBody = (string) ($message->body ?? '');
                         $escapedBody = e($rawBody);
-                        // http(s):// links
                         $bodyHtml = preg_replace(
                             '~(https?://[^\s<]+)~i',
                             '<a href="$1" target="_blank" rel="noopener noreferrer" class="'.$linkClass.' break-all">$1</a>',
                             $escapedBody
                         );
-                        // Bare www. links (add https:// prefix in href)
                         $bodyHtml = preg_replace(
                             '~(^|[\s(])((?<!//)www\.[^\s<]+)~i',
                             '$1<a href="https://$2" target="_blank" rel="noopener noreferrer" class="'.$linkClass.' break-all">$2</a>',
                             $bodyHtml
                         );
-                        // Email addresses
                         $bodyHtml = preg_replace(
                             '~([\w.+-]+@[\w-]+\.[\w.-]+)~i',
                             '<a href="mailto:$1" class="'.$linkClass.' break-all">$1</a>',
@@ -136,25 +135,87 @@
                         $attachmentUrl = $hasAttachment ? $message->attachmentUrl() : null;
                         $attachmentName = $hasAttachment ? ($message->attachment_name ?? 'file') : null;
                         $attachmentSize = $hasAttachment && method_exists($message, 'humanAttachmentSize') ? $message->humanAttachmentSize() : '';
+
+                        $actionPreview = trim($rawBody);
+                        if ($actionPreview === '' && $hasAttachment) {
+                            $actionPreview = $isImage ? 'Photo' : ($attachmentName ?: 'File');
+                        }
+                        $actionPreview = \Illuminate\Support\Str::limit($actionPreview, 120);
+
+                        $replyTarget = $message->repliedMessage ?? null;
+                        $replyTargetDeleted = $replyTarget ? $replyTarget->isDeleted() : false;
+                        $replyTargetSender = $replyTarget?->sender?->name ?? 'User';
+                        $replyTargetPreview = '';
+                        if ($replyTarget) {
+                            if ($replyTargetDeleted) {
+                                $replyTargetPreview = 'Original message was deleted';
+                            } else {
+                                $replyTargetPreview = trim((string) ($replyTarget->body ?? ''));
+                                if ($replyTargetPreview === '' && $replyTarget->hasAttachment()) {
+                                    $replyTargetPreview = $replyTarget->isImageAttachment()
+                                        ? '📷 Photo'
+                                        : '📎 '.($replyTarget->attachment_name ?: 'File');
+                                }
+                                $replyTargetPreview = \Illuminate\Support\Str::limit($replyTargetPreview, 120);
+                            }
+                        }
                     @endphp
+
                     @if ($showDayDivider)
                         <div class="my-3 flex justify-center">
                             <span class="rounded-full bg-white/80 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-500 shadow-sm">{{ $dayLabel }}</span>
                         </div>
                     @endif
+
                     <div class="flex min-w-0 max-w-full {{ $alignClass }}">
-                        <div class="group relative min-w-0 w-fit max-w-[min(88%,22rem)] overflow-hidden break-words rounded-2xl px-3 py-2 shadow-sm sm:max-w-[78%] {{ $bubbleClass }}">
-                            @if ($mine && $chatDeleteRoute && ! $isDeleted)
-                                <form method="POST" action="{{ route($chatDeleteRoute, [$course['id'], $message]) }}" class="absolute right-1 top-1">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="button" class="inline-flex h-7 w-7 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white focus:bg-white/10 focus:text-white focus:outline-none" title="Delete message" aria-label="Delete message" data-chat-delete-open>
-                                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>
+                        <div class="group relative min-w-0 w-fit max-w-[min(88%,22rem)] overflow-visible break-words rounded-2xl px-3 py-2 shadow-sm sm:max-w-[78%] {{ $bubbleClass }}">
+                            @if (! $isDeleted)
+                                <button type="button"
+                                    class="absolute right-1 top-1 z-10 inline-flex h-7 w-7 items-center justify-center rounded-full transition {{ $mine ? 'text-white/70 hover:bg-white/10 hover:text-white' : 'text-slate-400 hover:bg-slate-100 hover:text-mk-navy' }} sm:opacity-0 sm:group-hover:opacity-100"
+                                    aria-label="Message actions"
+                                    title="Message actions"
+                                    data-chat-menu-toggle>
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
+                                </button>
+
+                                <div class="absolute right-1 top-8 z-30 hidden w-36 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-left shadow-xl" data-chat-menu>
+                                    <button type="button"
+                                        class="flex w-full items-center gap-2 px-3 py-2 text-xs font-bold text-mk-navy hover:bg-slate-50"
+                                        data-chat-reply
+                                        data-message-id="{{ $message->id }}"
+                                        data-message-sender="{{ $senderName }}"
+                                        data-message-preview="{{ $actionPreview }}">
+                                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17l-5-5 5-5"/><path d="M4 12h10a6 6 0 0 1 6 6v1"/></svg>
+                                        Reply
                                     </button>
-                                </form>
+
+                                    @if ($mine && $chatEditRoute)
+                                        <button type="button"
+                                            class="flex w-full items-center gap-2 px-3 py-2 text-xs font-bold text-mk-navy hover:bg-slate-50"
+                                            data-chat-edit
+                                            data-edit-url="{{ route($chatEditRoute, [$course['id'], $message]) }}"
+                                            data-message-body="{{ $rawBody }}"
+                                            data-message-has-attachment="{{ $hasAttachment ? '1' : '0' }}">
+                                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"/></svg>
+                                            Edit
+                                        </button>
+                                    @endif
+
+                                    @if ($mine && $chatDeleteRoute)
+                                        <form method="POST" action="{{ route($chatDeleteRoute, [$course['id'], $message]) }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="button" class="flex w-full items-center gap-2 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50" data-chat-delete-open>
+                                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
+                                                Delete
+                                            </button>
+                                        </form>
+                                    @endif
+                                </div>
                             @endif
+
                             @if (! $mine)
-                                <p class="text-[11px] font-black {{ $senderNameClass }}">
+                                <p class="pr-7 text-[11px] font-black {{ $senderNameClass }}">
                                     {{ $senderName }}
                                     @if ($isInstructor)
                                         <span class="ml-1 rounded bg-mk-gold px-1 text-[10px] text-mk-navy">Instructor</span>
@@ -162,17 +223,24 @@
                                 </p>
                             @endif
 
+                            @if ($replyTarget)
+                                <div class="mt-1 mr-6 rounded-lg border-l-4 {{ $mine ? 'border-mk-gold bg-white/10' : 'border-mk-gold bg-slate-50' }} px-2.5 py-2">
+                                    <p class="truncate text-[10px] font-black {{ $mine ? 'text-mk-gold' : 'text-mk-blue' }}">{{ $replyTargetSender }}</p>
+                                    <p class="mt-0.5 line-clamp-2 text-[11px] leading-4 {{ $mine ? 'text-white/75' : 'text-slate-500' }}">{{ $replyTargetPreview }}</p>
+                                </div>
+                            @endif
+
                             @if ($isDeleted)
-                                <div class="mt-1 text-sm italic leading-6 {{ $mine ? 'pr-7 text-white/75' : 'text-slate-500' }}">This message was deleted</div>
+                                <div class="mt-1 text-sm italic leading-6 {{ $mine ? 'text-white/75' : 'text-slate-500' }}">This message was deleted</div>
                             @endif
 
                             @if ($hasAttachment)
                                 @if ($isImage)
-                                    <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener noreferrer" class="mt-1 block">
+                                    <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener noreferrer" class="mt-1 block pr-6">
                                         <img src="{{ $attachmentUrl }}" alt="{{ $attachmentName }}" class="max-h-64 w-auto rounded-lg border border-black/10 object-contain">
                                     </a>
                                 @else
-                                    <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener noreferrer" class="mt-1 flex items-center gap-2 rounded-lg border {{ $mine ? 'border-white/20 bg-white/10 text-white' : 'border-slate-200 bg-slate-50 text-mk-navy' }} px-3 py-2 text-sm">
+                                    <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener noreferrer" class="mt-1 mr-6 flex items-center gap-2 rounded-lg border {{ $mine ? 'border-white/20 bg-white/10 text-white' : 'border-slate-200 bg-slate-50 text-mk-navy' }} px-3 py-2 text-sm">
                                         <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                                         <span class="min-w-0 flex-1">
                                             <span class="block truncate font-bold">{{ $attachmentName }}</span>
@@ -185,10 +253,15 @@
                             @endif
 
                             @if (! $isDeleted && $rawBody !== '')
-                                <div class="mt-1 max-w-full overflow-hidden break-words text-sm leading-6 [overflow-wrap:anywhere] {{ $mine && $chatDeleteRoute ? 'pr-7' : '' }}">{!! $bodyHtml !!}</div>
+                                <div class="mt-1 max-w-full overflow-hidden break-words pr-6 text-sm leading-6 [overflow-wrap:anywhere]">{!! $bodyHtml !!}</div>
                             @endif
 
-                            <p class="mt-1 text-right text-[10px] font-bold {{ $timeClass }}">{{ $timeLabel }}</p>
+                            <p class="mt-1 text-right text-[10px] font-bold {{ $timeClass }}">
+                                {{ $timeLabel }}
+                                @if ($message->edited_at)
+                                    <span> · edited</span>
+                                @endif
+                            </p>
                         </div>
                     </div>
                 @empty
@@ -203,22 +276,37 @@
 
             <form method="POST" action="{{ route($chatSendRoute, $course['id']) }}" enctype="multipart/form-data" class="shrink-0 border-t border-slate-100 bg-white p-2 sm:p-3" style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));" id="mk-chat-form">
                 @csrf
+                <input type="hidden" name="reply_to_message_id" id="mk-chat-reply-id" value="">
+                <input type="hidden" name="_method" id="mk-chat-method" value="PATCH" disabled>
+
+                <div id="mk-chat-context" class="mb-2 hidden items-start justify-between gap-3 rounded-xl border border-mk-gold/30 bg-mk-goldSoft/40 px-3 py-2">
+                    <div class="min-w-0 flex-1 border-l-4 border-mk-gold pl-2.5">
+                        <p class="text-[11px] font-black text-mk-navy" data-chat-context-title></p>
+                        <p class="mt-0.5 truncate text-[11px] text-slate-500" data-chat-context-preview></p>
+                    </div>
+                    <button type="button" class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-white hover:text-red-600" aria-label="Cancel" title="Cancel" data-chat-context-cancel>
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                    </button>
+                </div>
+
                 <div id="mk-chat-attachment-preview" class="mb-2 hidden items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
                     <span class="min-w-0 flex-1 truncate font-bold text-mk-navy" data-attachment-name></span>
                     <button type="button" class="rounded-md border border-slate-200 px-2 py-0.5 text-[11px] font-bold text-slate-500 hover:border-red-400 hover:text-red-600" data-attachment-clear>Remove</button>
                 </div>
+
                 <div class="flex min-w-0 items-end gap-2">
-                    <label class="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-600 shadow-sm transition hover:border-mk-gold hover:bg-mk-goldSoft hover:text-mk-navy sm:h-11 sm:w-11" title="Attach file">
+                    <label id="mk-chat-attachment-button" class="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-600 shadow-sm transition hover:border-mk-gold hover:bg-mk-goldSoft hover:text-mk-navy sm:h-11 sm:w-11" title="Attach file">
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49L12.95 2.56a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83L15.07 6.1"/></svg>
                         <span class="sr-only">Attach file</span>
                         <input type="file" name="attachment" id="chat-attachment" class="hidden" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip">
                     </label>
                     <label class="sr-only" for="chat-body">Type a message</label>
                     <textarea id="chat-body" name="body" rows="1" maxlength="4000" placeholder="Type a message" class="max-h-36 min-h-10 min-w-0 flex-1 resize-y rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30 sm:min-h-[42px] sm:px-4"></textarea>
-                    <button type="submit" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mk-navy text-white shadow-sm transition hover:bg-mk-blue sm:h-11 sm:w-11" aria-label="Send message">
+                    <button type="submit" id="mk-chat-submit" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mk-navy text-white shadow-sm transition hover:bg-mk-blue sm:h-11 sm:w-11" aria-label="Send message">
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
                     </button>
                 </div>
+
                 <div id="mk-chat-link-hint" class="mt-2 hidden items-center gap-2 text-[11px] font-bold text-mk-blue">
                     <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.1 0l-2 2A5 5 0 0 0 12 20.1l1.1-1.1"/></svg>
                     <span data-link-count>Link detected — will be clickable once sent</span>
@@ -248,7 +336,21 @@
                     var scroll = document.getElementById('mk-chat-scroll');
                     if (scroll) { scroll.scrollTop = scroll.scrollHeight; }
 
+                    var form = document.getElementById('mk-chat-form');
                     var ta = document.getElementById('chat-body');
+                    var fileInput = document.getElementById('chat-attachment');
+                    var attachmentButton = document.getElementById('mk-chat-attachment-button');
+                    var submitButton = document.getElementById('mk-chat-submit');
+                    var replyInput = document.getElementById('mk-chat-reply-id');
+                    var methodOverride = document.getElementById('mk-chat-method');
+                    var contextBar = document.getElementById('mk-chat-context');
+                    var contextTitle = contextBar ? contextBar.querySelector('[data-chat-context-title]') : null;
+                    var contextPreview = contextBar ? contextBar.querySelector('[data-chat-context-preview]') : null;
+                    var contextCancel = contextBar ? contextBar.querySelector('[data-chat-context-cancel]') : null;
+                    var originalAction = form ? form.getAttribute('action') : '';
+                    var composerMode = 'send';
+                    var editingHasAttachment = false;
+
                     var linkHint = document.getElementById('mk-chat-link-hint');
                     var linkCountEl = linkHint ? linkHint.querySelector('[data-link-count]') : null;
                     var urlRe = /(https?:\/\/[^\s]+|(?:^|\s)www\.[^\s]+|[\w.+-]+@[\w-]+\.[\w.-]+)/gi;
@@ -268,6 +370,51 @@
                         }
                     };
 
+                    var hideContext = function () {
+                        if (!contextBar) { return; }
+                        contextBar.classList.add('hidden');
+                        contextBar.classList.remove('flex');
+                        if (contextTitle) { contextTitle.textContent = ''; }
+                        if (contextPreview) { contextPreview.textContent = ''; }
+                    };
+
+                    var showContext = function (title, previewText) {
+                        if (!contextBar) { return; }
+                        if (contextTitle) { contextTitle.textContent = title || ''; }
+                        if (contextPreview) { contextPreview.textContent = previewText || ''; }
+                        contextBar.classList.remove('hidden');
+                        contextBar.classList.add('flex');
+                    };
+
+                    var clearAttachment = function () {
+                        var preview = document.getElementById('mk-chat-attachment-preview');
+                        if (fileInput) { fileInput.value = ''; }
+                        if (preview) {
+                            preview.classList.add('hidden');
+                            preview.classList.remove('flex');
+                        }
+                    };
+
+                    var resetComposer = function (clearText) {
+                        composerMode = 'send';
+                        editingHasAttachment = false;
+                        if (form && originalAction) { form.setAttribute('action', originalAction); }
+                        if (methodOverride) {
+                            methodOverride.disabled = true;
+                            methodOverride.value = 'PATCH';
+                        }
+                        if (replyInput) { replyInput.value = ''; }
+                        if (fileInput) { fileInput.disabled = false; }
+                        if (attachmentButton) { attachmentButton.classList.remove('hidden'); }
+                        if (submitButton) { submitButton.setAttribute('aria-label', 'Send message'); }
+                        hideContext();
+                        clearAttachment();
+                        if (clearText && ta) {
+                            ta.value = '';
+                            refreshLinkHint();
+                        }
+                    };
+
                     if (ta) {
                         ta.addEventListener('input', refreshLinkHint);
                         ta.addEventListener('keydown', function (e) {
@@ -278,7 +425,6 @@
                         });
                     }
 
-                    var fileInput = document.getElementById('chat-attachment');
                     var preview = document.getElementById('mk-chat-attachment-preview');
                     var nameEl = preview ? preview.querySelector('[data-attachment-name]') : null;
                     var clearBtn = preview ? preview.querySelector('[data-attachment-clear]') : null;
@@ -294,19 +440,81 @@
                                 preview.classList.remove('flex');
                             }
                         });
-                        clearBtn.addEventListener('click', function () {
-                            fileInput.value = '';
-                            preview.classList.add('hidden');
-                            preview.classList.remove('flex');
+                        clearBtn.addEventListener('click', clearAttachment);
+                    }
+
+                    var closeAllMenus = function (exceptMenu) {
+                        document.querySelectorAll('[data-chat-menu]').forEach(function (menu) {
+                            if (menu !== exceptMenu) { menu.classList.add('hidden'); }
+                        });
+                    };
+
+                    document.querySelectorAll('[data-chat-menu-toggle]').forEach(function (button) {
+                        button.addEventListener('click', function (e) {
+                            e.stopPropagation();
+                            var menu = button.parentElement ? button.parentElement.querySelector('[data-chat-menu]') : null;
+                            if (!menu) { return; }
+                            var wasHidden = menu.classList.contains('hidden');
+                            closeAllMenus(menu);
+                            menu.classList.toggle('hidden', !wasHidden);
+                        });
+                    });
+
+                    document.querySelectorAll('[data-chat-menu]').forEach(function (menu) {
+                        menu.addEventListener('click', function (e) { e.stopPropagation(); });
+                    });
+
+                    document.addEventListener('click', function () { closeAllMenus(null); });
+
+                    document.querySelectorAll('[data-chat-reply]').forEach(function (button) {
+                        button.addEventListener('click', function () {
+                            resetComposer(true);
+                            composerMode = 'reply';
+                            if (replyInput) { replyInput.value = button.dataset.messageId || ''; }
+                            showContext('Replying to ' + (button.dataset.messageSender || 'User'), button.dataset.messagePreview || 'Message');
+                            closeAllMenus(null);
+                            if (ta) { ta.focus(); }
+                        });
+                    });
+
+                    document.querySelectorAll('[data-chat-edit]').forEach(function (button) {
+                        button.addEventListener('click', function () {
+                            resetComposer(true);
+                            composerMode = 'edit';
+                            editingHasAttachment = button.dataset.messageHasAttachment === '1';
+                            if (form && button.dataset.editUrl) { form.setAttribute('action', button.dataset.editUrl); }
+                            if (methodOverride) {
+                                methodOverride.disabled = false;
+                                methodOverride.value = 'PATCH';
+                            }
+                            if (replyInput) { replyInput.value = ''; }
+                            if (fileInput) { fileInput.disabled = true; }
+                            if (attachmentButton) { attachmentButton.classList.add('hidden'); }
+                            if (ta) {
+                                ta.value = button.dataset.messageBody || '';
+                                refreshLinkHint();
+                                ta.focus();
+                                ta.setSelectionRange(ta.value.length, ta.value.length);
+                            }
+                            if (submitButton) { submitButton.setAttribute('aria-label', 'Save edited message'); }
+                            showContext('Editing message', button.dataset.messageBody || (editingHasAttachment ? 'Attachment message' : 'Message'));
+                            closeAllMenus(null);
+                        });
+                    });
+
+                    if (contextCancel) {
+                        contextCancel.addEventListener('click', function () {
+                            resetComposer(true);
+                            if (ta) { ta.focus(); }
                         });
                     }
 
-                    var form = document.getElementById('mk-chat-form');
                     if (form) {
                         form.addEventListener('submit', function (e) {
-                            var hasFile = fileInput && fileInput.files && fileInput.files[0];
+                            var hasFile = fileInput && !fileInput.disabled && fileInput.files && fileInput.files[0];
                             var hasBody = ta && ta.value.trim() !== '';
-                            if (!hasFile && !hasBody) {
+                            var validEdit = composerMode === 'edit' && (hasBody || editingHasAttachment);
+                            if (!hasFile && !hasBody && !validEdit) {
                                 e.preventDefault();
                             }
                         });
@@ -328,6 +536,7 @@
                     openDeleteButtons.forEach(function (button) {
                         button.addEventListener('click', function () {
                             pendingDeleteForm = button.closest('form');
+                            closeAllMenus(null);
                             if (!deleteModal || !pendingDeleteForm) { return; }
                             deleteModal.classList.remove('hidden');
                             deleteModal.classList.add('flex');
