@@ -1408,11 +1408,6 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $tierMatch = $course->findTier($tierInput);
         $tier = $tierMatch['slug'] ?? null;
 
-        if ($course->hasTierPricing() && $tier === null) {
-            $firstTier = $course->tierOptions()[0] ?? null;
-            $tier = $firstTier['slug'] ?? null;
-        }
-
         if ($course->requiresPayment()) {
             if ($activeSubscriptionForCourse($user, $course)) {
                 Enrollment::updateOrCreate(
@@ -1454,6 +1449,12 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
                 return redirect()->route('student.courses.learn', $course);
             }
 
+            if ($course->hasTierPricing() && $tier === null) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['tier' => 'Please choose a payment tier before continuing.']);
+            }
+
             $payment = Payment::query()
                 ->where('user_id', $user->id)
                 ->where('course_id', $course->id)
@@ -1473,8 +1474,14 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
                     'tier' => $tier,
                 ]);
 
-            if ($tier && Schema::hasColumn('payments', 'tier') && $payment->tier !== $tier) {
-                $payment->update(['tier' => $tier]);
+            if ($tier) {
+                $paymentUpdates = ['amount' => $course->payableAmount($tier)];
+
+                if (Schema::hasColumn('payments', 'tier')) {
+                    $paymentUpdates['tier'] = $tier;
+                }
+
+                $payment->update($paymentUpdates);
             }
 
             return redirect()->route('student.payments.show', $payment);

@@ -42,10 +42,14 @@
                             <x-button type="submit" size="lg">Enroll Free</x-button>
                         </form>
                     @elseif ($ctaState === 'paid_not_started' && ! empty($course['id']))
-                        <form method="POST" action="{{ route('courses.enroll', $course['id']) }}">
-                            @csrf
-                            <x-button type="submit" size="lg">Pay & Enroll</x-button>
-                        </form>
+                        @if (! empty($priceTiers))
+                            <x-button href="#course-pricing" size="lg">Choose Payment Tier</x-button>
+                        @else
+                            <form method="POST" action="{{ route('courses.enroll', $course['id']) }}">
+                                @csrf
+                                <x-button type="submit" size="lg">Pay & Enroll</x-button>
+                            </form>
+                        @endif
                     @elseif ($ctaState === 'payment_pending' && ! empty($course['payment_id']))
                         <x-button :href="route('student.payments.show', $course['payment_id'])" size="lg">Payment Pending</x-button>
                     @elseif ($ctaState === 'payment_rejected' && ! empty($course['payment_id']))
@@ -78,7 +82,7 @@
                 </div>
 
                 @if ($showPriceCard)
-                    <x-card class="-mt-14 ml-4 mr-4 relative">
+                    <x-card id="course-pricing" class="-mt-14 ml-4 mr-4 relative scroll-mt-6">
                         <div class="flex flex-col gap-4">
                             <div class="flex items-start justify-between gap-4">
                                 <div>
@@ -87,6 +91,10 @@
                                 </div>
                                 <x-badge tone="gold">Manual payment</x-badge>
                             </div>
+
+                            @error('tier')
+                                <p class="rounded-md bg-red-50 px-3 py-2 text-sm font-bold text-red-700" role="alert">{{ $message }}</p>
+                            @enderror
 
                             @if (! empty($priceTiers))
                                 <div class="grid gap-3 @if (count($priceTiers) > 1) sm:grid-cols-2 @endif">
@@ -281,10 +289,14 @@
                         <x-button type="submit" size="lg">Enroll Free</x-button>
                     </form>
                 @elseif ($ctaState === 'paid_not_started' && ! empty($course['id']))
-                    <form method="POST" action="{{ route('courses.enroll', $course['id']) }}">
-                        @csrf
-                        <x-button type="submit" size="lg">Pay & Enroll</x-button>
-                    </form>
+                    @if (! empty($priceTiers))
+                        <x-button href="#course-pricing" size="lg">Choose Payment Tier</x-button>
+                    @else
+                        <form method="POST" action="{{ route('courses.enroll', $course['id']) }}">
+                            @csrf
+                            <x-button type="submit" size="lg">Pay & Enroll</x-button>
+                        </form>
+                    @endif
                 @elseif ($ctaState === 'payment_pending' && ! empty($course['payment_id']))
                     <x-button :href="route('student.payments.show', $course['payment_id'])" size="lg">Payment Pending</x-button>
                 @elseif ($ctaState === 'payment_rejected' && ! empty($course['payment_id']))
