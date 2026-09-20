@@ -18,7 +18,7 @@ class SubscriptionPaymentAccessTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_active_subscription_grants_access_to_included_paid_course(): void
+    public function test_legacy_subscription_does_not_grant_paid_course_access(): void
     {
         [$student, $course, $plan] = $this->courseWithPlan();
 
@@ -32,7 +32,7 @@ class SubscriptionPaymentAccessTest extends TestCase
 
         $this->actingAs($student)
             ->get(route('student.courses.learn', $course))
-            ->assertOk();
+            ->assertForbidden();
     }
 
     public function test_non_active_subscriptions_do_not_grant_paid_course_access(): void
@@ -52,44 +52,6 @@ class SubscriptionPaymentAccessTest extends TestCase
                 ->get(route('student.courses.learn', $course))
                 ->assertForbidden();
         }
-    }
-
-    public function test_approved_subscription_renewal_extends_once(): void
-    {
-        [$student, , $plan] = $this->courseWithPlan();
-        $currentEnd = now()->addDays(10)->startOfSecond();
-        $payment = Payment::create([
-            'user_id' => $student->id,
-            'amount' => $plan->price_amount,
-            'currency' => $plan->currency,
-            'purpose' => Payment::PURPOSE_SUBSCRIPTION,
-            'status' => Payment::STATUS_SUBMITTED,
-        ]);
-        $subscription = Subscription::create([
-            'user_id' => $student->id,
-            'subscription_plan_id' => $plan->id,
-            'payment_id' => $payment->id,
-            'status' => Subscription::STATUS_ACTIVE,
-            'starts_at' => now()->subDays(20),
-            'ends_at' => $currentEnd,
-        ]);
-
-        $payment->update([
-            'status' => Payment::STATUS_APPROVED,
-            'reviewed_at' => now(),
-        ]);
-
-        $subscription->refresh();
-        $expectedEnd = $currentEnd->copy()->addDays($plan->durationDays());
-        $this->assertTrue($subscription->ends_at->equalTo($expectedEnd));
-
-        $payment->update(['status' => Payment::STATUS_REJECTED]);
-        $payment->update([
-            'status' => Payment::STATUS_APPROVED,
-            'reviewed_at' => now()->addMinute(),
-        ]);
-
-        $this->assertTrue($subscription->refresh()->ends_at->equalTo($expectedEnd));
     }
 
     public function test_course_specific_approved_payment_still_grants_access(): void

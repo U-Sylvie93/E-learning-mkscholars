@@ -25,7 +25,7 @@
                 <x-empty-state
                     icon="courses"
                     title="No active courses yet."
-                    description="Paid, free, or subscription courses with active access will appear here."
+                    description="Paid or free courses with active access will appear here."
                     action-label="Browse Courses"
                     :action-href="route('courses')"
                 />

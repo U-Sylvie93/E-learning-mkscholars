@@ -11,9 +11,11 @@ class PublicPagesTest extends TestCase
 
     public function test_public_pages_load(): void
     {
-        foreach (['/', '/academies', '/courses', '/pricing', '/about', '/contact'] as $uri) {
+        foreach (['/', '/academies', '/courses', '/about', '/contact'] as $uri) {
             $this->get($uri)->assertOk();
         }
+
+        $this->get('/pricing')->assertRedirect('/courses');
     }
 
     public function test_public_navbar_uses_clean_order(): void
@@ -25,6 +27,14 @@ class PublicPagesTest extends TestCase
             ->assertDontSee('Opportunities')
             ->assertDontSee('Premium learning support');
     }
+
+    public function test_subscription_pages_are_removed(): void
+    {
+        $this->get('/pricing')->assertRedirect('/courses');
+        $this->get('/student/subscriptions')->assertNotFound();
+        $this->post('/subscriptions/1/choose')->assertNotFound();
+    }
+
     public function test_academies_page_uses_premium_listing_layout(): void
     {
         $this->get('/academies')
@@ -207,7 +217,5 @@ class PublicPagesTest extends TestCase
         }
     }
 }
-
-
 
 

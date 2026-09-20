@@ -5,8 +5,11 @@ namespace Tests\Feature;
 use App\Models\Academy;
 use App\Models\Course;
 use App\Models\Payment;
+use App\Models\PaymentMethod;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CourseTierSelectionTest extends TestCase
@@ -57,6 +60,50 @@ class CourseTierSelectionTest extends TestCase
         $response->assertRedirect(route('student.payments.show', $payment));
         $this->assertSame(Course::TIER_PREMIUM, $payment->tier);
         $this->assertSame('75000.00', $payment->amount);
+    }
+
+    public function test_payment_page_shows_tiers_and_applies_the_students_final_choice(): void
+    {
+        Storage::fake('public');
+        [$student, $course] = $this->tieredCourse();
+        $method = PaymentMethod::create([
+            'name' => 'Mobile Money',
+            'type' => PaymentMethod::TYPE_MOMO,
+            'account_name' => 'MK Scholars',
+            'account_number' => '0798611161',
+            'instructions' => 'Upload proof after payment.',
+            'status' => PaymentMethod::STATUS_ACTIVE,
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('courses.enroll', $course), ['tier' => Course::TIER_BASIC]);
+
+        $payment = Payment::query()
+            ->where('user_id', $student->id)
+            ->where('course_id', $course->id)
+            ->firstOrFail();
+
+        $this->actingAs($student)
+            ->get(route('student.payments.show', $payment))
+            ->assertOk()
+            ->assertSee('Choose your payment tier')
+            ->assertSee('25,000 RWF')
+            ->assertSee('75,000 RWF');
+
+        $this->actingAs($student)
+            ->post(route('student.payments.submit', $payment), [
+                'tier' => Course::TIER_PREMIUM,
+                'payment_method_id' => $method->id,
+                'proof_file' => UploadedFile::fake()->image('premium-proof.jpg'),
+            ])
+            ->assertSessionDoesntHaveErrors()
+            ->assertRedirect(route('student.payments.show', $payment));
+
+        $payment->refresh();
+
+        $this->assertSame(Course::TIER_PREMIUM, $payment->tier);
+        $this->assertSame('75000.00', $payment->amount);
+        $this->assertSame(Payment::STATUS_SUBMITTED, $payment->status);
     }
 
     private function tieredCourse(): array

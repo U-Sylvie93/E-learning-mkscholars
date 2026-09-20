@@ -86,25 +86,4 @@ return [
         ],
     ],
 
-    'pricing' => [
-        [
-            'name' => 'Starter',
-            'price' => 'Coming soon',
-            'description' => 'For students beginning a focused learning path.',
-            'features' => ['Core course access', 'Weekly study plan', 'Progress check-ins'],
-        ],
-        [
-            'name' => 'Scholar',
-            'price' => 'Coming soon',
-            'description' => 'For learners who want guided support and stronger accountability.',
-            'features' => ['Live class support', 'Practice resources', 'Student feedback'],
-            'highlighted' => true,
-        ],
-        [
-            'name' => 'Academy',
-            'price' => 'Coming soon',
-            'description' => 'For families and groups seeking a complete learning experience.',
-            'features' => ['Multi-course access', 'Parent updates', 'Priority coaching'],
-        ],
-    ],
 ];

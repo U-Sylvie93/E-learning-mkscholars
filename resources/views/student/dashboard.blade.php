@@ -11,33 +11,7 @@
             <x-stat-card data-testid="student-dashboard-card" tone="gold" label="Certificates" :value="$certificateCount" description="Issued certificates." />
             <x-stat-card data-testid="student-dashboard-card" tone="warning" label="Pending payments" :value="$pendingPaymentsCount" description="Awaiting approval." />
             <x-stat-card data-testid="student-dashboard-card" tone="success" label="Approved payments" :value="$approvedPaymentsCount" description="Cleared payments." />
-            <x-stat-card data-testid="student-dashboard-card" tone="blue" label="Subscription" :value="$activeSubscription?->subscriptionPlan?->name ?? 'None'" :description="$activeSubscription ? 'Active plan.' : 'No active plan.'" />
         </div>
-
-        {{-- Subscription expiry alert --}}
-        @if ($expiringSubscription || $expiredSubscription)
-            <x-card highlighted data-testid="student-dashboard-card" class="min-w-0">
-                <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <x-badge :tone="$expiredSubscription ? 'danger' : 'warning'">{{ $expiredSubscription ? 'Subscription expired' : 'Expiring soon' }}</x-badge>
-                        <h3 class="mt-3 text-lg font-bold text-mk-navy">{{ ($expiredSubscription ?? $expiringSubscription)?->subscriptionPlan?->name ?? 'Subscription plan' }}</h3>
-                        <p class="mt-1 text-sm leading-6 text-slate-600">
-                            @if ($expiredSubscription)
-                                Renew to restore included paid course access.
-                            @else
-                                Expires {{ $expiringSubscription->ends_at?->format('M j, Y') }}. Renew early to keep access.
-                            @endif
-                        </p>
-                    </div>
-                    @if (($expiredSubscription ?? $expiringSubscription)?->subscriptionPlan)
-                        <form method="POST" action="{{ route('student.subscriptions.renew', $expiredSubscription ?? $expiringSubscription) }}">
-                            @csrf
-                            <x-button type="submit">Renew Plan</x-button>
-                        </form>
-                    @endif
-                </div>
-            </x-card>
-        @endif
 
         {{-- Continue learning --}}
         <div class="space-y-4">

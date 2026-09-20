@@ -19,6 +19,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
 class PaymentResource extends Resource
@@ -31,13 +32,18 @@ class PaymentResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Payments';
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->where('purpose', '!=', Payment::PURPOSE_SUBSCRIPTION);
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
             Placeholder::make('student')->content(fn (?Payment $record): string => $record?->user?->name ?? 'Student'),
             Placeholder::make('course')->content(fn (?Payment $record): string => $record?->course?->title ?? 'N/A'),
             Placeholder::make('entrance_exam_paper')->content(fn (?Payment $record): string => $record?->entranceExamPastPaper?->title ?? 'N/A'),
-            Placeholder::make('subscription')->content(fn (?Payment $record): string => $record?->subscription?->subscriptionPlan?->name ?? 'N/A'),
             Placeholder::make('provider')->content(fn (?Payment $record): string => $record?->providerLabel() ?? 'Manual'),
             Placeholder::make('provider_reference')->content(fn (?Payment $record): string => $record?->provider_reference ?: 'N/A'),
             Placeholder::make('provider_status')->content(fn (?Payment $record): string => $record?->provider_status ?: 'N/A'),
@@ -46,7 +52,6 @@ class PaymentResource extends Resource
             TextInput::make('currency')->required()->maxLength(8),
             Select::make('purpose')->required()->options([
                 Payment::PURPOSE_COURSE => 'Course',
-                Payment::PURPOSE_SUBSCRIPTION => 'Subscription',
                 Payment::PURPOSE_ENTRANCE_EXAM => 'Entrance Exam Paper',
                 Payment::PURPOSE_OTHER => 'Other',
             ]),
@@ -75,7 +80,6 @@ class PaymentResource extends Resource
                 TextColumn::make('user.name')->label('Student')->searchable()->sortable(),
                 TextColumn::make('course.title')->label('Course')->searchable()->sortable()->placeholder('N/A'),
                 TextColumn::make('entranceExamPastPaper.title')->label('Entrance paper')->searchable()->sortable()->placeholder('N/A'),
-                TextColumn::make('subscription.subscriptionPlan.name')->label('Subscription')->searchable()->placeholder('N/A'),
                 TextColumn::make('purpose')->badge()->sortable(),
                 TextColumn::make('provider')
                     ->label('Provider')
@@ -95,7 +99,6 @@ class PaymentResource extends Resource
                 SelectFilter::make('status')->options(self::statusOptions()),
                 SelectFilter::make('purpose')->options([
                     Payment::PURPOSE_COURSE => 'Course',
-                    Payment::PURPOSE_SUBSCRIPTION => 'Subscription',
                     Payment::PURPOSE_ENTRANCE_EXAM => 'Entrance Exam Paper',
                     Payment::PURPOSE_OTHER => 'Other',
                 ]),

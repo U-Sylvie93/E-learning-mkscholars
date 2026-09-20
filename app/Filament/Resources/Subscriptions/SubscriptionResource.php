@@ -32,6 +32,16 @@ class SubscriptionResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Payments';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
+    public static function canViewAny(): bool
+    {
+        return false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->components([

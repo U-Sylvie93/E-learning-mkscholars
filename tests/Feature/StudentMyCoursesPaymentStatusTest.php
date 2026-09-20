@@ -11,8 +11,6 @@ use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\Module;
 use App\Models\Payment;
-use App\Models\Subscription;
-use App\Models\SubscriptionPlan;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -212,37 +210,6 @@ class StudentMyCoursesPaymentStatusTest extends TestCase
             ->assertOk()
             ->assertDontSee('http://mkscholars', false)
             ->assertDontSee('https://mkscholars', false);
-    }
-
-    public function test_expired_subscription_course_can_renew_from_my_courses(): void
-    {
-        $student = $this->student('expired-subscription@mkscholars.test');
-        $course = $this->course('expired-subscription-course', false);
-        $plan = SubscriptionPlan::create([
-            'name' => 'Expired Plan',
-            'slug' => 'expired-plan',
-            'price_amount' => 50000,
-            'currency' => 'RWF',
-            'billing_cycle' => SubscriptionPlan::BILLING_MONTHLY,
-            'duration_days' => 30,
-            'status' => SubscriptionPlan::STATUS_ACTIVE,
-        ]);
-        $plan->courses()->attach($course);
-        $subscription = Subscription::create([
-            'user_id' => $student->id,
-            'subscription_plan_id' => $plan->id,
-            'status' => Subscription::STATUS_ACTIVE,
-            'starts_at' => now()->subDays(40),
-            'ends_at' => now()->subDay(),
-        ]);
-
-        $this->actingAs($student)
-            ->get(route('student.my-courses'))
-            ->assertOk()
-            ->assertSee($course->title)
-            ->assertSee('Expired')
-            ->assertSee('Renew Plan')
-            ->assertSee(route('student.subscriptions.renew', $subscription), false);
     }
 
     private function student(string $email): User

@@ -36,8 +36,6 @@ use App\Models\QuizAttempt;
 use App\Models\QuizQuestion;
 use App\Models\QuizOption;
 use App\Models\StudentDocument;
-use App\Models\Subscription;
-use App\Models\SubscriptionPlan;
 use App\Services\CourseCompletionService;
 use App\Services\AppNotificationService;
 use App\Services\AdminCsvExportService;
@@ -136,23 +134,7 @@ $courseProgress = function (User $user, Course $course) use ($publishedLessonsFo
     return (int) round(($completed / $lessonIds->count()) * 100);
 };
 
-$activeSubscriptionForCourse = function (User $user, Course $course): ?Subscription {
-    return Subscription::query()
-        ->with('subscriptionPlan')
-        ->where('user_id', $user->id)
-        ->where('status', Subscription::STATUS_ACTIVE)
-        ->where(function ($query): void {
-            $query->whereNull('starts_at')->orWhere('starts_at', '<=', now());
-        })
-        ->where(function ($query): void {
-            $query->whereNull('ends_at')->orWhere('ends_at', '>', now());
-        })
-        ->whereHas('subscriptionPlan.courses', fn ($courseQuery) => $courseQuery->whereKey($course->id))
-        ->latest('starts_at')
-        ->first();
-};
-
-$hasCourseAccess = function (User $user, Course $course) use ($activeSubscriptionForCourse): bool {
+$hasCourseAccess = function (User $user, Course $course): bool {
     $hasActiveEnrollment = Enrollment::query()
         ->where('user_id', $user->id)
         ->where('course_id', $course->id)
@@ -170,7 +152,7 @@ $hasCourseAccess = function (User $user, Course $course) use ($activeSubscriptio
         ->where('status', Payment::STATUS_APPROVED)
         ->exists();
 
-    return ($hasActiveEnrollment && $hasApprovedPayment) || (bool) $activeSubscriptionForCourse($user, $course);
+    return $hasActiveEnrollment && $hasApprovedPayment;
 };
 
 Route::get('/', function () use ($publicAcademies, $publicCourses) {
@@ -200,7 +182,7 @@ Route::get('/courses', fn (Request $request) => view('pages.courses', [
     'activeAcademy' => $request->query('academy'),
 ]))->name('courses');
 
-Route::get('/courses/{slug}', function (string $slug) use ($activeSubscriptionForCourse) {
+Route::get('/courses/{slug}', function (string $slug) {
     try {
         if (! Schema::hasTable('courses')) {
             throw new RuntimeException('Courses table is not available.');
@@ -243,9 +225,6 @@ Route::get('/courses/{slug}', function (string $slug) use ($activeSubscriptionFo
                     ->first()
                 : null;
             $hasActiveEnrollment = $enrollment?->status === Enrollment::STATUS_ACTIVE;
-            $hasActiveSubscription = $user && $user->role === User::ROLE_STUDENT
-                ? (bool) $activeSubscriptionForCourse($user, $databaseCourse)
-                : false;
             $hasApprovedAccess = $databaseCourse->isFree() || $payment?->status === Payment::STATUS_APPROVED;
             $publishedReviews = $databaseCourse->reviews;
 
@@ -272,7 +251,6 @@ Route::get('/courses/{slug}', function (string $slug) use ($activeSubscriptionFo
                 'cta_state' => match (true) {
                     ! $user => 'guest',
                     $user->role !== User::ROLE_STUDENT => 'non_student',
-                    $hasActiveSubscription => 'enrolled',
                     $hasActiveEnrollment && $hasApprovedAccess => 'enrolled',
                     ! $databaseCourse->isFree() && in_array($payment?->status, [Payment::STATUS_PENDING, Payment::STATUS_SUBMITTED], true) => 'payment_pending',
                     ! $databaseCourse->isFree() && $payment?->status === Payment::STATUS_REJECTED => 'payment_rejected',
@@ -331,31 +309,7 @@ Route::get('/courses/{slug}', function (string $slug) use ($activeSubscriptionFo
 })->name('courses.show');
 
 
-Route::get('/pricing', function () {
-    try {
-        if (Schema::hasTable('subscription_plans')) {
-            $subscriptionPlans = SubscriptionPlan::query()
-                ->withCount('courses')
-                ->where('status', SubscriptionPlan::STATUS_ACTIVE)
-                ->orderBy('price_amount')
-                ->get();
-
-            if ($subscriptionPlans->isNotEmpty()) {
-                return view('pages.pricing', [
-                    'plans' => $subscriptionPlans,
-                    'usingDatabasePlans' => true,
-                ]);
-            }
-        }
-    } catch (Throwable) {
-        //
-    }
-
-    return view('pages.pricing', [
-        'plans' => config('mkscholars.pricing'),
-        'usingDatabasePlans' => false,
-    ]);
-})->name('pricing');
+Route::redirect('/pricing', '/courses')->name('pricing');
 
 Route::view('/about', 'pages.about')->name('about');
 
@@ -869,7 +823,7 @@ $removeInstructorSignature = function (Request $request) use ($deleteInstructorS
     return back()->with('signature_status', 'Your certificate signature has been removed.');
 };
 
-Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $courseProgress, $activeSubscriptionForCourse, $hasCourseAccess, $settingsPage, $updateProfile, $updatePassword, $updateInstructorSignature, $removeInstructorSignature): void {
+Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $courseProgress, $hasCourseAccess, $settingsPage, $updateProfile, $updatePassword, $updateInstructorSignature, $removeInstructorSignature): void {
     Route::get('/student/dashboard', function () use ($courseProgress) {
         $user = Auth::user();
         $notificationService = app(AppNotificationService::class);
@@ -881,26 +835,6 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             ->where('status', MentorAssignment::STATUS_ACTIVE)
             ->latest('assigned_at')
             ->first();
-
-        $expiringSubscriptionReminder = Schema::hasTable('subscriptions')
-            ? Subscription::query()
-                ->with('subscriptionPlan')
-                ->where('user_id', $user->id)
-                ->where('status', Subscription::STATUS_ACTIVE)
-                ->whereBetween('ends_at', [now(), now()->addDays(7)])
-                ->orderBy('ends_at')
-                ->first()
-            : null;
-
-        if ($expiringSubscriptionReminder) {
-            $notificationService->createForUser($user, [
-                'title' => 'Subscription expiring soon',
-                'message' => 'Your '.$expiringSubscriptionReminder->subscriptionPlan?->name.' subscription expires on '.$expiringSubscriptionReminder->ends_at?->format('M j, Y').'.',
-                'type' => AppNotification::TYPE_REMINDER,
-                'category' => AppNotification::CATEGORY_PAYMENT,
-                'action_url' => route('student.subscriptions.show', $expiringSubscriptionReminder),
-            ]);
-        }
 
         return view('student.dashboard', [
             'enrolledCourses' => Enrollment::query()
@@ -941,63 +875,24 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             'pendingPaymentsCount' => Schema::hasTable('payments')
                 ? Payment::query()
                     ->where('user_id', $user->id)
+                    ->where('purpose', '!=', Payment::PURPOSE_SUBSCRIPTION)
                     ->whereIn('status', [Payment::STATUS_PENDING, Payment::STATUS_SUBMITTED])
                     ->count()
                 : 0,
             'approvedPaymentsCount' => Schema::hasTable('payments')
                 ? Payment::query()
                     ->where('user_id', $user->id)
+                    ->where('purpose', '!=', Payment::PURPOSE_SUBSCRIPTION)
                     ->where('status', Payment::STATUS_APPROVED)
                     ->count()
                 : 0,
             'rejectedPaymentsCount' => Schema::hasTable('payments')
                 ? Payment::query()
                     ->where('user_id', $user->id)
+                    ->where('purpose', '!=', Payment::PURPOSE_SUBSCRIPTION)
                     ->where('status', Payment::STATUS_REJECTED)
                     ->count()
                 : 0,
-            'activeSubscription' => Schema::hasTable('subscriptions')
-                ? Subscription::query()
-                    ->with('subscriptionPlan')
-                    ->where('user_id', $user->id)
-                    ->where('status', Subscription::STATUS_ACTIVE)
-                    ->where(function ($query): void {
-                        $query->whereNull('ends_at')->orWhere('ends_at', '>', now());
-                    })
-                    ->latest('starts_at')
-                    ->first()
-                : null,
-            'expiringSubscription' => Schema::hasTable('subscriptions')
-                ? Subscription::query()
-                    ->with('subscriptionPlan')
-                    ->where('user_id', $user->id)
-                    ->where('status', Subscription::STATUS_ACTIVE)
-                    ->whereBetween('ends_at', [now(), now()->addDays(7)])
-                    ->orderBy('ends_at')
-                    ->first()
-                : null,
-            'expiredSubscription' => Schema::hasTable('subscriptions')
-                ? Subscription::query()
-                    ->with('subscriptionPlan')
-                    ->where('user_id', $user->id)
-                    ->where(function ($query): void {
-                        $query->where('status', Subscription::STATUS_EXPIRED)
-                            ->orWhere(fn ($activeQuery) => $activeQuery
-                                ->where('status', Subscription::STATUS_ACTIVE)
-                                ->whereNotNull('ends_at')
-                                ->where('ends_at', '<=', now()));
-                    })
-                    ->latest('ends_at')
-                    ->first()
-                : null,
-            'pendingSubscription' => Schema::hasTable('subscriptions')
-                ? Subscription::query()
-                    ->with(['subscriptionPlan', 'payment'])
-                    ->where('user_id', $user->id)
-                    ->whereIn('status', [Subscription::STATUS_PENDING, Subscription::STATUS_REJECTED])
-                    ->latest()
-                    ->first()
-                : null,
             'coursesAwaitingReview' => Schema::hasTable('course_reviews')
                 ? Enrollment::query()
                     ->with('course')
@@ -1222,127 +1117,6 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.notifications.read-all');
 
 
-    Route::post('/subscriptions/{plan}/choose', function (SubscriptionPlan $plan) {
-        $user = Auth::user();
-
-        abort_unless($plan->status === SubscriptionPlan::STATUS_ACTIVE, 404);
-
-        $existing = Subscription::query()
-            ->with('payment')
-            ->where('user_id', $user->id)
-            ->where('subscription_plan_id', $plan->id)
-            ->whereIn('status', [Subscription::STATUS_PENDING, Subscription::STATUS_ACTIVE])
-            ->latest()
-            ->first();
-
-        if ($existing) {
-            return redirect()->route('student.subscriptions.show', $existing);
-        }
-
-        $payment = app(PaymentProviderManager::class)
-            ->driver(Payment::PROVIDER_MANUAL)
-            ->createPendingPayment([
-                'user_id' => $user->id,
-                'course_id' => null,
-                'amount' => $plan->price_amount,
-                'currency' => $plan->currency ?: 'RWF',
-                'purpose' => Payment::PURPOSE_SUBSCRIPTION,
-            ]);
-
-        $subscription = Subscription::create([
-            'user_id' => $user->id,
-            'subscription_plan_id' => $plan->id,
-            'payment_id' => $payment->id,
-            'status' => Subscription::STATUS_PENDING,
-        ]);
-
-        return redirect()->route('student.subscriptions.show', $subscription);
-    })->middleware('role:'.User::ROLE_STUDENT)->name('subscriptions.choose');
-
-    Route::get('/student/subscriptions', function () {
-        $user = Auth::user();
-        $status = request('status');
-
-        $subscriptions = Subscription::query()
-                ->with(['subscriptionPlan.courses.academy', 'payment'])
-                ->where('user_id', $user->id)
-            ->when($status === Subscription::STATUS_EXPIRED, fn ($query) => $query
-                ->where(function ($expiredQuery): void {
-                    $expiredQuery->where('status', Subscription::STATUS_EXPIRED)
-                        ->orWhere(fn ($activeQuery) => $activeQuery
-                            ->where('status', Subscription::STATUS_ACTIVE)
-                            ->whereNotNull('ends_at')
-                            ->where('ends_at', '<=', now()));
-                }))
-            ->when($status && $status !== Subscription::STATUS_EXPIRED, fn ($query) => $query->where('status', $status))
-            ->latest()
-            ->get();
-
-        return view('student.subscriptions', [
-            'subscriptions' => $subscriptions,
-            'activeStatus' => $status,
-            'statuses' => [
-                Subscription::STATUS_ACTIVE,
-                Subscription::STATUS_PENDING,
-                Subscription::STATUS_EXPIRED,
-                Subscription::STATUS_REJECTED,
-                Subscription::STATUS_CANCELLED,
-            ],
-        ]);
-    })->middleware('role:'.User::ROLE_STUDENT)->name('student.subscriptions');
-
-    Route::get('/student/subscriptions/{subscription}', function (Subscription $subscription) {
-        $user = Auth::user();
-
-        abort_unless($subscription->user_id === $user->id, 403);
-
-        return view('student.subscription-show', [
-            'subscription' => $subscription->load(['subscriptionPlan.courses.academy', 'payment.paymentMethod']),
-            'paymentMethods' => PaymentMethod::query()
-                ->where('status', PaymentMethod::STATUS_ACTIVE)
-                ->orderBy('name')
-                ->get(),
-        ]);
-    })->middleware('role:'.User::ROLE_STUDENT)->name('student.subscriptions.show');
-
-    Route::post('/student/subscriptions/{subscription}/renew', function (Subscription $subscription) {
-        $user = Auth::user();
-
-        abort_unless($subscription->user_id === $user->id, 403);
-        abort_unless(in_array($subscription->statusLabel(), [Subscription::STATUS_ACTIVE, Subscription::STATUS_EXPIRED], true), 403);
-
-        $subscription->load('subscriptionPlan');
-        abort_unless($subscription->subscriptionPlan, 404);
-
-        $pendingPayment = Payment::query()
-            ->where('user_id', $user->id)
-            ->where('purpose', Payment::PURPOSE_SUBSCRIPTION)
-            ->whereIn('status', [Payment::STATUS_PENDING, Payment::STATUS_SUBMITTED])
-            ->whereHas('subscription', fn ($query) => $query->whereKey($subscription->id))
-            ->latest()
-            ->first();
-
-        if (! $pendingPayment) {
-            $pendingPayment = app(PaymentProviderManager::class)
-                ->driver(Payment::PROVIDER_MANUAL)
-                ->createPendingPayment([
-                    'user_id' => $user->id,
-                    'course_id' => null,
-                    'amount' => $subscription->subscriptionPlan->price_amount,
-                    'currency' => $subscription->subscriptionPlan->currency ?: 'RWF',
-                    'purpose' => Payment::PURPOSE_SUBSCRIPTION,
-                ]);
-
-            $subscription->update([
-                'payment_id' => $pendingPayment->id,
-                'status' => $subscription->isExpired() ? Subscription::STATUS_PENDING : $subscription->status,
-            ]);
-        }
-
-        return redirect()->route('student.payments.show', $pendingPayment);
-    })->middleware('role:'.User::ROLE_STUDENT)->name('student.subscriptions.renew');
-
-
     Route::get('/student/documents', function () {
         $user = Auth::user();
 
@@ -1398,7 +1172,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
     })->middleware('role:'.User::ROLE_STUDENT)->name('student.documents.destroy');
 
 
-    Route::post('/courses/{course}/enroll', function (Request $request, Course $course) use ($activeSubscriptionForCourse) {
+    Route::post('/courses/{course}/enroll', function (Request $request, Course $course) {
         $user = Auth::user();
 
         abort_unless($user?->role === User::ROLE_STUDENT, 403);
@@ -1409,22 +1183,6 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $tier = $tierMatch['slug'] ?? null;
 
         if ($course->requiresPayment()) {
-            if ($activeSubscriptionForCourse($user, $course)) {
-                Enrollment::updateOrCreate(
-                    [
-                        'user_id' => $user->id,
-                        'course_id' => $course->id,
-                    ],
-                    [
-                        'status' => Enrollment::STATUS_ACTIVE,
-                        'enrolled_at' => now(),
-                        'completed_at' => null,
-                    ],
-                );
-
-                return redirect()->route('student.courses.learn', $course);
-            }
-
             $approvedPayment = Payment::query()
                 ->where('user_id', $user->id)
                 ->where('course_id', $course->id)
@@ -1506,8 +1264,9 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
 
         return view('student.payments', [
             'payments' => Payment::query()
-                ->with(['course.academy', 'entranceExamPastPaper', 'paymentMethod', 'subscription.subscriptionPlan'])
+                ->with(['course.academy', 'entranceExamPastPaper', 'paymentMethod'])
                 ->where('user_id', $user->id)
+                ->where('purpose', '!=', Payment::PURPOSE_SUBSCRIPTION)
                 ->latest()
                 ->get(),
             'paymentMethods' => PaymentMethod::query()
@@ -1521,9 +1280,10 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $user = Auth::user();
 
         abort_unless($payment->user_id === $user->id, 403);
+        abort_if($payment->purpose === Payment::PURPOSE_SUBSCRIPTION, 404);
 
         return view('student.payment-show', [
-            'payment' => $payment->load(['course.academy', 'entranceExamPastPaper', 'paymentMethod', 'reviewer', 'subscription.subscriptionPlan.courses']),
+            'payment' => $payment->load(['course.academy', 'entranceExamPastPaper', 'paymentMethod', 'reviewer']),
             'paymentMethods' => PaymentMethod::query()
                 ->where('status', PaymentMethod::STATUS_ACTIVE)
                 ->orderBy('name')
@@ -1535,23 +1295,45 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         $user = Auth::user();
 
         abort_unless($payment->user_id === $user->id, 403);
+        abort_if($payment->purpose === Payment::PURPOSE_SUBSCRIPTION, 404);
         abort_unless(in_array($payment->status, [Payment::STATUS_PENDING, Payment::STATUS_SUBMITTED, Payment::STATUS_REJECTED], true), 403);
 
-        $validated = $request->validate([
+        $validationRules = [
             'payment_method_id' => ['required', Rule::exists('payment_methods', 'id')->where('status', PaymentMethod::STATUS_ACTIVE)],
             'proof_file' => ['required', 'file', 'max:10240', 'mimes:pdf,png,jpg,jpeg'],
-        ]);
+        ];
 
-        $payment->update([
+        $tierOptions = $payment->purpose === Payment::PURPOSE_COURSE
+            ? ($payment->course?->tierOptions() ?? [])
+            : [];
+
+        if (! empty($tierOptions)) {
+            $validationRules['tier'] = ['required', 'string', Rule::in(array_column($tierOptions, 'slug'))];
+        }
+
+        $validated = $request->validate($validationRules);
+
+        $paymentUpdates = [
             'payment_method_id' => $validated['payment_method_id'],
             'proof_path' => $request->file('proof_file')->store('payment-proofs', 'public'),
             'status' => Payment::STATUS_SUBMITTED,
             'submitted_at' => now(),
             'admin_notes' => null,
-        ]);
+        ];
+
+        if (! empty($tierOptions)) {
+            $selectedTier = $payment->course->findTier($validated['tier']);
+            $paymentUpdates['amount'] = $selectedTier['amount'];
+
+            if (Schema::hasColumn('payments', 'tier')) {
+                $paymentUpdates['tier'] = $selectedTier['slug'];
+            }
+        }
+
+        $payment->update($paymentUpdates);
 
         app(AppNotificationService::class)->createForRole(User::ROLE_ADMIN, [
-            'title' => $payment->purpose === Payment::PURPOSE_SUBSCRIPTION ? 'Subscription payment proof submitted' : 'Payment proof submitted',
+            'title' => 'Payment proof submitted',
             'message' => $user->name.' submitted payment proof for '.$payment->payableTitle().'.',
             'type' => AppNotification::TYPE_REMINDER,
             'category' => AppNotification::CATEGORY_PAYMENT,
@@ -1594,44 +1376,7 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
                 ];
             });
 
-        $activeSubscriptions = Subscription::query()
-            ->with(['subscriptionPlan.courses.academy', 'subscriptionPlan.courses.instructor'])
-            ->where('user_id', $user->id)
-            ->where('status', Subscription::STATUS_ACTIVE)
-            ->where(function ($query): void {
-                $query->whereNull('starts_at')->orWhere('starts_at', '<=', now());
-            })
-            ->where(function ($query): void {
-                $query->whereNull('ends_at')->orWhere('ends_at', '>', now());
-            })
-            ->get();
-
-        $activeSubscriptionCourses = $activeSubscriptions
-            ->flatMap(fn (Subscription $subscription) => $subscription->subscriptionPlan?->courses
-                ? $subscription->subscriptionPlan->courses
-                    ->filter(fn (Course $course): bool => $course->status === Course::STATUS_PUBLISHED)
-                    ->map(function (Course $course) use ($subscription, $user, $courseProgress, $completionService): array {
-                        $completion = $completionService->calculate($user, $course);
-                        $certificate = Certificate::query()
-                            ->where('user_id', $user->id)
-                            ->where('course_id', $course->id)
-                            ->latest()
-                            ->first();
-
-                        return [
-                            'enrollment' => null,
-                            'course' => $course,
-                            'progress' => $courseProgress($user, $course),
-                            'completion' => $completion,
-                            'certificate' => $certificate,
-                            'access_label' => $subscription->subscriptionPlan?->name ?? 'Active subscription',
-                        ];
-                    })
-                : collect())
-            ->reject(fn (array $item): bool => $activeCourses->contains(fn (array $active): bool => $active['course']->is($item['course'])));
-
         $activeCourses = $activeCourses
-            ->concat($activeSubscriptionCourses)
             ->unique(fn (array $item): int => $item['course']->id)
             ->values();
 
@@ -1646,7 +1391,6 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             ->map(fn (Payment $payment): array => [
                 'course' => $payment->course,
                 'payment' => $payment,
-                'subscription' => null,
                 'status_label' => match ($payment->status) {
                     Payment::STATUS_SUBMITTED => 'Pending Payment',
                     Payment::STATUS_REJECTED => 'Payment Rejected',
@@ -1673,7 +1417,6 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             ->map(fn (Enrollment $enrollment): array => [
                 'course' => $enrollment->course,
                 'payment' => null,
-                'subscription' => null,
                 'status_label' => $enrollment->status === Enrollment::STATUS_CANCELLED ? 'Not Enrolled' : 'Unpaid',
                 'status_tone' => 'warning',
                 'reason' => $enrollment->course->requiresPayment()
@@ -1684,50 +1427,8 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
                 'pay_form_route' => $enrollment->course->requiresPayment() ? route('courses.enroll', $enrollment->course) : null,
             ]);
 
-        $subscriptionIssues = Subscription::query()
-            ->with(['subscriptionPlan.courses.academy', 'subscriptionPlan.courses.instructor', 'payment'])
-            ->where('user_id', $user->id)
-            ->where(function ($query): void {
-                $query->whereIn('status', [Subscription::STATUS_PENDING, Subscription::STATUS_REJECTED, Subscription::STATUS_EXPIRED])
-                    ->orWhere(fn ($activeQuery) => $activeQuery
-                        ->where('status', Subscription::STATUS_ACTIVE)
-                        ->whereNotNull('ends_at')
-                        ->where('ends_at', '<=', now()));
-            })
-            ->latest()
-            ->get()
-            ->flatMap(fn (Subscription $subscription) => $subscription->subscriptionPlan?->courses
-                ? $subscription->subscriptionPlan->courses
-                    ->filter(fn (Course $course): bool => $course->status === Course::STATUS_PUBLISHED && ! $hasCourseAccess($user, $course))
-                    ->map(function (Course $course) use ($subscription): array {
-                        $label = $subscription->isExpired() ? 'Expired' : ($subscription->status === Subscription::STATUS_REJECTED ? 'Payment Rejected' : 'Pending Payment');
-                        $payment = $subscription->payment;
-
-                        return [
-                            'course' => $course,
-                            'payment' => $payment,
-                            'subscription' => $subscription,
-                            'status_label' => $label,
-                            'status_tone' => $subscription->status === Subscription::STATUS_REJECTED ? 'danger' : 'warning',
-                            'reason' => match ($label) {
-                                'Expired' => 'Your subscription for this course has expired. Renew to restore access.',
-                                'Payment Rejected' => 'The subscription payment was rejected. Upload a new proof to continue.',
-                                default => 'Subscription payment is awaiting proof or admin review.',
-                            },
-                            'pay_label' => match ($label) {
-                                'Expired' => 'Renew Plan',
-                                'Payment Rejected' => 'Pay Again',
-                                default => 'Payment Pending',
-                            },
-                            'pay_href' => $payment ? route('student.payments.show', $payment) : route('student.subscriptions.show', $subscription),
-                            'pay_form_route' => $label === 'Expired' ? route('student.subscriptions.renew', $subscription) : null,
-                        ];
-                    })
-                : collect());
-
         $unpaidCourses = $coursePayments
             ->concat($blockedEnrollmentCourses)
-            ->concat($subscriptionIssues)
             ->unique(fn (array $item): int => $item['course']->id)
             ->values();
 
@@ -1746,7 +1447,6 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
             ->map(fn (Course $course): array => [
                 'course' => $course,
                 'payment' => null,
-                'subscription' => null,
                 'status_label' => 'Available',
                 'status_tone' => 'blue',
                 'reason' => 'Enroll and complete payment to unlock this course.',

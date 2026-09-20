@@ -10,6 +10,9 @@
         \App\Models\Payment::STATUS_SUBMITTED => 'blue',
         default => 'gold',
     };
+    $tierOptions = $payment->purpose === \App\Models\Payment::PURPOSE_COURSE
+        ? ($payment->course?->tierOptions() ?? [])
+        : [];
 @endphp
 
 <x-dashboard-layout role="student" :title="'Payment - '.$paymentTitle" description="MK Scholars manual payment proof upload.">
@@ -18,7 +21,7 @@
             <x-section-header
                 eyebrow="Manual payment"
                 :title="$paymentTitle"
-                :description="$payment->purpose === \App\Models\Payment::PURPOSE_SUBSCRIPTION ? 'Upload payment proof so an MK Scholars admin can review and activate your subscription.' : ($payment->purpose === \App\Models\Payment::PURPOSE_ENTRANCE_EXAM ? 'Upload your payment proof so an MK Scholars admin can review and unlock this entrance exam paper.' : 'Upload your payment proof so an MK Scholars admin can review and activate course access.')"
+                :description="$payment->purpose === \App\Models\Payment::PURPOSE_ENTRANCE_EXAM ? 'Upload your payment proof so an MK Scholars admin can review and unlock this entrance exam paper.' : 'Choose your course tier and upload payment proof so an MK Scholars admin can activate course access.'"
             />
             <x-badge :tone="$statusTone">{{ str_replace('_', ' ', $payment->status) }}</x-badge>
         </div>
@@ -41,7 +44,7 @@
                             <p class="mt-2 font-bold text-mk-navy">{{ $payment->providerLabel() }}</p>
                         </div>
                         <div>
-                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">{{ $payment->purpose === \App\Models\Payment::PURPOSE_ENTRANCE_EXAM ? 'Past Paper' : ($payment->purpose === \App\Models\Payment::PURPOSE_SUBSCRIPTION ? 'Subscription' : 'Course') }}</p>
+                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">{{ $payment->purpose === \App\Models\Payment::PURPOSE_ENTRANCE_EXAM ? 'Past Paper' : 'Course' }}</p>
                             <p class="mt-2 font-bold text-mk-navy">{{ $paymentTitle }}</p>
                         </div>
                     </div>
@@ -76,6 +79,41 @@
 
                         <form method="POST" action="{{ route('student.payments.submit', $payment) }}" enctype="multipart/form-data" class="mt-6 space-y-5">
                             @csrf
+                            @if (! empty($tierOptions))
+                                <fieldset>
+                                    <legend class="text-sm font-bold text-mk-navy">Choose your payment tier</legend>
+                                    <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                                        @foreach ($tierOptions as $tier)
+                                            @php
+                                                $tierId = 'payment-tier-'.$tier['slug'];
+                                                $selectedTier = old('tier', $payment->tier);
+                                            @endphp
+                                            <label for="{{ $tierId }}" class="flex cursor-pointer gap-3 rounded-lg border border-slate-200 bg-white p-4 transition hover:border-mk-gold has-[:checked]:border-mk-gold has-[:checked]:bg-mk-goldSoft">
+                                                <input
+                                                    id="{{ $tierId }}"
+                                                    type="radio"
+                                                    name="tier"
+                                                    value="{{ $tier['slug'] }}"
+                                                    class="mt-1 h-4 w-4 border-slate-300 text-mk-gold focus:ring-mk-gold"
+                                                    @checked($selectedTier === $tier['slug'])
+                                                    required
+                                                >
+                                                <span>
+                                                    <span class="block font-black text-mk-navy">{{ $tier['name'] }}</span>
+                                                    <span class="mt-1 block text-sm font-bold text-slate-600">{{ number_format((float) $tier['amount'], 0) }} {{ $payment->currency }}</span>
+                                                    @if (filled($tier['description'] ?? null))
+                                                        <span class="mt-2 block text-xs leading-5 text-slate-500">{{ $tier['description'] }}</span>
+                                                    @endif
+                                                </span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                    @error('tier')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </fieldset>
+                            @endif
+
                             <div>
                                 <label for="payment_method_id" class="text-sm font-bold text-mk-navy">Payment method</label>
                                 <select id="payment_method_id" name="payment_method_id" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm focus:border-mk-gold focus:outline-none focus:ring-2 focus:ring-mk-gold/30" required>
@@ -105,14 +143,12 @@
                         <x-badge :tone="$payment->status === \App\Models\Payment::STATUS_APPROVED ? 'green' : 'gray'">Reviewed</x-badge>
                         <h2 class="mt-4 text-xl font-bold text-mk-navy">{{ $payment->status === \App\Models\Payment::STATUS_APPROVED ? 'Payment approved' : 'Payment closed' }}</h2>
                         <p class="mt-3 text-sm leading-6 text-slate-600">
-                            {{ $payment->status === \App\Models\Payment::STATUS_APPROVED ? ($payment->purpose === \App\Models\Payment::PURPOSE_SUBSCRIPTION ? 'Your subscription is active. Open subscriptions to view included courses.' : ($payment->purpose === \App\Models\Payment::PURPOSE_ENTRANCE_EXAM ? 'Your entrance exam paper access is active.' : 'Your course access is active. Continue learning when you are ready.')) : 'This payment is no longer accepting proof uploads.' }}
+                            {{ $payment->status === \App\Models\Payment::STATUS_APPROVED ? ($payment->purpose === \App\Models\Payment::PURPOSE_ENTRANCE_EXAM ? 'Your entrance exam paper access is active.' : 'Your course access is active. Continue learning when you are ready.') : 'This payment is no longer accepting proof uploads.' }}
                         </p>
                         @if ($payment->course && $payment->status === \App\Models\Payment::STATUS_APPROVED)
                             <x-button :href="route('student.courses.learn', $payment->course)" class="mt-6">Continue Learning</x-button>
                         @elseif ($payment->purpose === \App\Models\Payment::PURPOSE_ENTRANCE_EXAM && $payment->entranceExamPastPaper)
                             <x-button :href="route('entrance-exam-academy.papers.show', $payment->entranceExamPastPaper)" class="mt-6">Open Past Paper</x-button>
-                        @elseif ($payment->purpose === \App\Models\Payment::PURPOSE_SUBSCRIPTION && $payment->subscription)
-                            <x-button :href="route('student.subscriptions.show', $payment->subscription)" class="mt-6">View Subscription</x-button>
                         @endif
                     </x-card>
                 @endif
@@ -142,7 +178,7 @@
                 <x-card>
                     <x-badge tone="gold">Next step</x-badge>
                     <p class="mt-4 text-sm leading-6 text-slate-600">
-                        {{ $payment->purpose === \App\Models\Payment::PURPOSE_SUBSCRIPTION ? 'After your proof is approved, MK Scholars activates your subscription and included course access.' : ($payment->purpose === \App\Models\Payment::PURPOSE_ENTRANCE_EXAM ? 'After your proof is approved, MK Scholars unlocks this entrance exam past paper.' : 'After your proof is approved, MK Scholars automatically activates your course enrollment.') }}
+                        {{ $payment->purpose === \App\Models\Payment::PURPOSE_ENTRANCE_EXAM ? 'After your proof is approved, MK Scholars unlocks this entrance exam past paper.' : 'After your proof is approved, MK Scholars automatically activates your selected course tier.' }}
                     </p>
                     <x-button :href="route('student.payments')" variant="secondary" size="sm" class="mt-5">Back to Payments</x-button>
                 </x-card>

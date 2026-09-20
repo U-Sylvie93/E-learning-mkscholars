@@ -8,8 +8,6 @@ use App\Models\Enrollment;
 use App\Models\Lesson;
 use App\Models\Module;
 use App\Models\Payment;
-use App\Models\Subscription;
-use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Services\Payments\PaymentProviderManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -112,26 +110,6 @@ class PaymentProviderArchitectureTest extends TestCase
         $this->assertSame(Payment::STATUS_PENDING, $payment->status);
     }
 
-    public function test_new_manual_subscription_payment_has_manual_provider(): void
-    {
-        [$student, , $plan] = $this->studentCourseAndPlan('route-subscription-payment@mkscholars.test', 'route-subscription-payment');
-
-        $this->actingAs($student)
-            ->post(route('subscriptions.choose', $plan))
-            ->assertRedirect();
-
-        $subscription = Subscription::query()
-            ->where('user_id', $student->id)
-            ->where('subscription_plan_id', $plan->id)
-            ->firstOrFail();
-
-        $payment = $subscription->payment()->firstOrFail();
-
-        $this->assertSame(Payment::PROVIDER_MANUAL, $payment->provider);
-        $this->assertSame(Payment::PURPOSE_SUBSCRIPTION, $payment->purpose);
-        $this->assertSame(Payment::STATUS_PENDING, $payment->status);
-    }
-
     public function test_webhook_placeholder_does_not_approve_payment(): void
     {
         [$student] = $this->studentAndPaidCourse('webhook-provider@mkscholars.test', 'webhook-provider-course');
@@ -184,37 +162,6 @@ class PaymentProviderArchitectureTest extends TestCase
             ->assertOk();
     }
 
-    public function test_manual_subscription_payment_approval_still_grants_access(): void
-    {
-        [$student, $course, $plan] = $this->studentCourseAndPlan('manual-subscription-access@mkscholars.test', 'manual-subscription-access');
-        $payment = app(PaymentProviderManager::class)
-            ->driver(Payment::PROVIDER_MANUAL)
-            ->createPendingPayment([
-                'user_id' => $student->id,
-                'amount' => $plan->price_amount,
-                'currency' => $plan->currency,
-                'purpose' => Payment::PURPOSE_SUBSCRIPTION,
-            ]);
-
-        $subscription = Subscription::create([
-            'user_id' => $student->id,
-            'subscription_plan_id' => $plan->id,
-            'payment_id' => $payment->id,
-            'status' => Subscription::STATUS_PENDING,
-        ]);
-
-        $payment->update(['status' => Payment::STATUS_APPROVED]);
-
-        $subscription->refresh();
-
-        $this->assertSame(Subscription::STATUS_ACTIVE, $subscription->status);
-        $this->assertTrue($subscription->ends_at->isFuture());
-
-        $this->actingAs($student)
-            ->get(route('student.courses.learn', $course))
-            ->assertOk();
-    }
-
     public function test_free_course_still_works_without_payment_provider_metadata(): void
     {
         [$student, $course] = $this->studentAndCourse('free-provider-flow@mkscholars.test', 'free-provider-flow', true);
@@ -238,25 +185,6 @@ class PaymentProviderArchitectureTest extends TestCase
     private function studentAndPaidCourse(string $email = 'payment-provider@mkscholars.test', string $slug = 'payment-provider-course'): array
     {
         return $this->studentAndCourse($email, $slug, false);
-    }
-
-    private function studentCourseAndPlan(string $email, string $slug): array
-    {
-        [$student, $course] = $this->studentAndPaidCourse($email, $slug);
-
-        $plan = SubscriptionPlan::create([
-            'name' => 'Provider Plan '.$slug,
-            'slug' => 'provider-plan-'.$slug,
-            'price_amount' => 50000,
-            'currency' => 'RWF',
-            'billing_cycle' => SubscriptionPlan::BILLING_MONTHLY,
-            'duration_days' => 30,
-            'status' => SubscriptionPlan::STATUS_ACTIVE,
-        ]);
-
-        $plan->courses()->attach($course);
-
-        return [$student, $course, $plan];
     }
 
     private function studentAndCourse(string $email, string $slug, bool $isFree): array
