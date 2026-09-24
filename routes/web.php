@@ -42,6 +42,7 @@ use App\Services\AdminCsvExportService;
 use App\Services\CertificatePdfService;
 use App\Services\QuizAttemptService;
 use App\Services\Payments\PaymentProviderManager;
+use App\Services\PasswordResetService;
 use App\Support\CourseContentRenderer;
 use App\Support\LoginAuthenticator;
 use App\Rules\YouTubeUrl;
@@ -515,7 +516,7 @@ Route::middleware('guest')->group(function (): void {
 
     Route::view('/password/forgot', 'auth.forgot-password')->name('password.forgot');
 
-    Route::post('/password/forgot', function (Request $request) {
+    Route::post('/password/forgot', function (Request $request, PasswordResetService $passwordResets) {
         $validated = $request->validate([
             'email' => ['required', 'email', 'max:190'],
         ]);
@@ -529,37 +530,11 @@ Route::middleware('guest')->group(function (): void {
             return back()->with('status', $genericStatus);
         }
 
-        // Rate-limit: at most 5 pending requests per email in the last hour.
-        $recentCount = \App\Models\PasswordResetRequest::query()
-            ->where('email', $user->email)
-            ->where('created_at', '>=', now()->subHour())
-            ->count();
-
-        if ($recentCount >= 5) {
+        if ($passwordResets->hasReachedRateLimit($user)) {
             return back()->with('status', 'Too many reset attempts for this email in the last hour. Please try again later or contact support.');
         }
 
-        $otp = \App\Models\PasswordResetRequest::generateOtp();
-        $reset = \App\Models\PasswordResetRequest::create([
-            'email' => $user->email,
-            'user_id' => $user->id,
-            'otp' => $otp,
-            'status' => \App\Models\PasswordResetRequest::STATUS_PENDING,
-            'expires_at' => now()->addMinutes(30),
-            'request_ip' => $request->ip(),
-        ]);
-
-        try {
-            \Illuminate\Support\Facades\Mail::raw(
-                "Hello {$user->name},\n\nYour MK Scholars password reset code is: {$otp}\n\nIt expires in 30 minutes. If you did not request this, you can ignore this message.\n\n— MK Scholars",
-                function ($message) use ($user) {
-                    $message->to($user->email)
-                        ->subject('Your MK Scholars password reset code');
-                }
-            );
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('Password reset mail failed: '.$e->getMessage(), ['email' => $user->email, 'reset_id' => $reset->id]);
-        }
+        $passwordResets->createFor($user, $request->ip());
 
         return redirect()
             ->route('password.reset', ['email' => $user->email])

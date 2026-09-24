@@ -10,6 +10,7 @@ use App\Models\AppNotification;
 use App\Models\Course;
 use App\Models\User;
 use App\Services\AppNotificationService;
+use App\Services\PasswordResetService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
@@ -18,6 +19,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -137,6 +139,25 @@ class UserResource extends Resource
                     ->requiresConfirmation()
                     ->visible(fn (User $record): bool => ! self::isReadOnlyViewer() && self::canModerate($record) && $record->approval_status !== User::APPROVAL_SUSPENDED)
                     ->action(fn (User $record) => self::setApprovalStatus($record, User::APPROVAL_SUSPENDED)),
+                Action::make('resetPassword')
+                    ->label('Reset password')
+                    ->icon(Heroicon::OutlinedKey)
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalHeading('Generate a password reset code?')
+                    ->modalDescription(fn (User $record): string => "A new six-digit code will be emailed to {$record->email}. Any previous unused code will stop working.")
+                    ->modalSubmitActionLabel('Generate code')
+                    ->visible(fn (): bool => ! self::isReadOnlyViewer())
+                    ->action(function (User $record): void {
+                        $reset = app(PasswordResetService::class)->createFor($record, request()->ip());
+
+                        Notification::make()
+                            ->title('Password reset code generated')
+                            ->body("Code: {$reset->otp}. It expires in 30 minutes and is also listed under Password Reset Requests.")
+                            ->success()
+                            ->persistent()
+                            ->send();
+                    }),
                 EditAction::make()->visible(fn (): bool => ! self::isReadOnlyViewer()),
             ]);
     }
