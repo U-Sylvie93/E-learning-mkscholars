@@ -8,6 +8,7 @@ use App\Models\CourseRoomMessage;
 use App\Models\User;
 use App\Services\AppNotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -76,6 +77,7 @@ class CourseRoomView
     public static function describeActiveRoom(Course $course, CourseRoom $room, ?User $user): array
     {
         $messages = collect();
+        $pinnedMessage = null;
         try {
             if (Schema::hasTable('course_room_messages')) {
                 $messages = $room->messages()
@@ -85,6 +87,13 @@ class CourseRoomView
                     ])
                     ->orderBy('created_at')
                     ->get();
+
+                if (Schema::hasColumn('course_room_messages', 'pinned_at')) {
+                    $pinnedMessage = $messages
+                        ->filter(fn (CourseRoomMessage $message): bool => $message->isPinned())
+                        ->sortByDesc('pinned_at')
+                        ->first();
+                }
             }
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('describeActiveRoom failed: '.$e->getMessage());
@@ -99,6 +108,7 @@ class CourseRoomView
             ],
             'room' => $room,
             'messages' => $messages,
+            'pinned_message' => $pinnedMessage,
             'my_id' => $user?->id,
         ];
     }
@@ -242,10 +252,57 @@ class CourseRoomView
             $message->deleted_by_id = $user->id;
         }
 
+        if (Schema::hasColumn('course_room_messages', 'pinned_at')) {
+            $message->pinned_at = null;
+        }
+        if (Schema::hasColumn('course_room_messages', 'pinned_by_id')) {
+            $message->pinned_by_id = null;
+        }
+
         $message->save();
 
         if ($room) {
             $room->update(['last_message_at' => now()]);
         }
+    }
+
+    public static function togglePinnedMessage(CourseRoomMessage $message, User $user): CourseRoomMessage
+    {
+        abort_unless($user->role === User::ROLE_INSTRUCTOR, 403);
+        abort_if($message->isDeleted(), 422, 'Deleted messages cannot be pinned.');
+        abort_unless(
+            Schema::hasColumn('course_room_messages', 'pinned_at')
+                && Schema::hasColumn('course_room_messages', 'pinned_by_id'),
+            503,
+            'Message pinning is not available until the latest migration is applied.'
+        );
+
+        return DB::transaction(function () use ($message, $user): CourseRoomMessage {
+            $message->refresh();
+
+            if ($message->isPinned()) {
+                $message->forceFill([
+                    'pinned_at' => null,
+                    'pinned_by_id' => null,
+                ])->save();
+
+                return $message->refresh();
+            }
+
+            CourseRoomMessage::query()
+                ->where('course_room_id', $message->course_room_id)
+                ->whereNotNull('pinned_at')
+                ->update([
+                    'pinned_at' => null,
+                    'pinned_by_id' => null,
+                ]);
+
+            $message->forceFill([
+                'pinned_at' => now(),
+                'pinned_by_id' => $user->id,
+            ])->save();
+
+            return $message->refresh();
+        });
     }
 }

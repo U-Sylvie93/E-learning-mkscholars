@@ -32,6 +32,15 @@ class FinalCourseTestTest extends TestCase
                 'max_attempts' => 2,
                 'status' => Quiz::STATUS_DRAFT,
                 'publish_quiz' => 1,
+                'question_text' => 'Which answer completes the course?',
+                'question_type' => QuizQuestion::TYPE_SINGLE_CHOICE,
+                'points' => 3,
+                'question_status' => QuizQuestion::STATUS_PUBLISHED,
+                'options' => [
+                    ['option_text' => 'Correct answer'],
+                    ['option_text' => 'Incorrect answer'],
+                ],
+                'correct_option_index' => 0,
             ])
             ->assertRedirect();
 
@@ -43,6 +52,12 @@ class FinalCourseTestTest extends TestCase
         $this->assertSame(30, $finalTest->time_limit_minutes);
         $this->assertSame(2, $finalTest->max_attempts);
         $this->assertSame(Quiz::STATUS_PUBLISHED, $finalTest->status);
+        $this->assertDatabaseHas('quiz_questions', [
+            'quiz_id' => $finalTest->id,
+            'question_text' => 'Which answer completes the course?',
+            'points' => 3,
+        ]);
+        $this->assertSame(2, $finalTest->questions()->firstOrFail()->options()->count());
     }
 
     public function test_instructor_cannot_create_final_test_for_another_instructors_course(): void

@@ -28,6 +28,9 @@ class CourseRoomChatDisplayTest extends TestCase
         $this->assertStringNotContainsString("confirm('Delete this message?')", $view);
         $this->assertStringContainsString('This message was deleted', $view);
         $this->assertStringContainsString('placeholder="Type a message"', $view);
+        $this->assertStringContainsString('Pinned message', $view);
+        $this->assertStringContainsString('data-chat-scroll-to', $view);
+        $this->assertStringContainsString("{{ \$isPinned ? 'Unpin' : 'Pin message' }}", $view);
     }
 
     public function test_student_can_delete_own_course_room_message_only(): void
@@ -92,6 +95,41 @@ class CourseRoomChatDisplayTest extends TestCase
         ]);
     }
 
+    public function test_instructor_can_pin_replace_and_unpin_a_room_message(): void
+    {
+        [$student, , $course, $room, $instructor] = $this->chatContext();
+        $firstMessage = CourseRoomMessage::create([
+            'course_room_id' => $room->id,
+            'sender_id' => $student->id,
+            'body' => 'First important message',
+        ]);
+        $secondMessage = CourseRoomMessage::create([
+            'course_room_id' => $room->id,
+            'sender_id' => $instructor->id,
+            'body' => 'Updated important message',
+        ]);
+
+        $this->actingAs($instructor)
+            ->patch(route('instructor.messages.pin', [$course, $firstMessage]))
+            ->assertRedirect(route('instructor.messages.show', $course));
+
+        $this->assertTrue($firstMessage->fresh()->isPinned());
+        $this->assertSame($instructor->id, $firstMessage->fresh()->pinned_by_id);
+
+        $this->actingAs($instructor)
+            ->patch(route('instructor.messages.pin', [$course, $secondMessage]))
+            ->assertRedirect(route('instructor.messages.show', $course));
+
+        $this->assertFalse($firstMessage->fresh()->isPinned());
+        $this->assertTrue($secondMessage->fresh()->isPinned());
+
+        $this->actingAs($instructor)
+            ->patch(route('instructor.messages.pin', [$course, $secondMessage]))
+            ->assertRedirect(route('instructor.messages.show', $course));
+
+        $this->assertFalse($secondMessage->fresh()->isPinned());
+    }
+
     private function chatContext(): array
     {
         $instructor = $this->user(User::ROLE_INSTRUCTOR, 'chat-instructor@mkscholars.test');
@@ -112,7 +150,7 @@ class CourseRoomChatDisplayTest extends TestCase
             ]);
         }
 
-        return [$student, $otherStudent, $course, $room];
+        return [$student, $otherStudent, $course, $room, $instructor];
     }
 
     private function user(string $role, string $email): User

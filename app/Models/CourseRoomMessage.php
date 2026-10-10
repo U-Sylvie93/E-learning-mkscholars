@@ -22,6 +22,8 @@ class CourseRoomMessage extends Model
         'deleted_by_id',
         'reply_to_message_id',
         'edited_at',
+        'pinned_at',
+        'pinned_by_id',
     ];
 
     protected function casts(): array
@@ -29,12 +31,18 @@ class CourseRoomMessage extends Model
         return [
             'deleted_at' => 'datetime',
             'edited_at' => 'datetime',
+            'pinned_at' => 'datetime',
         ];
     }
 
     public function isDeleted(): bool
     {
         return filled($this->deleted_at);
+    }
+
+    public function isPinned(): bool
+    {
+        return ! $this->isDeleted() && filled($this->pinned_at);
     }
 
     public function hasAttachment(): bool
@@ -82,6 +90,11 @@ class CourseRoomMessage extends Model
     public function deletedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'deleted_by_id');
+    }
+
+    public function pinnedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'pinned_by_id');
     }
 
     public function repliedMessage(): BelongsTo

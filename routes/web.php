@@ -2611,6 +2611,18 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return redirect()->route('instructor.messages.show', $course);
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.messages.delete');
 
+    Route::patch('/instructor/messages/{course}/messages/{message}/pin', function (Course $course, CourseRoomMessage $message) use ($abortUnlessInstructorOwnsCourse) {
+        $user = Auth::user();
+        $abortUnlessInstructorOwnsCourse($user, $course);
+        abort_unless((int) $message->room?->course_id === (int) $course->id, 404);
+
+        $message = \App\Support\CourseRoomView::togglePinnedMessage($message, $user);
+
+        return redirect()
+            ->route('instructor.messages.show', $course)
+            ->with('status', $message->isPinned() ? 'Message pinned.' : 'Message unpinned.');
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.messages.pin');
+
     Route::get('/instructor/settings', fn () => $settingsPage(User::ROLE_INSTRUCTOR, 'instructor.dashboard'))
         ->middleware('role:'.User::ROLE_INSTRUCTOR)
         ->name('instructor.settings');

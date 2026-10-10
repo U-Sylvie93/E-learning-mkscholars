@@ -4,6 +4,7 @@
     $activeCourseId = $activeRoom['course']['id'] ?? null;
     $chatEditRoute = $chatEditRoute ?? null;
     $chatDeleteRoute = $chatDeleteRoute ?? null;
+    $chatPinRoute = $chatPinRoute ?? null;
 @endphp
 
 <div class="-mx-4 flex h-[calc(100dvh-7.25rem)] min-h-[460px] w-[calc(100%+2rem)] max-w-none flex-col overflow-hidden border-y border-slate-200 bg-white shadow-sm sm:mx-0 sm:h-[calc(100dvh-9rem)] sm:min-h-[520px] sm:w-full sm:rounded-2xl sm:border lg:h-[calc(100vh-9rem)] lg:min-h-[500px] lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:flex-row">
@@ -65,6 +66,7 @@
             @php
                 $course = $activeRoom['course'];
                 $messages = $activeRoom['messages'];
+                $pinnedMessage = $activeRoom['pinned_message'] ?? null;
                 $me = $activeRoom['my_id'];
                 $lastDay = null;
                 $courseInitial = mb_strtoupper(mb_substr((string) $course['title'], 0, 1));
@@ -83,6 +85,24 @@
                 </div>
             </div>
 
+            @if ($pinnedMessage)
+                @php
+                    $pinnedPreview = trim((string) $pinnedMessage->body);
+                    if ($pinnedPreview === '' && $pinnedMessage->hasAttachment()) {
+                        $pinnedPreview = $pinnedMessage->isImageAttachment() ? 'Photo' : ($pinnedMessage->attachment_name ?: 'File');
+                    }
+                @endphp
+                <button type="button" class="flex shrink-0 items-center gap-3 border-b border-mk-gold/30 bg-mk-goldSoft/60 px-3 py-2 text-left transition hover:bg-mk-goldSoft sm:px-4" data-chat-scroll-to="chat-message-{{ $pinnedMessage->id }}">
+                    <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-mk-gold text-mk-navy">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M5 17h14"/><path d="M7 3h10l-1 8 3 3H5l3-3z"/></svg>
+                    </span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-[11px] font-black uppercase text-mk-navy">Pinned message</span>
+                        <span class="block truncate text-xs text-slate-600">{{ $pinnedMessage->sender?->name }}: {{ $pinnedPreview }}</span>
+                    </span>
+                </button>
+            @endif
+
             <div class="min-h-0 min-w-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto bg-[#f0f2f5] px-2 py-3 sm:px-4 sm:py-4" id="mk-chat-scroll" style="background-image: radial-gradient(rgba(11,58,90,0.05) 1px, transparent 1px); background-size: 20px 20px; overscroll-behavior: contain;">
                 @forelse ($messages as $message)
                     @php
@@ -92,6 +112,7 @@
                         $senderRole = $message->sender ? $message->sender->role : null;
                         $isInstructor = $senderRole === \App\Models\User::ROLE_INSTRUCTOR;
                         $isDeleted = method_exists($message, 'isDeleted') ? $message->isDeleted() : false;
+                        $isPinned = method_exists($message, 'isPinned') ? $message->isPinned() : false;
 
                         $dayLabel = '';
                         if ($createdAt) {
@@ -167,7 +188,7 @@
                         </div>
                     @endif
 
-                    <div class="flex min-w-0 max-w-full {{ $alignClass }}">
+                    <div id="chat-message-{{ $message->id }}" class="flex min-w-0 max-w-full scroll-mt-4 {{ $alignClass }}">
                         <div class="group relative min-w-0 w-fit max-w-[min(88%,22rem)] overflow-visible break-words rounded-2xl px-3 py-2 shadow-sm sm:max-w-[78%] {{ $bubbleClass }}">
                             @if (! $isDeleted)
                                 <button type="button"
@@ -211,6 +232,17 @@
                                             </button>
                                         </form>
                                     @endif
+
+                                    @if ($chatPinRoute)
+                                        <form method="POST" action="{{ route($chatPinRoute, [$course['id'], $message]) }}">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="flex w-full items-center gap-2 px-3 py-2 text-xs font-bold text-mk-navy hover:bg-mk-goldSoft">
+                                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M5 17h14"/><path d="M7 3h10l-1 8 3 3H5l3-3z"/></svg>
+                                                {{ $isPinned ? 'Unpin' : 'Pin message' }}
+                                            </button>
+                                        </form>
+                                    @endif
                                 </div>
                             @endif
 
@@ -221,6 +253,10 @@
                                         <span class="ml-1 rounded bg-mk-gold px-1 text-[10px] text-mk-navy">Instructor</span>
                                     @endif
                                 </p>
+                            @endif
+
+                            @if ($isPinned)
+                                <p class="pr-7 text-[10px] font-black uppercase {{ $mine ? 'text-mk-gold' : 'text-mk-blue' }}">Pinned</p>
                             @endif
 
                             @if ($replyTarget)
@@ -350,6 +386,15 @@
                     var originalAction = form ? form.getAttribute('action') : '';
                     var composerMode = 'send';
                     var editingHasAttachment = false;
+
+                    document.querySelectorAll('[data-chat-scroll-to]').forEach(function (button) {
+                        button.addEventListener('click', function () {
+                            var target = document.getElementById(button.dataset.chatScrollTo || '');
+                            if (target) {
+                                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        });
+                    });
 
                     var linkHint = document.getElementById('mk-chat-link-hint');
                     var linkCountEl = linkHint ? linkHint.querySelector('[data-link-count]') : null;

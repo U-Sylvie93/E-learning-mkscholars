@@ -1417,3 +1417,11 @@ Use this checklist after running migrations, seeding demo data, building assets,
 - Sender cannot delete another user's message.
 - Deleted message attachments are removed from storage and no longer displayed.
 - Student and instructor chat rooms both use the corrected shared layout.
+
+# Final Test Question Builder and Chat Pinning
+
+- Create a final test as an instructor and add its optional first question, answer options, correct answer, points, and publication status in the same submission.
+- Open an existing final test and add more single-choice, multiple-choice, true/false, short-answer, and long-answer questions.
+- In an instructor course chat, pin a student or instructor message and confirm the pinned strip appears for both instructor and enrolled students.
+- Pin another message and confirm it replaces the previous room pin; select Unpin and confirm the strip disappears.
+- Delete a pinned message and confirm it no longer appears as the room pin.
