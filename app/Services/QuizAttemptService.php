@@ -88,7 +88,7 @@ class QuizAttemptService
             'quiz_id' => $quiz->id,
             'user_id' => $user->id,
             'score' => 0,
-            'total_points' => (int) $questions->filter(fn (QuizQuestion $question): bool => $question->isAutoGradable())->sum('points'),
+            'total_points' => (int) $questions->sum('points'),
             'percentage' => 0,
             'status' => QuizAttempt::STATUS_IN_PROGRESS,
             'started_at' => now(),
@@ -228,7 +228,13 @@ class QuizAttemptService
 
         return DB::transaction(function () use ($attempt, $quiz): QuizAttempt {
             $questions = $this->publishedQuestions($quiz);
-            $totalPoints = (int) $questions->filter(fn (QuizQuestion $question): bool => $question->isAutoGradable())->sum('points');
+            foreach ($questions->filter(fn (QuizQuestion $question): bool => $question->acceptsTextAnswer()) as $question) {
+                QuizAnswer::firstOrCreate([
+                    'quiz_attempt_id' => $attempt->id,
+                    'quiz_question_id' => $question->id,
+                ], ['is_correct' => false, 'points_awarded' => 0]);
+            }
+            $totalPoints = (int) $questions->sum('points');
             $score = (int) QuizAnswer::query()
                 ->where('quiz_attempt_id', $attempt->id)
                 ->whereIn('quiz_question_id', $questions->pluck('id'))
@@ -239,12 +245,51 @@ class QuizAttemptService
                 'score' => $score,
                 'total_points' => $totalPoints,
                 'percentage' => $percentage,
-                'status' => $totalPoints === 0
+                'status' => $questions->contains(fn (QuizQuestion $question): bool => $question->acceptsTextAnswer()) || $totalPoints === 0
                     ? QuizAttempt::STATUS_SUBMITTED
                     : ($percentage >= $quiz->passing_score
                     ? QuizAttempt::STATUS_PASSED
                     : QuizAttempt::STATUS_FAILED),
                 'submitted_at' => now(),
+            ]);
+
+            return $attempt->refresh();
+        });
+    }
+
+    public function gradeAnswer(QuizAttempt $attempt, QuizAnswer $answer, User $instructor, int $points, ?string $feedback = null): QuizAttempt
+    {
+        return DB::transaction(function () use ($attempt, $answer, $instructor, $points, $feedback): QuizAttempt {
+            $attempt = QuizAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
+            $question = $answer->question;
+            abort_unless($instructor->role === User::ROLE_INSTRUCTOR && $attempt->quiz->courseContext()?->instructor_id === $instructor->id, 403);
+            abort_unless($attempt->submitted_at && $answer->quiz_attempt_id === $attempt->id && $question?->quiz_id === $attempt->quiz_id && $question->acceptsTextAnswer(), 422);
+            if ($points < 0 || $points > $question->points) {
+                throw ValidationException::withMessages(['points' => 'Marks must be between 0 and '.$question->points.'.']);
+            }
+            $answer->update([
+                'points_awarded' => $points,
+                'is_correct' => $points === $question->points,
+                'feedback' => $feedback,
+                'graded_by' => $instructor->id,
+                'graded_at' => now(),
+            ]);
+            $questions = $this->publishedQuestions($attempt->quiz);
+            foreach ($questions->filter(fn (QuizQuestion $question): bool => $question->acceptsTextAnswer()) as $writtenQuestion) {
+                QuizAnswer::firstOrCreate([
+                    'quiz_attempt_id' => $attempt->id,
+                    'quiz_question_id' => $writtenQuestion->id,
+                ], ['is_correct' => false, 'points_awarded' => 0]);
+            }
+            $totalPoints = (int) $questions->sum('points');
+            $score = (int) $attempt->answers()->whereIn('quiz_question_id', $questions->pluck('id'))->sum('points_awarded');
+            $pending = $attempt->answers()->whereIn('quiz_question_id', $questions->filter(fn (QuizQuestion $question): bool => $question->acceptsTextAnswer())->pluck('id'))->whereNull('graded_at')->exists();
+            $percentage = $totalPoints > 0 ? (int) round($score / $totalPoints * 100) : 0;
+            $attempt->update([
+                'score' => $score,
+                'total_points' => $totalPoints,
+                'percentage' => $percentage,
+                'status' => $pending ? QuizAttempt::STATUS_SUBMITTED : ($percentage >= $attempt->quiz->passing_score ? QuizAttempt::STATUS_PASSED : QuizAttempt::STATUS_FAILED),
             ]);
 
             return $attempt->refresh();

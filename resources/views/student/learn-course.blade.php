@@ -18,7 +18,7 @@
             : null;
         $latestFinalTestAttempt = $finalTest?->attempts?->first();
         $latestFinalTestStatusLabel = $latestFinalTestAttempt
-            ? str_replace('_', ' ', $latestFinalTestAttempt->status)
+            ? ($latestFinalTestAttempt->status === \App\Models\QuizAttempt::STATUS_SUBMITTED ? 'Waiting for grading' : str_replace('_', ' ', $latestFinalTestAttempt->status))
             : null;
         $quizPassed = $latestQuizAttempt?->status === \App\Models\QuizAttempt::STATUS_PASSED;
         $firstAssignment = $currentAssignments->first();
@@ -48,6 +48,7 @@
         $finalTestAttemptsExhausted = $finalTest && $finalTest->max_attempts !== null && $finalTestCompletedAttempts >= $finalTest->max_attempts;
         $finalTestActionLabel = match (true) {
             ! $latestFinalTestAttempt => 'Start Test',
+            $latestFinalTestAttempt->status === \App\Models\QuizAttempt::STATUS_SUBMITTED => 'View Pending Result',
             in_array($latestFinalTestAttempt->status, [\App\Models\QuizAttempt::STATUS_PASSED, \App\Models\QuizAttempt::STATUS_SUBMITTED], true) => 'Final Test Completed',
             $latestFinalTestAttempt->status === \App\Models\QuizAttempt::STATUS_FAILED && ! $finalTestAttemptsExhausted => 'Retry Test',
             $latestFinalTestAttempt->status === \App\Models\QuizAttempt::STATUS_FAILED && $finalTestAttemptsExhausted => 'Test Attempts Exhausted',
@@ -154,7 +155,20 @@
                 </section>
 
             {{-- Quiz --}}
-            @if ($currentQuiz)
+            @forelse (($currentLesson?->quizzes ?? collect()) as $lessonQuiz)
+                @php
+                    $currentQuiz = $lessonQuiz;
+                    $latestQuizAttempt = $lessonQuiz->attempts->first();
+                    $latestQuizStatusLabel = $latestQuizAttempt?->status === \App\Models\QuizAttempt::STATUS_SUBMITTED ? 'Waiting for grading' : ($latestQuizAttempt ? str_replace('_', ' ', $latestQuizAttempt->status) : null);
+                    $quizAttemptsExhausted = $lessonQuiz->max_attempts !== null && $lessonQuiz->attempts->count() >= $lessonQuiz->max_attempts;
+                    $quizActionLabel = match (true) {
+                        ! $latestQuizAttempt => 'Start Quiz',
+                        $latestQuizAttempt->status === \App\Models\QuizAttempt::STATUS_SUBMITTED => 'View Pending Result',
+                        $latestQuizAttempt->status === \App\Models\QuizAttempt::STATUS_PASSED => 'Quiz Completed',
+                        $quizAttemptsExhausted => 'View Result',
+                        default => 'Retry Quiz',
+                    };
+                @endphp
                 <section class="rounded-mk-lg border border-slate-200 bg-white p-5 shadow-sm" data-testid="learning-quiz-card">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
@@ -165,19 +179,19 @@
                                 @if ($latestQuizAttempt)· Latest: {{ $latestQuizAttempt->percentage }}% {{ $latestQuizStatusLabel }}@endif
                             </p>
                         </div>
-                        @if ($latestQuizAttempt)<x-status-badge :status="$latestQuizAttempt->status" />@else<x-badge tone="blue">Ready</x-badge>@endif
+                        @if ($latestQuizAttempt)<x-status-badge :status="$latestQuizAttempt->status" :label="$latestQuizStatusLabel" />@else<x-badge tone="blue">Ready</x-badge>@endif
                     </div>
                     @if ($quizActionLabel === 'Attempts Exhausted')
                         <span class="mt-4 inline-flex rounded-md bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600">Attempts Exhausted</span>
                     @else
-                        <x-button :href="route('student.quizzes.show', $currentQuiz)" size="sm" :variant="$quizActionLabel === 'Quiz Completed' ? 'secondary' : 'primary'" class="mt-4">{{ $quizActionLabel }}</x-button>
+                        <x-button :href="route('student.quizzes.show', ['quiz' => $currentQuiz, 'attempt' => $latestQuizAttempt?->id])" size="sm" :variant="$quizActionLabel === 'Quiz Completed' ? 'secondary' : 'primary'" class="mt-4">{{ $quizActionLabel }}</x-button>
                     @endif
                 </section>
-            @else
+            @empty
                 <section class="rounded-mk-lg border border-dashed border-slate-200 bg-white p-5">
                     <p class="text-sm font-semibold text-slate-600">No quiz is attached to this lesson.</p>
                 </section>
-            @endif
+            @endforelse
 
             {{-- Assignment --}}
             @if ($firstAssignment)
@@ -313,8 +327,9 @@
                     </div>
                     @if ($finalTestActionLabel === 'Test Attempts Exhausted')
                         <span class="mt-4 inline-flex rounded-md bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600">Test Attempts Exhausted</span>
+                        <x-button :href="route('student.quizzes.show', ['quiz' => $finalTest, 'attempt' => $latestFinalTestAttempt?->id])" size="sm" variant="secondary">View Result</x-button>
                     @else
-                        <x-button :href="route('student.quizzes.show', $finalTest)" size="sm" :variant="$finalTestActionLabel === 'Final Test Completed' ? 'secondary' : 'primary'" class="mt-4">{{ $finalTestActionLabel }}</x-button>
+                        <x-button :href="route('student.quizzes.show', ['quiz' => $finalTest, 'attempt' => $latestFinalTestAttempt?->id])" size="sm" :variant="$finalTestActionLabel === 'Final Test Completed' ? 'secondary' : 'primary'" class="mt-4">{{ $finalTestActionLabel }}</x-button>
                     @endif
                 </section>
             @endif

@@ -19,6 +19,60 @@ class InstructorQuizBuilderTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_written_marks_update_totals_and_student_results_without_double_counting(): void
+    {
+        [$instructor, $course, , $quiz] = $this->ownedCourseScenario(withQuiz: true);
+        $student = $this->approvedUser(User::ROLE_STUDENT, 'grading-student@example.test');
+        Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => Enrollment::STATUS_ACTIVE, 'enrolled_at' => now()]);
+        $objective = $quiz->questions()->create(['question_text' => 'Choose yes.', 'question_type' => QuizQuestion::TYPE_SINGLE_CHOICE, 'points' => 2, 'sort_order' => 1, 'status' => QuizQuestion::STATUS_PUBLISHED]);
+        $option = $objective->options()->create(['option_text' => 'Yes', 'is_correct' => true]);
+        $short = $quiz->questions()->create(['question_text' => 'Explain briefly.', 'question_type' => QuizQuestion::TYPE_SHORT_ANSWER, 'points' => 3, 'sort_order' => 2, 'status' => QuizQuestion::STATUS_PUBLISHED]);
+        $long = $quiz->questions()->create(['question_text' => 'Explain fully.', 'question_type' => QuizQuestion::TYPE_LONG_ANSWER, 'points' => 5, 'sort_order' => 3, 'status' => QuizQuestion::STATUS_PUBLISHED]);
+        $service = app(\App\Services\QuizAttemptService::class);
+        $attempt = $service->startOrResume($student, $quiz);
+        $service->saveAnswer($attempt, $quiz, 0, $option->id);
+        $shortAnswer = $service->saveAnswer($attempt, $quiz, 1, null, 'Brief explanation.');
+        $service->submit($attempt, $quiz);
+        $this->assertSame(10, $attempt->refresh()->total_points);
+        $this->assertSame(QuizAttempt::STATUS_SUBMITTED, $attempt->status);
+        $longAnswer = $attempt->answers()->where('quiz_question_id', $long->id)->firstOrFail();
+        $gradeRoute = route('instructor.quiz-answers.grade', ['attempt' => $attempt, 'answer' => $shortAnswer]);
+        $this->actingAs($instructor)->post($gradeRoute, ['points' => 2, 'feedback' => 'Good explanation.'])->assertRedirect();
+        $this->assertSame(4, $attempt->refresh()->score);
+        $this->assertSame(QuizAttempt::STATUS_SUBMITTED, $attempt->status);
+        $this->actingAs($instructor)->post(route('instructor.quiz-answers.grade', ['attempt' => $attempt, 'answer' => $longAnswer]), ['points' => 0])->assertRedirect();
+        $this->assertSame(QuizAttempt::STATUS_FAILED, $attempt->refresh()->status);
+        $this->actingAs($instructor)->post($gradeRoute, ['points' => 3, 'feedback' => 'Good explanation.'])->assertRedirect();
+        $this->assertSame(5, $attempt->refresh()->score);
+        $this->assertSame(50, $attempt->percentage);
+        $this->assertSame(QuizAttempt::STATUS_PASSED, $attempt->status);
+        $this->assertSame($instructor->id, $shortAnswer->refresh()->graded_by);
+        $this->actingAs($student)->get(route('student.quizzes.show', ['quiz' => $quiz, 'attempt' => $attempt->id]))->assertOk()->assertSee('5/10')->assertSee('Good explanation.')->assertSee('Graded');
+        $this->actingAs($instructor)->post($gradeRoute, ['points' => 4])->assertSessionHasErrors('points');
+        $this->assertSame(5, $attempt->refresh()->score);
+        $otherInstructor = $this->approvedUser(User::ROLE_INSTRUCTOR, 'grading-other@example.test');
+        $this->actingAs($otherInstructor)->post($gradeRoute, ['points' => 0])->assertForbidden();
+        $this->actingAs($student)->post($gradeRoute, ['points' => 0])->assertForbidden();
+        $this->actingAs($instructor)->post(route('instructor.quiz-answers.grade', ['attempt' => $attempt, 'answer' => $attempt->answers()->where('quiz_question_id', $objective->id)->firstOrFail()]), ['points' => 0])->assertStatus(422);
+        $this->assertSame(5, $attempt->refresh()->score);
+    }
+
+    public function test_instructor_can_add_multiple_quizzes_to_one_lesson_and_student_sees_each(): void
+    {
+        [$instructor, $course, $lesson] = $this->ownedCourseScenario();
+        foreach (['First lesson quiz', 'Second lesson quiz'] as $title) {
+            $this->actingAs($instructor)->post(route('instructor.quizzes.store', $course), [
+                'lesson_id' => $lesson->id, 'title' => $title, 'passing_score' => 50, 'status' => Quiz::STATUS_PUBLISHED,
+            ])->assertRedirect()->assertSessionHasNoErrors();
+        }
+        $this->assertSame(2, $lesson->quizzes()->count());
+        $student = $this->approvedUser(User::ROLE_STUDENT, 'multiple-quizzes@example.test');
+        Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => Enrollment::STATUS_ACTIVE, 'enrolled_at' => now()]);
+        $draft = $lesson->quizzes()->create(['title' => 'Hidden draft quiz', 'passing_score' => 50, 'status' => Quiz::STATUS_DRAFT]);
+        $this->actingAs($student)->get(route('student.courses.learn', ['course' => $course, 'lesson' => $lesson->id]))->assertOk()
+            ->assertSee('First lesson quiz')->assertSee('Second lesson quiz')->assertDontSee($draft->title);
+    }
+
     public function test_instructor_can_create_quiz_with_settings_and_multiple_options(): void
     {
         [$instructor, $course, $lesson] = $this->ownedCourseScenario();

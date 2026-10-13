@@ -767,6 +767,7 @@
                 <x-card>
                     <x-badge tone="green">Quiz</x-badge>
                     <h2 class="mt-4 text-xl font-extrabold text-mk-navy">Add Quiz</h2>
+                    <p class="mt-2 text-sm text-slate-600">You can add multiple quizzes to the same lesson. Each quiz has its own questions, marks, and attempt limit.</p>
                     <form method="POST" action="{{ route('instructor.quizzes.store', $course) }}" class="mt-5 space-y-4">
                         @csrf
                         <div class="grid gap-3 sm:grid-cols-2">

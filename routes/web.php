@@ -3335,12 +3335,26 @@ Route::middleware('auth')->group(function () use ($publishedLessonsForCourse, $c
         return view('instructor.course-quiz-attempts', [
             'course' => $course->load('academy'),
             'attempts' => QuizAttempt::query()
-                ->with(['user', 'quiz.lesson.module.course'])
-                ->whereHas('quiz.lesson.module', fn ($query) => $query->where('course_id', $course->id))
+                ->with(['user', 'quiz.lesson.module.course', 'answers.question'])
+                ->whereHas('quiz', fn ($query) => $query->where('course_id', $course->id)->orWhereHas('lesson.module', fn ($query) => $query->where('course_id', $course->id)))
                 ->latest('submitted_at')
                 ->get(),
         ]);
     })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.courses.quiz-attempts');
+
+    Route::post('/instructor/quiz-attempts/{attempt}/answers/{answer}/grade', function (Request $request, QuizAttempt $attempt, QuizAnswer $answer) use ($abortUnlessInstructorOwnsCourse) {
+        $course = $attempt->quiz->courseContext();
+        abort_unless($course, 404);
+        $abortUnlessInstructorOwnsCourse(Auth::user(), $course);
+        abort_unless($answer->quiz_attempt_id === $attempt->id, 404);
+        $validated = $request->validate([
+            'points' => ['required', 'integer', 'min:0', 'max:'.($answer->question?->points ?? 0)],
+            'feedback' => ['nullable', 'string', 'max:5000'],
+        ]);
+        app(QuizAttemptService::class)->gradeAnswer($attempt, $answer, Auth::user(), (int) $validated['points'], $validated['feedback'] ?? null);
+
+        return back()->with('status', 'Marks saved. The student’s quiz total has been updated.');
+    })->middleware('role:'.User::ROLE_INSTRUCTOR)->name('instructor.quiz-answers.grade');
 
     Route::get('/instructor/notifications', function () {
         $user = Auth::user();

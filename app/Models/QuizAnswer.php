@@ -18,11 +18,15 @@ class QuizAnswer extends Model
         'answer_text',
         'is_correct',
         'points_awarded',
+        'feedback',
+        'graded_at',
+        'graded_by',
     ];
 
     protected function casts(): array
     {
         return [
+            'graded_at' => 'datetime',
             'selected_option_ids' => 'array',
             'is_correct' => 'boolean',
             'points_awarded' => 'integer',
