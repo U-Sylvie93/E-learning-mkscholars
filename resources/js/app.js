@@ -2,6 +2,27 @@ import './bootstrap';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 
+document.addEventListener('click', (event) => {
+    const addQuiz = event.target.closest('[data-add-lesson-quiz]');
+    const cancelQuiz = event.target.closest('[data-cancel-lesson-quiz]');
+    const creator = document.getElementById('quiz-creator');
+    if (!creator || (!addQuiz && !cancelQuiz)) return;
+
+    if (cancelQuiz) {
+        creator.open = false;
+        creator.querySelector('summary')?.focus();
+        return;
+    }
+
+    event.preventDefault();
+    const form = creator.querySelector('[data-lesson-quiz-form]');
+    if (!form) return;
+    form.querySelector('[name="lesson_id"]').value = addQuiz.dataset.addLessonQuiz;
+    creator.open = true;
+    creator.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+    form.querySelector('[name="title"]')?.focus({ preventScroll: true });
+});
+
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 const animateCounters = () => {

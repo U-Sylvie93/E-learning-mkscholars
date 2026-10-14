@@ -711,6 +711,9 @@
                                     </form>
                                     @endif
                                 </details>
+                                <div class="flex justify-end">
+                                    <x-button :href="route('instructor.courses.edit', ['course' => $course, 'add_quiz_lesson' => $lesson->id]).'#quiz-creator'" size="sm" variant="secondary" data-add-lesson-quiz="{{ $lesson->id }}">Add Quiz to {{ $lesson->title }}</x-button>
+                                </div>
                             @endforeach
                         </div>
 
@@ -766,16 +769,18 @@
             <div class="grid gap-6 lg:grid-cols-2">
                 <x-card>
                     <x-badge tone="green">Quiz</x-badge>
-                    <h2 class="mt-4 text-xl font-extrabold text-mk-navy">Add Quiz</h2>
-                    <p class="mt-2 text-sm text-slate-600">You can add multiple quizzes to the same lesson. Each quiz has its own questions, marks, and attempt limit.</p>
-                    <form method="POST" action="{{ route('instructor.quizzes.store', $course) }}" class="mt-5 space-y-4">
+                    <h2 class="mt-4 text-xl font-extrabold text-mk-navy">Lesson Quizzes</h2>
+                    <p class="mt-2 text-sm text-slate-600">Choose Add Quiz to create a new quiz, or Add Another Quiz to add one to the same lesson.</p>
+                    <details id="quiz-creator" class="mt-5 rounded-lg border border-slate-200 p-4" @if(request()->filled('add_quiz_lesson') || old('lesson_id')) open @endif>
+                        <summary class="mk-focus w-fit cursor-pointer rounded-md bg-mk-gold px-4 py-2 text-sm font-semibold text-mk-navy">Add Quiz</summary>
+                    <form method="POST" action="{{ route('instructor.quizzes.store', $course) }}" class="mt-5 space-y-4" data-lesson-quiz-form>
                         @csrf
                         <div class="grid gap-3 sm:grid-cols-2">
                             <label class="text-sm font-bold text-mk-navy">Related lesson
                                 <select name="lesson_id" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" required>
                                     <option value="">Select lesson</option>
                                     @foreach ($lessons as $lesson)
-                                        <option value="{{ $lesson->id }}">{{ $lesson->title }}</option>
+                                        <option value="{{ $lesson->id }}" @selected((string) old('lesson_id', request('add_quiz_lesson')) === (string) $lesson->id)>{{ $lesson->title }}</option>
                                     @endforeach
                                 </select>
                             </label>
@@ -840,8 +845,10 @@
                         <div class="flex flex-wrap gap-2">
                             <x-button type="submit" size="sm">Save Quiz</x-button>
                             <x-button type="submit" name="publish_quiz" value="1" size="sm" variant="secondary">Publish Quiz</x-button>
+                            <x-button type="button" size="sm" variant="ghost" data-cancel-lesson-quiz>Cancel</x-button>
                         </div>
                     </form>
+                    </details>
 
                     <div class="mt-6 space-y-4">
                         @forelse ($quizzes as $quizItem)
@@ -851,7 +858,10 @@
                                         <p class="text-sm font-black text-mk-navy">{{ $quizItem->title }}</p>
                                         <p class="mt-1 text-xs font-semibold text-slate-500">{{ $quizItem->lesson?->title ?? 'Lesson' }} - {{ str($quizItem->status)->headline() }}</p>
                                     </div>
-                                    <x-badge tone="blue">{{ $quizItem->questions->count() }} questions</x-badge>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <x-badge tone="blue">{{ $quizItem->questions->count() }} questions</x-badge>
+                                        <x-button :href="route('instructor.courses.edit', ['course' => $course, 'add_quiz_lesson' => $quizItem->lesson_id]).'#quiz-creator'" size="sm" variant="secondary" data-add-lesson-quiz="{{ $quizItem->lesson_id }}">Add Another Quiz</x-button>
+                                    </div>
                                 </div>
 
                                 <div class="mt-4 space-y-3">
@@ -921,8 +931,8 @@
                             </div>
                         @empty
                             <div class="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4">
-                                <p class="text-sm font-black text-mk-navy">No questions yet</p>
-                                <p class="mt-1 text-xs font-semibold text-slate-500">Add your first question by saving a quiz above.</p>
+                                <p class="text-sm font-black text-mk-navy">No quizzes yet</p>
+                                <p class="mt-1 text-xs font-semibold text-slate-500">Choose Add Quiz to create your first lesson quiz.</p>
                             </div>
                         @endforelse
                     </div>
